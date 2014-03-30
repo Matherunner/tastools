@@ -169,4 +169,3 @@ clean:
 	-rm -rf $(PM_OBJ_DIR)
 	-rm -rf $(HLWPN_OBJ_DIR)
 	-rm -rf $(HLDLL_OBJ_DIR)
-	-rm -f hl_$(ARCH).$(SHLIBEXT)
