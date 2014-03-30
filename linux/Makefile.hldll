@@ -24,10 +24,10 @@ GAME_SHARED_INCLUDEDIRS=-I$(HLDLL_SRC_DIR) -I$(ENGINE_SRC_DIR) -I$(COMMON_SRC_DI
 LDFLAGS= -lm -lstdc++
 
 PPRINT=@echo "[HLDLL]  $<"
-DO_HLDLL_CC=@$(CC) $(HLDLL_INCLUDEDIRS) $(CFLAGS) -o $@ -c $<
-DO_HLWPN_CC=@$(CC) $(HLWPN_INCLUDEDIRS) $(CFLAGS) -o $@ -c $<
+DO_HLDLL_CC=@$(CC) $(HLDLL_INCLUDEDIRS) $(CFLAGS) $(CPLUS_FLAGS) -o $@ -c $<
+DO_HLWPN_CC=@$(CC) $(HLWPN_INCLUDEDIRS) $(CFLAGS) $(CPLUS_FLAGS) -o $@ -c $<
 DO_PM_CC=@$(CC) $(PM_INCLUDEDIRS) $(CFLAGS) -o $@ -c $<
-DO_GAME_SHARED_CC=@$(CC) $(GAME_SHARED_INCLUDEDIRS) $(CFLAGS) -o $@ -c $<
+DO_GAME_SHARED_CC=@$(CC) $(GAME_SHARED_INCLUDEDIRS) $(CFLAGS) $(CPLUS_FLAGS) -o $@ -c $<
 
 #####################################################################
 

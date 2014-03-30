@@ -23,9 +23,9 @@ INCLUDEDIRS=-I$(HL_SRC_DIR) -I../dlls -I../tfc -I$(COMMON_SRC_DIR) -I$(PUBLIC_SR
 LDFLAGS=$(SHLIBLDFLAGS) $(CPP_LIB)  -L$(CFG) vgui.so -L. libSDL2-2.0.so.0
 
 PPRINT=@echo "[CLIENT]  $<"
-DO_CC=@$(CPLUS) $(INCLUDEDIRS) $(CFLAGS) -o $@ -c $<
-DO_PUBLIC_CC=@$(CPLUS) $(COMMON_INCLUDEDIRS) $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
-DO_COMMON_CC=@$(CPLUS) $(INCLUDEDIRS)  $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
+DO_CC=@$(CPLUS) $(INCLUDEDIRS) $(CFLAGS) $(CPLUS_FLAGS) -o $@ -c $<
+DO_PUBLIC_CC=@$(CPLUS) $(COMMON_INCLUDEDIRS) $(CFLAGS) $(CPLUS_FLAGS) $(SHLIBCFLAGS) -o $@ -c $<
+DO_COMMON_CC=@$(CPLUS) $(INCLUDEDIRS)  $(CFLAGS) $(CPLUS_FLAGS) $(SHLIBCFLAGS) -o $@ -c $<
 DO_PM_SHARED_CC=@$(CC) $(INCLUDEDIRS)  $(CFLAGS) $(SHLIBCFLAGS) -o $@ -c $<
 
 #####################################################################
