@@ -26,7 +26,7 @@ LDFLAGS= -lm -lstdc++
 PPRINT=@echo "[HLDLL]  $<"
 DO_HLDLL_CC=@$(CC) $(HLDLL_INCLUDEDIRS) $(CFLAGS) $(CPLUS_FLAGS) -o $@ -c $<
 DO_HLWPN_CC=@$(CC) $(HLWPN_INCLUDEDIRS) $(CFLAGS) $(CPLUS_FLAGS) -o $@ -c $<
-DO_PM_CC=@$(CC) $(PM_INCLUDEDIRS) $(CFLAGS) -o $@ -c $<
+DO_PM_CC=@$(CC) $(PM_INCLUDEDIRS) $(CFLAGS) -Werror=implicit -o $@ -c $<
 DO_GAME_SHARED_CC=@$(CC) $(GAME_SHARED_INCLUDEDIRS) $(CFLAGS) $(CPLUS_FLAGS) -o $@ -c $<
 
 #####################################################################
