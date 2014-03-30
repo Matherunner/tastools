@@ -28,9 +28,9 @@ BUILD_OBJ_DIR=$(BUILD_DIR)/obj
 ARCH=i386
 ELF-GC-DYNSTR=./elf-gc-dynstr
 
-CC="/valve/bin/gcc-4.6 -m32"
-CPLUS="/valve/bin/g++-4.6 -m32"
-CPP_LIB:=-L$(shell /valve/bin/g++-4.6 -m32 -print-file-name=libstdc++.so | xargs dirname) -lstdc++ -ldl -lpthread
+CC="gcc -m32"
+CPLUS="g++ -m32"
+CPP_LIB:=-L$(shell g++ -m32 -print-file-name=libstdc++.so | xargs dirname) -lstdc++ -ldl -lpthread
 
 CLINK=$(CC)
 
