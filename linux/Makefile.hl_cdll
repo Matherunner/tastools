@@ -181,7 +181,3 @@ $(GAME_SHARED_OBJ_DIR)/%.o : $(GAME_SHARED_SRC_DIR)/%.cpp $(filter-out $(wildcar
 
 $(PM_SHARED_OBJ_DIR)/%.o : $(PM_SHARED_SRC_DIR)/%.c $(filter-out $(wildcard  $(PM_SHARED_OBJ_DIR)),  $(PM_SHARED_OBJ_DIR))
 	$(DO_PM_SHARED_CC)
-
-clean:
-	rm -rf $(HL1_OBJ_DIR)
-	rm -f client.$(SHLIBEXT)

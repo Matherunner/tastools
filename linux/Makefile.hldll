@@ -163,9 +163,3 @@ $(PM_OBJ_DIR)/%.o : $(PM_SRC_DIR)/%.c
 
 $(GAME_SHARED_OBJ_DIR)/%.o : $(GAME_SHARED_SRC_DIR)/%.cpp
 	$(DO_GAME_SHARED_CC)
-
-clean:
-	rm -rf $(GAME_SHARED_OBJ_DIR)
-	rm -rf $(PM_OBJ_DIR)
-	rm -rf $(HLWPN_OBJ_DIR)
-	rm -rf $(HLDLL_OBJ_DIR)
