@@ -30,21 +30,14 @@ CPP_LIB:=-L$(shell g++ -m32 -print-file-name=libstdc++.so | xargs dirname) -lstd
 
 CLINK=$(CC)
 
-ARCH_CFLAGS_I486=-O3 -gdwarf-2 -g2 
-ARCH_CFLAGS_I686=-O3 -gdwarf-2 -g2 
-ARCH_CFLAGS_AMD=-O3 -gdwarf-2 -g2 
+ARCH_CFLAGS_I486=-O3 -gdwarf-2 -g2 -march=pentium-m -mfpmath=387
+ARCH_CFLAGS_I686=-O3 -gdwarf-2 -g2 -march=pentium-m -mfpmath=387
+ARCH_CFLAGS_AMD=-O3 -gdwarf-2 -g2 -march=k6 -mfpmath=387
 ARCH_CFLAGS_AMD64=-m64 -O3 -gdwarf-2 -g2 
-
-ifeq ($(OS),Linux)
-ARCH_CFLAGS_I486+=-march=pentium-m -mfpmath=387
-ARCH_CFLAGS_I686+=-march=pentium-m -mfpmath=387
-ARCH_CFLAGS_AMD+=-march=k6 -mfpmath=387
-endif
 
 ARCH_CFLAGS="$(ARCH_CFLAGS_I486)"
 
-BASE_CFLAGS=-fpermissive -fno-strict-aliasing -DNDEBUG -DPOSIX -D_POSIX -DLINUX -D_LINUX -DGNUC -DHL1 -Dstricmp=strcasecmp -D_strnicmp=strncasecmp -Dstrnicmp=strncasecmp -D_snprintf=snprintf -DQUIVER -DQUAKE2 -DVALVE_DLL -D_alloca=alloca -fno-exceptions -fexpensive-optimizations -D_vsnprintf=vsnprintf -DNO_MALLOC_OVERRIDE -Werror=return-type
-BASE_CFLAGS+=-w -DLINUX -D_LINUX
+BASE_CFLAGS=-fpermissive -fno-strict-aliasing -DNDEBUG -DPOSIX -D_POSIX -DLINUX -D_LINUX -DGNUC -DHL1 -Dstricmp=strcasecmp -D_strnicmp=strncasecmp -Dstrnicmp=strncasecmp -D_snprintf=snprintf -DQUIVER -DQUAKE2 -DVALVE_DLL -D_alloca=alloca -fno-exceptions -fexpensive-optimizations -D_vsnprintf=vsnprintf -DNO_MALLOC_OVERRIDE -Werror=return-type -w
 
 DEDICATED_CFLAGS="-DDEDICATED -DSWDS"
 SHLIBEXT=so
