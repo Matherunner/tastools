@@ -28,10 +28,10 @@ CPP_LIB:=-L$(shell g++ -m32 -print-file-name=libstdc++.so | xargs dirname) -lstd
 
 CLINK=$(CC)
 
-ARCH_CFLAGS_I486=-O3 -gdwarf-2 -g2 -march=pentium-m -mfpmath=387
-ARCH_CFLAGS_I686=-O3 -gdwarf-2 -g2 -march=pentium-m -mfpmath=387
-ARCH_CFLAGS_AMD=-O3 -gdwarf-2 -g2 -march=k6 -mfpmath=387
-ARCH_CFLAGS_AMD64=-m64 -O3 -gdwarf-2 -g2 
+ARCH_CFLAGS_I486=-O3 -march=pentium-m -mfpmath=387
+ARCH_CFLAGS_I686=-O3 -march=pentium-m -mfpmath=387
+ARCH_CFLAGS_AMD=-O3 -march=k6 -mfpmath=387
+ARCH_CFLAGS_AMD64=-m64 -O3
 
 ARCH_CFLAGS="$(ARCH_CFLAGS_I486)"
 
@@ -40,7 +40,7 @@ BASE_CFLAGS=-fpermissive -fno-strict-aliasing -DNDEBUG -DPOSIX -D_POSIX -DLINUX 
 DEDICATED_CFLAGS="-DDEDICATED -DSWDS"
 SHLIBEXT=so
 SHLIBCFLAGS=
-SHLIBLDFLAGS="-shared -gdwarf-2 -g2"
+SHLIBLDFLAGS="-shared"
 AR=ar
 LIBEXT=a
 MAKE+= -j8
