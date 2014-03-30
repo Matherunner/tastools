@@ -26,7 +26,6 @@ DBG_SRC_DIR=$(SOURCE_DIR)/dbg
 BUILD_OBJ_DIR=$(BUILD_DIR)/obj
 
 ARCH=i386
-ELF-GC-DYNSTR=./elf-gc-dynstr
 
 CC="gcc -m32"
 CPLUS="g++ -m32"
