@@ -6,10 +6,7 @@
 
 OS:=$(shell uname)
 HOSTNAME:=$(shell hostname)
-
-ifeq "$(CFG)" ""
 CFG=release
-endif
 
 SOURCE_DIR=..
 BUILD_DIR=$(CFG)
@@ -33,17 +30,10 @@ CPP_LIB:=-L$(shell g++ -m32 -print-file-name=libstdc++.so | xargs dirname) -lstd
 
 CLINK=$(CC)
 
-ifeq "$(CFG)" "release"
 ARCH_CFLAGS_I486=-O3 -gdwarf-2 -g2 
 ARCH_CFLAGS_I686=-O3 -gdwarf-2 -g2 
 ARCH_CFLAGS_AMD=-O3 -gdwarf-2 -g2 
 ARCH_CFLAGS_AMD64=-m64 -O3 -gdwarf-2 -g2 
-else
-ARCH_CFLAGS_I486=-gdwarf-2 -g2 
-ARCH_CFLAGS_I686=-gdwarf-2 -g2 
-ARCH_CFLAGS_AMD=-gdwarf-2 -g2 
-ARCH_CFLAGS_AMD64=-m64 -gdwarf-2 -g2 
-endif
 
 ifeq ($(OS),Linux)
 ARCH_CFLAGS_I486+=-march=pentium-m -mfpmath=387
