@@ -4,8 +4,6 @@
 #
 #
 
-OS:=$(shell uname)
-HOSTNAME:=$(shell hostname)
 CFG=release
 
 SOURCE_DIR=..
