@@ -23,10 +23,11 @@ GAME_SHARED_INCLUDEDIRS=-I$(HLDLL_SRC_DIR) -I$(ENGINE_SRC_DIR) -I$(COMMON_SRC_DI
 
 LDFLAGS= -lm -lstdc++
 
-DO_HLDLL_CC=$(CC) $(HLDLL_INCLUDEDIRS) $(CFLAGS) -o $@ -c $<
-DO_HLWPN_CC=$(CC) $(HLWPN_INCLUDEDIRS) $(CFLAGS) -o $@ -c $<
-DO_PM_CC=$(CC) $(PM_INCLUDEDIRS) $(CFLAGS) -o $@ -c $<
-DO_GAME_SHARED_CC=$(CC) $(GAME_SHARED_INCLUDEDIRS) $(CFLAGS) -o $@ -c $<
+PPRINT=@echo "[HLDLL]  $<"
+DO_HLDLL_CC=@$(CC) $(HLDLL_INCLUDEDIRS) $(CFLAGS) -o $@ -c $<
+DO_HLWPN_CC=@$(CC) $(HLWPN_INCLUDEDIRS) $(CFLAGS) -o $@ -c $<
+DO_PM_CC=@$(CC) $(PM_INCLUDEDIRS) $(CFLAGS) -o $@ -c $<
+DO_GAME_SHARED_CC=@$(CC) $(GAME_SHARED_INCLUDEDIRS) $(CFLAGS) -o $@ -c $<
 
 #####################################################################
 
@@ -150,16 +151,21 @@ dirs:
 	mkdir -p $(GAME_SHARED_OBJ_DIR)
 
 $(BUILD_DIR)/hl.$(SHLIBEXT): $(HLDLL_OBJS) $(HLWPN_OBJS) $(PM_OBJS) $(GAME_SHARED_OBJS)
-	$(CC) $(LDFLAGS) $(SHLIBLDFLAGS) -o $@ $(HLDLL_OBJS) $(HLWPN_OBJS) $(PM_OBJS) $(GAME_SHARED_OBJS)
+	@echo "Linking $@"
+	@$(CC) $(LDFLAGS) $(SHLIBLDFLAGS) -o $@ $(HLDLL_OBJS) $(HLWPN_OBJS) $(PM_OBJS) $(GAME_SHARED_OBJS)
 
 $(HLWPN_OBJ_DIR)/%.o : $(HLWPN_SRC_DIR)/%.cpp
+	$(PPRINT)
 	$(DO_HLWPN_CC)
 
 $(HLDLL_OBJ_DIR)/%.o : $(HLDLL_SRC_DIR)/%.cpp
+	$(PPRINT)
 	$(DO_HLDLL_CC)
 
 $(PM_OBJ_DIR)/%.o : $(PM_SRC_DIR)/%.c
+	$(PPRINT)
 	$(DO_PM_CC)
 
 $(GAME_SHARED_OBJ_DIR)/%.o : $(GAME_SHARED_SRC_DIR)/%.cpp
+	$(PPRINT)
 	$(DO_GAME_SHARED_CC)
