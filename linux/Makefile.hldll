@@ -143,11 +143,11 @@ GAME_SHARED_OBJS = \
 all: dirs hl.$(SHLIBEXT)
 
 dirs:
-	-mkdir $(BUILD_OBJ_DIR)
-	-mkdir $(HLDLL_OBJ_DIR)
-	-mkdir $(HLWPN_OBJ_DIR)
-	-mkdir $(PM_OBJ_DIR)
-	-mkdir $(GAME_SHARED_OBJ_DIR)
+	mkdir -p $(BUILD_OBJ_DIR)
+	mkdir -p $(HLDLL_OBJ_DIR)
+	mkdir -p $(HLWPN_OBJ_DIR)
+	mkdir -p $(PM_OBJ_DIR)
+	mkdir -p $(GAME_SHARED_OBJ_DIR)
 
 hl.$(SHLIBEXT): $(HLDLL_OBJS) $(HLWPN_OBJS) $(PM_OBJS) $(GAME_SHARED_OBJS)
 	$(CC) $(LDFLAGS) $(SHLIBLDFLAGS) -o $(BUILD_DIR)/$@ $(HLDLL_OBJS) $(HLWPN_OBJS) $(PM_OBJS) $(GAME_SHARED_OBJS)
@@ -165,7 +165,7 @@ $(GAME_SHARED_OBJ_DIR)/%.o : $(GAME_SHARED_SRC_DIR)/%.cpp
 	$(DO_GAME_SHARED_CC)
 
 clean:
-	-rm -rf $(GAME_SHARED_OBJ_DIR)
-	-rm -rf $(PM_OBJ_DIR)
-	-rm -rf $(HLWPN_OBJ_DIR)
-	-rm -rf $(HLDLL_OBJ_DIR)
+	rm -rf $(GAME_SHARED_OBJ_DIR)
+	rm -rf $(PM_OBJ_DIR)
+	rm -rf $(HLWPN_OBJ_DIR)
+	rm -rf $(HLDLL_OBJ_DIR)

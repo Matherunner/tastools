@@ -183,5 +183,5 @@ $(PM_SHARED_OBJ_DIR)/%.o : $(PM_SHARED_SRC_DIR)/%.c $(filter-out $(wildcard  $(P
 	$(DO_PM_SHARED_CC)
 
 clean:
-	-rm -rf $(HL1_OBJ_DIR)
-	-rm -f client.$(SHLIBEXT)
+	rm -rf $(HL1_OBJ_DIR)
+	rm -f client.$(SHLIBEXT)
