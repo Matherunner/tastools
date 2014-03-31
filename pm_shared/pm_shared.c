@@ -27,6 +27,11 @@
 #include <stdlib.h> // atoi
 #include <ctype.h>  // isspace
 
+#ifndef CLIENT_DLL
+#include "cvardef.h"
+extern cvar_t g_sv_taslog;
+#endif
+
 #ifdef CLIENT_DLL
 	// Spectator Mode
 	int		iJumpSpectator;

@@ -448,6 +448,8 @@ cvar_t	sk_player_leg1	= { "sk_player_leg1","1" };
 cvar_t	sk_player_leg2	= { "sk_player_leg2","1" };
 cvar_t	sk_player_leg3	= { "sk_player_leg3","1" };
 
+cvar_t g_sv_taslog = {"sv_taslog", "0", FCVAR_SERVER};
+
 // END Cvars for Skill Level settings
 
 // Register your console variables here
@@ -459,6 +461,8 @@ void GameDLLInit( void )
 	g_psv_gravity = CVAR_GET_POINTER( "sv_gravity" );
 	g_psv_aim = CVAR_GET_POINTER( "sv_aim" );
 	g_footsteps = CVAR_GET_POINTER( "mp_footsteps" );
+
+	CVAR_REGISTER(&g_sv_taslog);
 
 	CVAR_REGISTER (&displaysoundlist);
 	CVAR_REGISTER( &allow_spectators );
