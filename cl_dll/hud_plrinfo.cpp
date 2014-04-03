@@ -80,38 +80,41 @@ void CHudPlrInfo::DrawVelocity()
 	DrawConsoleString(10, line_height, numstr);
 	snprintf(numstr, sizeof(numstr), "V: %.8g", m_velocity[2]);
 	DrawConsoleString(10, line_height * 2, numstr);
+	int r, g, b;
+	UnpackRGB(r, g, b, RGB_YELLOWISH);
+	FillRGBA(10, (int)(line_height * 3.5) - 1, 100, 1, r, g, b, 255);
 }
 
 void CHudPlrInfo::DrawEntHealth()
 {
 	char numstr[30];
 	snprintf(numstr, sizeof(numstr), "EH: %.8g", m_entHealth);
-	DrawConsoleString(10, line_height * 3, numstr);
+	DrawConsoleString(10, line_height * 4, numstr);
 }
 
 void CHudPlrInfo::DrawPlaneZA()
 {
 	char numstr[30];
 	snprintf(numstr, sizeof(numstr), "ZA: %.8g", acos(m_planeNZ) * 180 / M_PI);
-	DrawConsoleString(10, line_height * 4, numstr);
+	DrawConsoleString(10, line_height * 5, numstr);
 }
 
 void CHudPlrInfo::DrawDistances()
 {
 	char numstr[30];
 	snprintf(numstr, sizeof(numstr), "HD: %.8g", hypot(m_dispVec[0], m_dispVec[1]));
-	DrawConsoleString(10, line_height * 5, numstr);
-	snprintf(numstr, sizeof(numstr), "VD: %.8g", m_dispVec[2]);
 	DrawConsoleString(10, line_height * 6, numstr);
+	snprintf(numstr, sizeof(numstr), "VD: %.8g", m_dispVec[2]);
+	DrawConsoleString(10, line_height * 7, numstr);
 }
 
 void CHudPlrInfo::DrawViewangles()
 {
 	char numstr[30];
 	snprintf(numstr, sizeof(numstr), "Y: %.8g", m_viewangles[1]);
-	DrawConsoleString(10, line_height * 7, numstr);
-	snprintf(numstr, sizeof(numstr), "P: %.8g", m_viewangles[0]);
 	DrawConsoleString(10, line_height * 8, numstr);
+	snprintf(numstr, sizeof(numstr), "P: %.8g", m_viewangles[0]);
+	DrawConsoleString(10, line_height * 9, numstr);
 }
 
 int CHudPlrInfo::Draw(float flTime)
