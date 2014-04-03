@@ -45,6 +45,8 @@ extern DLL_GLOBAL	BOOL	g_fDrawLines;
 int gEvilImpulse101;
 extern DLL_GLOBAL int		g_iSkillLevel, gDisplayTitle;
 extern cvar_t g_sv_taslog;
+extern float g_cheatHealth;
+extern float g_cheatArmor;
 
 
 BOOL gInitHUD = TRUE;
@@ -1852,6 +1854,17 @@ void CBasePlayer::PreThink(void)
 {
 	if (g_sv_taslog.string[0] != '0')
 		ALERT(at_console, "health %.8g %.8g\n", pev->health, pev->armorvalue);
+
+	if (g_cheatHealth != -1)
+	{
+		pev->health = g_cheatHealth;
+		g_cheatHealth = -1;
+	}
+	if (g_cheatArmor != -1)
+	{
+		pev->armorvalue = g_cheatArmor;
+		g_cheatArmor = -1;
+	}
 
 	int buttonsChanged = (m_afButtonLast ^ pev->button);	// These buttons have changed this frame
 	

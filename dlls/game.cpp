@@ -451,12 +451,28 @@ cvar_t	sk_player_leg3	= { "sk_player_leg3","1" };
 cvar_t g_sv_taslog = {"sv_taslog", "0", FCVAR_SERVER};
 cvar_t g_sv_bcap = {"sv_bcap", "1", FCVAR_SERVER};
 
+float g_cheatHealth = -1;
+float g_cheatArmor = -1;
+
+void cheatHealth()
+{
+	g_cheatHealth = fmax(atof(g_engfuncs.pfnCmd_Argv(1)), 0);
+}
+
+void cheatArmor()
+{
+	g_cheatArmor = fmax(atof(g_engfuncs.pfnCmd_Argv(1)), 0);
+}
+
 // END Cvars for Skill Level settings
 
 // Register your console variables here
 // This gets called one time when the game is initialied
 void GameDLLInit( void )
 {
+	g_engfuncs.pfnAddServerCommand("ch_health", cheatHealth);
+	g_engfuncs.pfnAddServerCommand("ch_armor", cheatArmor);
+
 	// Register cvars here:
 
 	g_psv_gravity = CVAR_GET_POINTER( "sv_gravity" );
