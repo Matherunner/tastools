@@ -4,6 +4,7 @@
 
 DECLARE_MESSAGE(m_PlrInfo, Velocity)
 DECLARE_MESSAGE(m_PlrInfo, EntHealth)
+DECLARE_MESSAGE(m_PlrInfo, PlaneNZ)
 
 extern float g_ColorYellow[3];
 static int line_height;
@@ -17,9 +18,11 @@ int CHudPlrInfo::Init()
 	GetConsoleStringSize("M", &tmpwidth, &line_height);
 	memset(m_velocity, 0, sizeof(m_velocity));
 	m_entHealth = 0;
+	m_planeNZ = 0;
 
 	HOOK_MESSAGE(Velocity);
 	HOOK_MESSAGE(EntHealth);
+	HOOK_MESSAGE(PlaneNZ);
 
 	return 1;
 }
@@ -40,6 +43,13 @@ int CHudPlrInfo::MsgFunc_EntHealth(const char *name, int size, void *buf)
 	return 1;
 }
 
+int CHudPlrInfo::MsgFunc_PlaneNZ(const char *name, int size, void *buf)
+{
+	BEGIN_READ(buf, size);
+	m_planeNZ = READ_FLOAT();
+	return 1;
+}
+
 void CHudPlrInfo::DrawVelocity()
 {
 	char numstr[30];
@@ -56,12 +66,20 @@ void CHudPlrInfo::DrawEntHealth()
 	DrawConsoleString(10, line_height * 3, numstr);
 }
 
+void CHudPlrInfo::DrawPlaneZA()
+{
+	char numstr[30];
+	snprintf(numstr, 30, "ZA: %.8g", acos(m_planeNZ) * 180 / M_PI);
+	DrawConsoleString(10, line_height * 4, numstr);
+}
+
 int CHudPlrInfo::Draw(float flTime)
 {
 	gEngfuncs.pfnDrawSetTextColor(g_ColorYellow[0], g_ColorYellow[1], g_ColorYellow[2]);
 
 	DrawVelocity();
 	DrawEntHealth();
+	DrawPlaneZA();
 
 	return 1;
 }

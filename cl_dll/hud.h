@@ -540,12 +540,15 @@ public:
 	int Draw(float flTime);
 	void DrawVelocity();
 	void DrawEntHealth();
+	void DrawPlaneZA();
 	int MsgFunc_Velocity(const char *name, int size, void *buf);
 	int MsgFunc_EntHealth(const char *name, int size, void *buf);
+	int MsgFunc_PlaneNZ(const char *name, int size, void *buf);
 
 private:
 	float m_velocity[3];
 	float m_entHealth;
+	float m_planeNZ;
 };
 
 //

@@ -192,6 +192,7 @@ int gmsgStatusValue = 0;
 
 int gmsgVelocity = 0;
 int gmsgEntHealth = 0;
+int gmsgPlaneNZ = 0;
 
 
 void LinkUserMessages( void )
@@ -204,6 +205,7 @@ void LinkUserMessages( void )
 
 	gmsgVelocity = REG_USER_MSG("Velocity", 12);
 	gmsgEntHealth = REG_USER_MSG("EntHealth", 4);
+	gmsgPlaneNZ = REG_USER_MSG("PlaneNZ", 4);
 
 	gmsgSelAmmo = REG_USER_MSG("SelAmmo", sizeof(SelAmmo));
 	gmsgCurWeapon = REG_USER_MSG("CurWeapon", 3);
@@ -2603,6 +2605,10 @@ void CBasePlayer::SendInfoToClient()
 		WRITE_LONG(*(int *)&pEntity->pev->health);
 	else
 		WRITE_LONG(0);
+	MESSAGE_END();
+
+	MESSAGE_BEGIN(MSG_ONE, gmsgPlaneNZ, NULL, pev);
+	WRITE_LONG(*(int *)&tr.vecPlaneNormal[2]);
 	MESSAGE_END();
 }
 
