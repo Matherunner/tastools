@@ -45,6 +45,7 @@ extern cvar_t *in_joystick;
 
 int	in_impulse	= 0;
 int	in_cancel	= 0;
+int g_bcap = 1;
 
 cvar_t	*m_pitch;
 cvar_t	*m_yaw;
@@ -667,6 +668,8 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 
 	if ( active && !Bench_Active() )
 	{
+		g_bcap = gEngfuncs.pfnGetCvarString("sv_bcap")[0] != '0';
+
 		//memset( viewangles, 0, sizeof( vec3_t ) );
 		//viewangles[ 0 ] = viewangles[ 1 ] = viewangles[ 2 ] = 0.0;
 		gEngfuncs.GetViewAngles( (float *)viewangles );

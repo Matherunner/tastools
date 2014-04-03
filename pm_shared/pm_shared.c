@@ -30,6 +30,9 @@
 #ifndef CLIENT_DLL
 #include "cvardef.h"
 extern cvar_t g_sv_taslog;
+extern cvar_t g_sv_bcap;
+#else
+extern int g_bcap;
 #endif
 
 #ifdef CLIENT_DLL
@@ -2588,7 +2591,12 @@ void PM_Jump (void)
 	// In the air now.
     pmove->onground = -1;
 
-	PM_PreventMegaBunnyJumping();
+#ifndef CLIENT_DLL
+	if (g_sv_bcap.string[0] != '0')
+#else
+	if (g_bcap)
+#endif
+		PM_PreventMegaBunnyJumping();
 
 	if ( tfc )
 	{
