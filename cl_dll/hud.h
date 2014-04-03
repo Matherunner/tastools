@@ -538,6 +538,14 @@ class CHudPlrInfo : CHudBase
 public:
 	int Init();
 	int Draw(float flTime);
+	void DrawVelocity();
+	void DrawEntHealth();
+	int MsgFunc_Velocity(const char *name, int size, void *buf);
+	int MsgFunc_EntHealth(const char *name, int size, void *buf);
+
+private:
+	float m_velocity[3];
+	float m_entHealth;
 };
 
 //

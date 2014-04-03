@@ -190,6 +190,8 @@ int gmsgTeamNames = 0;
 int gmsgStatusText = 0;
 int gmsgStatusValue = 0; 
 
+int gmsgVelocity = 0;
+int gmsgEntHealth = 0;
 
 
 void LinkUserMessages( void )
@@ -199,6 +201,9 @@ void LinkUserMessages( void )
 	{
 		return;
 	}
+
+	gmsgVelocity = REG_USER_MSG("Velocity", 12);
+	gmsgEntHealth = REG_USER_MSG("EntHealth", 4);
 
 	gmsgSelAmmo = REG_USER_MSG("SelAmmo", sizeof(SelAmmo));
 	gmsgCurWeapon = REG_USER_MSG("CurWeapon", 3);
@@ -2579,6 +2584,27 @@ void CBasePlayer :: UpdatePlayerSound ( void )
 	//ALERT ( at_console, "%d/%d\n", iVolume, m_iTargetVolume );
 }
 
+void CBasePlayer::SendInfoToClient()
+{
+	MESSAGE_BEGIN(MSG_ONE, gmsgVelocity, NULL, pev);
+	WRITE_LONG(*(int *)&pev->velocity[0]);
+	WRITE_LONG(*(int *)&pev->velocity[1]);
+	WRITE_LONG(*(int *)&pev->velocity[2]);
+	MESSAGE_END();
+
+	Vector vecSrc = Center() + pev->view_ofs;
+	UTIL_MakeVectors(pev->v_angle);
+	TraceResult tr;
+	UTIL_TraceLine(vecSrc, vecSrc + 8192 * gpGlobals->v_forward, dont_ignore_monsters, ENT(pev), &tr);
+
+	CBaseEntity *pEntity = CBaseEntity::Instance(tr.pHit);
+	MESSAGE_BEGIN(MSG_ONE, gmsgEntHealth, NULL, pev);
+	if (pEntity)
+		WRITE_LONG(*(int *)&pEntity->pev->health);
+	else
+		WRITE_LONG(0);
+	MESSAGE_END();
+}
 
 void CBasePlayer::PostThink()
 {
@@ -2587,6 +2613,8 @@ void CBasePlayer::PostThink()
 
 	if (!IsAlive())
 		goto pt_end;
+
+	SendInfoToClient();
 
 	// Handle Tank controlling
 	if ( m_pTank != NULL )
