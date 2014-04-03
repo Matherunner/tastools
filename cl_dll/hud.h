@@ -541,14 +541,20 @@ public:
 	void DrawVelocity();
 	void DrawEntHealth();
 	void DrawPlaneZA();
+	void DrawDistances();
+	void DrawViewangles();
 	int MsgFunc_Velocity(const char *name, int size, void *buf);
 	int MsgFunc_EntHealth(const char *name, int size, void *buf);
 	int MsgFunc_PlaneNZ(const char *name, int size, void *buf);
+	int MsgFunc_DispVec(const char *name, int size, void *buf);
+	int MsgFunc_Viewangles(const char *name, int size, void *buf);
 
 private:
 	float m_velocity[3];
 	float m_entHealth;
 	float m_planeNZ;
+	float m_dispVec[3];
+	float m_viewangles[2];
 };
 
 //
