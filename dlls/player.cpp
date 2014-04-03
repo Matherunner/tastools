@@ -44,7 +44,6 @@ extern DLL_GLOBAL BOOL		g_fGameOver;
 extern DLL_GLOBAL	BOOL	g_fDrawLines;
 int gEvilImpulse101;
 extern DLL_GLOBAL int		g_iSkillLevel, gDisplayTitle;
-extern cvar_t g_sv_taslog;
 extern float g_cheatHealth;
 extern float g_cheatArmor;
 
@@ -505,7 +504,7 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		flDamage = flNew;
 	}
 
-	if (g_sv_taslog.string[0] != '0')
+	if (CVAR_GET_STRING("sv_taslog")[0] != '0')
 		ALERT(at_console, "dmg %d %d ", (int)flDamage, bitsDamageType);
 
 	// this cast to INT is critical!!! If a player ends up with 0.5 health, the engine will get that
@@ -1852,7 +1851,7 @@ void CBasePlayer::UpdateStatusBar()
 
 void CBasePlayer::PreThink(void)
 {
-	if (g_sv_taslog.string[0] != '0')
+	if (CVAR_GET_STRING("sv_taslog")[0] != '0')
 		ALERT(at_console, "health %.8g %.8g\n", pev->health, pev->armorvalue);
 
 	if (g_cheatHealth != -1)
