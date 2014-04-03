@@ -54,6 +54,7 @@ extern int giPrecacheGrunt;
 extern int gmsgSayText;
 
 extern cvar_t allow_spectators;
+extern cvar_t g_sv_taslog;
 
 extern int g_teamplay;
 
@@ -747,7 +748,11 @@ void PlayerPreThink( edict_t *pEntity )
 	CBasePlayer *pPlayer = (CBasePlayer *)GET_PRIVATE(pEntity);
 
 	if (pPlayer)
+	{
+		if (g_sv_taslog.string[0] != '0')
+			ALERT(at_console, "prethink %u %.8g\n", g_ulFrameCount, gpGlobals->frametime);
 		pPlayer->PreThink( );
+	}
 }
 
 /*

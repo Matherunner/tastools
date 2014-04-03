@@ -35,6 +35,7 @@ extern DLL_GLOBAL int			g_iSkillLevel;
 
 extern Vector VecBModelOrigin( entvars_t* pevBModel );
 extern entvars_t *g_pevLastInflictor;
+extern cvar_t g_sv_taslog;
 
 #define GERMAN_GIB_COUNT		4
 #define	HUMAN_GIB_COUNT			6
@@ -877,6 +878,9 @@ int CBaseMonster :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker,
 	// todo: remove after combining shotgun blasts?
 	if ( IsPlayer() )
 	{
+		if (g_sv_taslog.string[0] != '0')
+			ALERT(at_console, "%.8g %.8g %.8g\n", vecDir.x, vecDir.y, vecDir.z);
+
 		if ( pevInflictor )
 			pev->dmg_inflictor = ENT(pevInflictor);
 
@@ -1091,6 +1095,11 @@ void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacke
 				if ( flAdjustedDamage < 0 )
 				{
 					flAdjustedDamage = 0;
+				}
+
+				if (g_sv_taslog.string[0] != '0' && pEntity->IsPlayer())
+				{
+					ALERT(at_console, "expld %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g\n", vecSrc.x, vecSrc.y, vecSrc.z, vecSpot.x, vecSpot.y, vecSpot.z, tr.vecEndPos.x, tr.vecEndPos.y, tr.vecEndPos.z);
 				}
 			
 				// ALERT( at_console, "hit %s\n", STRING( pEntity->pev->classname ) );

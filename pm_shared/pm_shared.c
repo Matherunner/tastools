@@ -158,6 +158,34 @@ static char grgchTextureType[CTEXTURESMAX];
 
 int g_onladder = 0;
 
+void PM_TasLog(int num)
+{
+#ifndef CLIENT_DLL
+	if (g_sv_taslog.string[0] == '0')
+		return;
+	if (num == 1)
+	{
+		pmove->Con_Printf(
+			"usercmd %d %d %.8g %.8g\n",
+			pmove->cmd.msec, pmove->cmd.buttons,
+			pmove->cmd.viewangles[0], pmove->cmd.viewangles[1]);
+		pmove->Con_Printf("fsu %.8g %.8g %.8g\n", pmove->cmd.forwardmove, pmove->cmd.sidemove, pmove->cmd.upmove);
+		pmove->Con_Printf("pos %.8g %.8g %.8g\n", pmove->origin[0], pmove->origin[1], pmove->origin[2]);
+		pmove->Con_Printf("fg %.8g %.8g\n", pmove->friction, pmove->gravity);
+		pmove->Con_Printf("pa %.8g %.8g\n", pmove->punchangle[0], pmove->punchangle[1]);
+	}
+	else if (num == 2)
+	{
+		pmove->Con_Printf("ntl %d %d\n", pmove->numtouch, g_onladder);
+	}
+	pmove->Con_Printf(
+		"pmove %d %.8g %.8g %.8g %.8g %.8g %.8g %d %d %d %d\n",
+		num, pmove->velocity[0], pmove->velocity[1], pmove->velocity[2],
+		pmove->basevelocity[0], pmove->basevelocity[1], pmove->basevelocity[2],
+		pmove->bInDuck, pmove->flags, pmove->onground, pmove->waterlevel);
+#endif
+}
+
 void PM_SwapTextures( int i, int j )
 {
 	char chTemp;
@@ -3322,8 +3350,9 @@ void PM_Move ( struct playermove_s *ppmove, int server )
 	assert( pm_shared_initialized );
 
 	pmove = ppmove;
-	
+	PM_TasLog(1);
 	PM_PlayerMove( ( server != 0 ) ? true : false );
+	PM_TasLog(2);
 
 	if ( pmove->onground != -1 )
 	{
