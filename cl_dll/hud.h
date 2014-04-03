@@ -533,6 +533,13 @@ private:
 	int 	m_nCompositeScore;
 };
 
+class CHudPlrInfo : CHudBase
+{
+public:
+	int Init();
+	int Draw(float flTime);
+};
+
 //
 //-----------------------------------------------------
 //
@@ -611,6 +618,7 @@ public:
 	CHudTextMessage m_TextMessage;
 	CHudStatusIcons m_StatusIcons;
 	CHudBenchmark	m_Benchmark;
+	CHudPlrInfo m_PlrInfo;
 
 	void Init( void );
 	void VidInit( void );
