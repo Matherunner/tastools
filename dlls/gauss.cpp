@@ -312,6 +312,11 @@ void CGauss::StartFire( void )
 	UTIL_MakeVectors( m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle );
 	Vector vecAiming = gpGlobals->v_forward;
 	Vector vecSrc = m_pPlayer->GetGunPosition( ); // + gpGlobals->v_up * -8 + gpGlobals->v_right * 8;
+
+#ifndef CLIENT_DLL
+	if (CVAR_GET_STRING("sv_sim_qg")[0] != '0')
+		m_pPlayer->m_flStartCharge = 0;
+#endif
 	
 	if ( gpGlobals->time - m_pPlayer->m_flStartCharge > GetFullChargeTime() )
 	{
