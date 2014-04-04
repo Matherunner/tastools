@@ -166,7 +166,10 @@ void CGauss::PrimaryAttack()
 	StartFire();
 	m_fInAttack = 0;
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.0;
-	m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.2;
+#ifndef CLIENT_DLL
+	if (CVAR_GET_STRING("sv_sim_grf")[0] == '0')
+#endif
+		m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.2;
 }
 
 void CGauss::SecondaryAttack()

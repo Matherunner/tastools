@@ -451,6 +451,7 @@ cvar_t	sk_player_leg3	= { "sk_player_leg3","1" };
 cvar_t g_sv_taslog = {"sv_taslog", "0", FCVAR_SERVER};
 cvar_t g_sv_bcap = {"sv_bcap", "1", FCVAR_SERVER};
 cvar_t sv_sim_qg = {"sv_sim_qg", "0", FCVAR_SERVER};
+cvar_t sv_sim_grf = {"sv_sim_grf", "0", FCVAR_SERVER};
 
 float g_cheatHealth = -1;
 float g_cheatArmor = -1;
@@ -483,6 +484,7 @@ void GameDLLInit( void )
 	CVAR_REGISTER(&g_sv_taslog);
 	CVAR_REGISTER(&g_sv_bcap);
 	CVAR_REGISTER(&sv_sim_qg);
+	CVAR_REGISTER(&sv_sim_grf);
 
 	CVAR_REGISTER (&displaysoundlist);
 	CVAR_REGISTER( &allow_spectators );
