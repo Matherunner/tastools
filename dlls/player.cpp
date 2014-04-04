@@ -195,6 +195,7 @@ int gmsgEntHealth = 0;
 int gmsgPlaneNZ = 0;
 int gmsgDispVec = 0;
 int gmsgViewangles = 0;
+int gmsgEntClassname = 0;
 
 
 void LinkUserMessages( void )
@@ -210,6 +211,7 @@ void LinkUserMessages( void )
 	gmsgPlaneNZ = REG_USER_MSG("PlaneNZ", 4);
 	gmsgDispVec = REG_USER_MSG("DispVec", 12);
 	gmsgViewangles = REG_USER_MSG("Viewangles", 8);
+	gmsgEntClassname = REG_USER_MSG("EntClassN", -1);
 
 	gmsgSelAmmo = REG_USER_MSG("SelAmmo", sizeof(SelAmmo));
 	gmsgCurWeapon = REG_USER_MSG("CurWeapon", 3);
@@ -2625,6 +2627,13 @@ void CBasePlayer::SendInfoToClient()
 	MESSAGE_BEGIN(MSG_ONE, gmsgViewangles, NULL, pev);
 	WRITE_LONG(*(int *)&pev->v_angle[0]);
 	WRITE_LONG(*(int *)&pev->v_angle[1]);
+	MESSAGE_END();
+
+	MESSAGE_BEGIN(MSG_ONE, gmsgEntClassname, NULL, pev);
+	if (pEntity)
+		WRITE_STRING(STRING(pEntity->pev->classname));
+	else
+		WRITE_STRING("N/A");
 	MESSAGE_END();
 }
 

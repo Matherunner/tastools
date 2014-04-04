@@ -7,6 +7,7 @@ DECLARE_MESSAGE(m_PlrInfo, EntHealth)
 DECLARE_MESSAGE(m_PlrInfo, PlaneNZ)
 DECLARE_MESSAGE(m_PlrInfo, DispVec)
 DECLARE_MESSAGE(m_PlrInfo, Viewangles)
+DECLARE_MESSAGE(m_PlrInfo, EntClassN)
 
 extern float g_ColorYellow[3];
 static int line_height;
@@ -23,12 +24,14 @@ int CHudPlrInfo::Init()
 	memset(m_viewangles, 0, sizeof(m_viewangles));
 	m_entHealth = 0;
 	m_planeNZ = 0;
+	m_entClassname = "N/A";
 
 	HOOK_MESSAGE(Velocity);
 	HOOK_MESSAGE(EntHealth);
 	HOOK_MESSAGE(PlaneNZ);
 	HOOK_MESSAGE(DispVec);
 	HOOK_MESSAGE(Viewangles);
+	HOOK_MESSAGE(EntClassN);
 
 	return 1;
 }
@@ -73,6 +76,13 @@ int CHudPlrInfo::MsgFunc_Viewangles(const char *name, int size, void *buf)
 	return 1;
 }
 
+int CHudPlrInfo::MsgFunc_EntClassN(const char *name, int size, void *buf)
+{
+	BEGIN_READ(buf, size);
+	m_entClassname = READ_STRING();
+	return 1;
+}
+
 void CHudPlrInfo::DrawVelocity()
 {
 	char numstr[30];
@@ -89,32 +99,41 @@ void CHudPlrInfo::DrawEntHealth()
 {
 	char numstr[30];
 	snprintf(numstr, sizeof(numstr), "EH: %.8g", m_entHealth);
-	DrawConsoleString(10, line_height * 4, numstr);
+	DrawConsoleString(10, line_height * 9, numstr);
 }
 
 void CHudPlrInfo::DrawPlaneZA()
 {
 	char numstr[30];
 	snprintf(numstr, sizeof(numstr), "ZA: %.8g", acos(m_planeNZ) * 180 / M_PI);
-	DrawConsoleString(10, line_height * 5, numstr);
+	DrawConsoleString(10, line_height * 4, numstr);
 }
 
 void CHudPlrInfo::DrawDistances()
 {
 	char numstr[30];
 	snprintf(numstr, sizeof(numstr), "HD: %.8g", hypot(m_dispVec[0], m_dispVec[1]));
-	DrawConsoleString(10, line_height * 6, numstr);
+	DrawConsoleString(10, line_height * 5, numstr);
 	snprintf(numstr, sizeof(numstr), "VD: %.8g", m_dispVec[2]);
-	DrawConsoleString(10, line_height * 7, numstr);
+	DrawConsoleString(10, line_height * 6, numstr);
 }
 
 void CHudPlrInfo::DrawViewangles()
 {
 	char numstr[30];
 	snprintf(numstr, sizeof(numstr), "Y: %.8g", m_viewangles[1]);
-	DrawConsoleString(10, line_height * 8, numstr);
+	DrawConsoleString(10, line_height * 7, numstr);
 	snprintf(numstr, sizeof(numstr), "P: %.8g", m_viewangles[0]);
-	DrawConsoleString(10, line_height * 9, numstr);
+	DrawConsoleString(10, line_height * 8, numstr);
+}
+
+void CHudPlrInfo::DrawEntClassname()
+{
+	char numstr[30];
+	int width, tmph;
+	GetConsoleStringSize("EC: ", &width, &tmph);
+	DrawConsoleString(10, line_height * 10, "CN: ");
+	DrawConsoleString(10 + width, line_height * 10, m_entClassname);
 }
 
 int CHudPlrInfo::Draw(float flTime)
@@ -126,6 +145,7 @@ int CHudPlrInfo::Draw(float flTime)
 	DrawPlaneZA();
 	DrawDistances();
 	DrawViewangles();
+	DrawEntClassname();
 
 	return 1;
 }
