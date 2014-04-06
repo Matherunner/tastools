@@ -544,6 +544,7 @@ public:
 	void DrawDistances();
 	void DrawViewangles();
 	void DrawEntClassname();
+	void DrawMyCrosshair();
 	int MsgFunc_Velocity(const char *name, int size, void *buf);
 	int MsgFunc_EntHealth(const char *name, int size, void *buf);
 	int MsgFunc_PlaneNZ(const char *name, int size, void *buf);

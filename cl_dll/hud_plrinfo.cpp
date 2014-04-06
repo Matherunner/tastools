@@ -136,6 +136,12 @@ void CHudPlrInfo::DrawEntClassname()
 	DrawConsoleString(10 + width, line_height * 10, m_entClassname);
 }
 
+void CHudPlrInfo::DrawMyCrosshair()
+{
+	const int chwidth = 4;
+	FillRGBA((ScreenWidth - chwidth) / 2, (ScreenHeight - chwidth) / 2, chwidth, chwidth, 255, 0, 0, 255);
+}
+
 int CHudPlrInfo::Draw(float flTime)
 {
 	gEngfuncs.pfnDrawSetTextColor(g_ColorYellow[0], g_ColorYellow[1], g_ColorYellow[2]);
@@ -146,6 +152,7 @@ int CHudPlrInfo::Draw(float flTime)
 	DrawDistances();
 	DrawViewangles();
 	DrawEntClassname();
+	DrawMyCrosshair();
 
 	return 1;
 }
