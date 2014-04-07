@@ -531,6 +531,7 @@ public:
 	void EXPORT CounterUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void EXPORT ToggleUse ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void InitTrigger( void );
+	void Precache() { return; }
 
 	virtual int	ObjectCaps( void ) { return CBaseToggle :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
 };
@@ -553,8 +554,8 @@ void CBaseTrigger::InitTrigger( )
 	SET_MODEL(ENT(pev), STRING(pev->model));    // set size and link into world
 	if ( CVAR_GET_FLOAT("showtriggers") == 0 )
 		SetBits( pev->effects, EF_NODRAW );
+	Precache();
 }
-
 
 //
 // Cache user-entity-field values until spawn is called.
@@ -585,6 +586,7 @@ class CTriggerHurt : public CBaseTrigger
 {
 public:
 	void Spawn( void );
+	void Precache();
 	void EXPORT RadiationThink( void );
 };
 
@@ -831,6 +833,15 @@ void CTriggerHurt :: Spawn( void )
 	UTIL_SetOrigin( pev, pev->origin );		// Link into the list
 }
 
+void CTriggerHurt::Precache()
+{
+	pev->rendermode = kRenderTransColor;
+	pev->renderfx = kRenderFxPulseFast;
+	pev->rendercolor = Vector(255, 0, 0);
+	pev->renderamt = 100;
+	pev->effects &= ~EF_NODRAW;
+}
+
 // trigger hurt that causes radiation will do a radius
 // check and set the player's geiger counter level
 // according to distance from center of trigger
@@ -1052,10 +1063,19 @@ class CTriggerMultiple : public CBaseTrigger
 {
 public:
 	void Spawn( void );
+	void Precache();
 };
 
 LINK_ENTITY_TO_CLASS( trigger_multiple, CTriggerMultiple );
 
+void CTriggerMultiple::Precache()
+{
+	pev->rendermode = kRenderTransColor;
+	pev->rendercolor = Vector(0, 0, 255);
+	pev->renderamt = 80;
+	pev->renderfx = kRenderFxPulseFast;
+	pev->effects &= ~EF_NODRAW;
+}
 
 void CTriggerMultiple :: Spawn( void )
 {
@@ -1101,6 +1121,7 @@ class CTriggerOnce : public CTriggerMultiple
 {
 public:
 	void Spawn( void );
+	void Precache();
 };
 
 LINK_ENTITY_TO_CLASS( trigger_once, CTriggerOnce );
@@ -1111,6 +1132,11 @@ void CTriggerOnce::Spawn( void )
 	CTriggerMultiple :: Spawn();
 }
 
+void CTriggerOnce::Precache()
+{
+	CTriggerMultiple::Precache();
+	pev->rendercolor = Vector(0, 255, 255);
+}
 
 
 void CBaseTrigger :: MultiTouch( CBaseEntity *pOther )
@@ -1327,6 +1353,7 @@ class CChangeLevel : public CBaseTrigger
 {
 public:
 	void Spawn( void );
+	void Precache();
 	void KeyValue( KeyValueData *pkvd );
 	void EXPORT UseChangeLevel ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	void EXPORT TriggerChangeLevel( void );
@@ -1361,6 +1388,15 @@ TYPEDESCRIPTION	CChangeLevel::m_SaveData[] =
 };
 
 IMPLEMENT_SAVERESTORE(CChangeLevel,CBaseTrigger);
+
+void CChangeLevel::Precache()
+{
+	pev->rendermode = kRenderTransColor;
+	pev->rendercolor = Vector(255, 0, 255);
+	pev->renderfx = kRenderFxPulseFastWide;
+	pev->renderamt = 180;
+	pev->effects &= ~EF_NODRAW;
+}
 
 //
 // Cache user-entity-field values until spawn is called.
@@ -1788,11 +1824,20 @@ class CTriggerPush : public CBaseTrigger
 {
 public:
 	void Spawn( void );
+	void Precache();
 	void KeyValue( KeyValueData *pkvd );
 	void Touch( CBaseEntity *pOther );
 };
 LINK_ENTITY_TO_CLASS( trigger_push, CTriggerPush );
 
+void CTriggerPush::Precache()
+{
+	pev->rendermode = kRenderTransColor;
+	pev->rendercolor = Vector(255, 255, 0);
+	pev->renderamt = 150;
+	pev->renderfx = kRenderFxPulseFast;
+	pev->effects &= ~EF_NODRAW;
+}
 
 void CTriggerPush :: KeyValue( KeyValueData *pkvd )
 {
@@ -1927,8 +1972,18 @@ class CTriggerTeleport : public CBaseTrigger
 {
 public:
 	void Spawn( void );
+	void Precache();
 };
 LINK_ENTITY_TO_CLASS( trigger_teleport, CTriggerTeleport );
+
+void CTriggerTeleport::Precache()
+{
+	pev->rendermode = kRenderTransColor;
+	pev->renderfx = kRenderFxPulseFastWide;
+	pev->rendercolor = Vector(0, 255, 0);
+	pev->renderamt = 150;
+	pev->effects &= ~EF_NODRAW;
+}
 
 void CTriggerTeleport :: Spawn( void )
 {
