@@ -47,6 +47,7 @@ extern DLL_GLOBAL int		g_iSkillLevel, gDisplayTitle;
 extern float g_cheatHealth;
 extern float g_cheatArmor;
 
+static Vector old_origin;
 
 BOOL gInitHUD = TRUE;
 
@@ -2594,10 +2595,12 @@ void CBasePlayer :: UpdatePlayerSound ( void )
 
 void CBasePlayer::SendInfoToClient()
 {
+	Vector vecActualVel = (pev->origin - old_origin) / gpGlobals->frametime;
+	old_origin = pev->origin;
 	MESSAGE_BEGIN(MSG_ONE, gmsgVelocity, NULL, pev);
-	WRITE_LONG(*(int *)&pev->velocity[0]);
-	WRITE_LONG(*(int *)&pev->velocity[1]);
-	WRITE_LONG(*(int *)&pev->velocity[2]);
+	WRITE_LONG(*(int *)&vecActualVel[0]);
+	WRITE_LONG(*(int *)&vecActualVel[1]);
+	WRITE_LONG(*(int *)&vecActualVel[2]);
 	MESSAGE_END();
 
 	Vector vecSrc = Center() + pev->view_ofs;
@@ -3058,6 +3061,8 @@ void CBasePlayer :: Precache( void )
 
 	if ( gInitHUD )
 		m_fInitHUD = TRUE;
+
+	old_origin = pev->origin;
 }
 
 
