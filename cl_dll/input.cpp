@@ -70,6 +70,7 @@ static float friction;
 static float stopspeed;
 
 static tas_cmd_t do_setpitch = {0, false};
+static tas_cmd_t do_setyaw = {0, false};
 
 extern playermove_t *pmove;
 
@@ -617,6 +618,11 @@ void IN_SetPitch()
 	do_setpitch.value = atof(gEngfuncs.Cmd_Argv(1));
 	do_setpitch.do_it = true;
 }
+void IN_SetYaw()
+{
+	do_setyaw.value = atof(gEngfuncs.Cmd_Argv(1));
+	do_setyaw.do_it = true;
+}
 
 /*
 ===============
@@ -843,9 +849,12 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 		speed = frametime;
 	}
 
+	if (do_setyaw.do_it)
+		viewangles[YAW] = do_setyaw.value;
+
 	if (!(in_strafe.state & 1))
 	{
-		if (strafetype == Nostrafe)
+		if (strafetype == Nostrafe && !do_setyaw.do_it)
 		{
 			viewangles[YAW] -= speed*cl_yawspeed->value*CL_KeyState (&in_right);
 			viewangles[YAW] += speed*cl_yawspeed->value*CL_KeyState (&in_left);
@@ -856,10 +865,18 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 		}
 		else if (strafetype == Linestrafe)
 		{
+			if (do_setyaw.do_it)
+			{
+				line_dir[0] = cos(do_setyaw.value * M_PI / 180);
+				line_dir[1] = sin(do_setyaw.value * M_PI / 180);
+			}
 			viewangles[YAW] = CL_TasLinestrafeYaw(viewangles[YAW], frametime);
 		}
 		viewangles[YAW] = anglemod(viewangles[YAW]);
 	}
+
+	do_setyaw.do_it = false;
+
 	if (in_klook.state & 1)
 	{
 		V_StopPitchDrift ();
@@ -1229,6 +1246,7 @@ void InitInput (void)
 	gEngfuncs.pfnAddCommand("+rightstrafe", IN_RightstrafeDown);
 	gEngfuncs.pfnAddCommand("-rightstrafe", IN_RightstrafeUp);
 	gEngfuncs.pfnAddCommand("tas_pitch", IN_SetPitch);
+	gEngfuncs.pfnAddCommand("tas_yaw", IN_SetYaw);
 
 	gEngfuncs.pfnAddCommand ("+moveup",IN_UpDown);
 	gEngfuncs.pfnAddCommand ("-moveup",IN_UpUp);
