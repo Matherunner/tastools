@@ -35,6 +35,12 @@ extern cl_enginefunc_t gEngfuncs;
 // Defined in pm_math.c
 extern "C" float anglemod( float a );
 
+typedef struct tas_cmd_s
+{
+	double value;
+	bool do_it;
+} tas_cmd_t;
+
 enum StrafeType
 {
 	Nostrafe = 0,
@@ -62,6 +68,8 @@ static float grndaccel;
 static float maxspeed;
 static float friction;
 static float stopspeed;
+
+static tas_cmd_t do_setpitch = {0, false};
 
 extern playermove_t *pmove;
 
@@ -604,6 +612,11 @@ void IN_LeftstrafeDown() { strafetype = Leftstrafe; }
 void IN_LeftstrafeUp() { strafetype = Nostrafe; }
 void IN_RightstrafeDown() { strafetype = Rightstrafe; }
 void IN_RightstrafeUp() { strafetype = Nostrafe; }
+void IN_SetPitch()
+{
+	do_setpitch.value = atof(gEngfuncs.Cmd_Argv(1));
+	do_setpitch.do_it = true;
+}
 
 /*
 ===============
@@ -867,6 +880,16 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 		viewangles[PITCH] = cl_pitchdown->value;
 	if (viewangles[PITCH] < -cl_pitchup->value)
 		viewangles[PITCH] = -cl_pitchup->value;
+
+	if (do_setpitch.do_it)
+	{
+		viewangles[PITCH] = do_setpitch.value;
+		if (viewangles[PITCH] > cl_pitchdown->value)
+			gEngfuncs.Cvar_SetValue("cl_pitchdown", viewangles[PITCH]);
+		if (viewangles[PITCH] < -cl_pitchup->value)
+			gEngfuncs.Cvar_SetValue("cl_pitchup", viewangles[PITCH]);
+		do_setpitch.do_it = false;
+	}
 
 	if (viewangles[ROLL] > 50)
 		viewangles[ROLL] = 50;
@@ -1205,6 +1228,7 @@ void InitInput (void)
 	gEngfuncs.pfnAddCommand("-leftstrafe", IN_LeftstrafeUp);
 	gEngfuncs.pfnAddCommand("+rightstrafe", IN_RightstrafeDown);
 	gEngfuncs.pfnAddCommand("-rightstrafe", IN_RightstrafeUp);
+	gEngfuncs.pfnAddCommand("tas_pitch", IN_SetPitch);
 
 	gEngfuncs.pfnAddCommand ("+moveup",IN_UpDown);
 	gEngfuncs.pfnAddCommand ("-moveup",IN_UpUp);
