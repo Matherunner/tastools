@@ -7,8 +7,10 @@
 #include "hud.h"
 #include "cl_util.h"
 #include "camera.h"
+#include "parsemsg.h"
 extern "C"
 {
+#include "pm_defs.h"
 #include "kbutton.h"
 }
 #include "cvardef.h"
@@ -32,6 +34,32 @@ extern cl_enginefunc_t gEngfuncs;
 
 // Defined in pm_math.c
 extern "C" float anglemod( float a );
+
+enum StrafeType
+{
+	Nostrafe = 0,
+	Linestrafe = 2,
+	Leftstrafe = -1,
+	Rightstrafe = 1,
+	Backpedal = 3,
+};
+
+static const double M_U = 360.0 / 65536;
+
+static vec3_t plr_velocity;
+static vec3_t plr_origin;
+static bool plr_onground;
+static bool plr_ducked;
+static float plr_friction;
+static StrafeType strafetype = Nostrafe;
+
+static float airaccel;
+static float grndaccel;
+static float maxspeed;
+static float friction;
+static float stopspeed;
+
+extern playermove_t *pmove;
 
 void IN_Init (void);
 void IN_Move ( float frametime, usercmd_t *cmd);
@@ -65,6 +93,9 @@ cvar_t	*cl_yawspeed;
 cvar_t	*cl_pitchspeed;
 cvar_t	*cl_anglespeedkey;
 cvar_t	*cl_vsmoothing;
+
+cvar_t *cl_mtype;
+
 /*
 ===============================================================================
 
@@ -539,6 +570,11 @@ void IN_MLookUp (void)
 	}
 }
 
+void IN_LeftstrafeDown() { strafetype = Leftstrafe; }
+void IN_LeftstrafeUp() { strafetype = Nostrafe; }
+void IN_RightstrafeDown() { strafetype = Rightstrafe; }
+void IN_RightstrafeUp() { strafetype = Nostrafe; }
+
 /*
 ===============
 CL_KeyState
@@ -595,6 +631,100 @@ float CL_KeyState (kbutton_t *key)
 	return val;
 }
 
+// This function modifies plr_velocity.
+double CL_ApplyFriction(float frametime, double speed)
+{
+	if (speed < 0.1)
+	{
+		return 0;
+	}
+	else if (speed < stopspeed)
+	{
+		double tmp = (stopspeed * friction * frametime) / speed;
+		if (tmp <= 1)
+		{
+			plr_velocity[0] -= plr_velocity[0] * tmp;
+			plr_velocity[1] -= plr_velocity[1] * tmp;
+			return speed * (1 - tmp);
+		}
+	}
+	else
+	{
+		double tmp = 1 - friction * frametime;
+		if (tmp >= 0)
+		{
+			plr_velocity[0] *= tmp;
+			plr_velocity[1] *= tmp;
+			return speed * tmp;
+		}
+	}
+	plr_velocity[0] = 0;
+	plr_velocity[1] = 0;
+	return 0;
+}
+
+float CL_TasStrafeYaw(float yaw, float frametime, bool right)
+{
+	double L, A;
+	double speed = hypot(plr_velocity[0], plr_velocity[1]);
+
+	if (plr_onground)
+	{
+		L = maxspeed;
+		A = grndaccel;
+		speed = CL_ApplyFriction(frametime, speed);
+	}
+	else
+	{
+		L = 30;
+		A = airaccel;
+	}
+
+	double dir = right ? 1 : -1;
+	double alpha[2];
+	double testspd[2];
+	double theta;
+	double tmp;
+
+	switch (cl_mtype->string[0]) {
+	case '1':
+		tmp = L - frametime * A * maxspeed;
+		if (tmp <= 0)
+			theta = 90;
+		else if (tmp <= speed)
+			theta = acos(tmp / speed) * 180 / M_PI;
+		else
+			theta = 0;
+		break;
+	default:
+		return yaw;
+	}
+
+	double beta = speed > 0.1 ? atan2(plr_velocity[1], plr_velocity[0]) * 180 / M_PI : yaw;
+	beta += dir * (90 - theta);
+	alpha[0] = beta;
+	alpha[1] = beta + (beta >= 0 ? M_U : -M_U);
+
+	for (int i = 0; i < 2; i++)
+	{
+		double ang = anglemod(alpha[i]) * M_PI / 180 - dir * M_PI_2;
+		double avec[2] = {cos(ang), sin(ang)};
+		double gamma2 = L - plr_velocity[0] * avec[0] - plr_velocity[1] * avec[1];
+		if (gamma2 < 0)
+		{
+			testspd[i] = speed;
+			continue;
+		}
+		double mu = fmin(frametime * maxspeed * A, gamma2);
+		testspd[i] = hypot(plr_velocity[0] + mu * avec[0], plr_velocity[1] + mu * avec[1]);
+	}
+
+	if (testspd[0] > testspd[1])
+		return alpha[0];
+	else
+		return alpha[1];
+}
+
 /*
 ================
 CL_AdjustAngles
@@ -618,8 +748,15 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 
 	if (!(in_strafe.state & 1))
 	{
-		viewangles[YAW] -= speed*cl_yawspeed->value*CL_KeyState (&in_right);
-		viewangles[YAW] += speed*cl_yawspeed->value*CL_KeyState (&in_left);
+		if (strafetype == Nostrafe)
+		{
+			viewangles[YAW] -= speed*cl_yawspeed->value*CL_KeyState (&in_right);
+			viewangles[YAW] += speed*cl_yawspeed->value*CL_KeyState (&in_left);
+		}
+		else if (strafetype == Leftstrafe || strafetype == Rightstrafe)
+		{
+			viewangles[YAW] = CL_TasStrafeYaw(viewangles[YAW], frametime, strafetype == Rightstrafe);
+		}
 		viewangles[YAW] = anglemod(viewangles[YAW]);
 	}
 	if (in_klook.state & 1)
@@ -669,6 +806,13 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 	if ( active && !Bench_Active() )
 	{
 		g_bcap = gEngfuncs.pfnGetCvarString("sv_bcap")[0] != '0';
+		airaccel = gEngfuncs.pfnGetCvarFloat("sv_airaccelerate");
+		grndaccel = gEngfuncs.pfnGetCvarFloat("sv_accelerate");
+		maxspeed = gEngfuncs.pfnGetCvarFloat("sv_maxspeed");
+		if (plr_ducked)
+			maxspeed *= 0.333;
+		friction = gEngfuncs.pfnGetCvarFloat("sv_friction") * plr_friction;
+		stopspeed = gEngfuncs.pfnGetCvarFloat("sv_stopspeed");
 
 		//memset( viewangles, 0, sizeof( vec3_t ) );
 		//viewangles[ 0 ] = viewangles[ 1 ] = viewangles[ 2 ] = 0.0;
@@ -680,26 +824,37 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 		
 		gEngfuncs.SetViewAngles( (float *)viewangles );
 
-		if ( in_strafe.state & 1 )
+		if ( in_strafe.state & 1 && strafetype == Nostrafe )
 		{
 			cmd->sidemove += cl_sidespeed->value * CL_KeyState (&in_right);
 			cmd->sidemove -= cl_sidespeed->value * CL_KeyState (&in_left);
 		}
 
-		cmd->sidemove += cl_sidespeed->value * CL_KeyState (&in_moveright);
-		cmd->sidemove -= cl_sidespeed->value * CL_KeyState (&in_moveleft);
+		if (strafetype == Nostrafe)
+		{
+			cmd->sidemove += cl_sidespeed->value * CL_KeyState (&in_moveright);
+			cmd->sidemove -= cl_sidespeed->value * CL_KeyState (&in_moveleft);
+		}
+		else if (strafetype == Leftstrafe)
+		{
+			cmd->sidemove = -cl_sidespeed->value;
+		}
+		else if (strafetype == Rightstrafe)
+		{
+			cmd->sidemove = cl_sidespeed->value;
+		}
 
 		cmd->upmove += cl_upspeed->value * CL_KeyState (&in_up);
 		cmd->upmove -= cl_upspeed->value * CL_KeyState (&in_down);
 
-		if ( !(in_klook.state & 1 ) )
+		if ( !(in_klook.state & 1 ) && strafetype == Nostrafe )
 		{	
 			cmd->forwardmove += cl_forwardspeed->value * CL_KeyState (&in_forward);
 			cmd->forwardmove -= cl_backspeed->value * CL_KeyState (&in_back);
 		}	
 
 		// adjust for speed key
-		if ( in_speed.state & 1 )
+		if ( in_speed.state & 1 && strafetype == Nostrafe )
 		{
 			cmd->forwardmove *= cl_movespeedkey->value;
 			cmd->sidemove *= cl_movespeedkey->value;
@@ -723,7 +878,8 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 		}
 
 		// Allow mice and other controllers to add their inputs
-		IN_Move ( frametime, cmd );
+		if (strafetype == Nostrafe)
+			IN_Move ( frametime, cmd );
 	}
 
 	cmd->impulse = in_impulse;
@@ -735,6 +891,20 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 	// set button and flag bits
 	//
 	cmd->buttons = CL_ButtonBits( 1 );
+	if (strafetype == Leftstrafe)
+	{
+		cmd->buttons &= ~IN_FORWARD;
+		cmd->buttons &= ~IN_BACK;
+		cmd->buttons &= ~IN_MOVERIGHT;
+		cmd->buttons |= IN_MOVELEFT;
+	}
+	else if (strafetype == Rightstrafe)
+	{
+		cmd->buttons &= ~IN_FORWARD;
+		cmd->buttons &= ~IN_BACK;
+		cmd->buttons |= IN_MOVERIGHT;
+		cmd->buttons &= ~IN_MOVELEFT;
+	}
 
 	// If they're in a modal dialog, ignore the attack button.
 	if(GetClientVoiceMgr()->IsInSquelchMode())
@@ -921,6 +1091,21 @@ void CL_ResetButtonBits( int bits )
 	}
 }
 
+int MsgFunc_TasPlrInfo(const char *, int size, void *buf)
+{
+	BEGIN_READ(buf, size);
+	plr_velocity[0] = READ_FLOAT();
+	plr_velocity[1] = READ_FLOAT();
+	plr_velocity[2] = READ_FLOAT();
+	plr_origin[0] = READ_FLOAT();
+	plr_origin[1] = READ_FLOAT();
+	plr_origin[2] = READ_FLOAT();
+	plr_onground = READ_BYTE();
+	plr_ducked = READ_BYTE();
+	plr_friction = READ_FLOAT();
+	return 1;
+}
+
 /*
 ============
 InitInput
@@ -928,6 +1113,12 @@ InitInput
 */
 void InitInput (void)
 {
+	gEngfuncs.pfnHookUserMsg("TasPlrInfo", MsgFunc_TasPlrInfo);
+	gEngfuncs.pfnAddCommand("+leftstrafe", IN_LeftstrafeDown);
+	gEngfuncs.pfnAddCommand("-leftstrafe", IN_LeftstrafeUp);
+	gEngfuncs.pfnAddCommand("+rightstrafe", IN_RightstrafeDown);
+	gEngfuncs.pfnAddCommand("-rightstrafe", IN_RightstrafeUp);
+
 	gEngfuncs.pfnAddCommand ("+moveup",IN_UpDown);
 	gEngfuncs.pfnAddCommand ("-moveup",IN_UpUp);
 	gEngfuncs.pfnAddCommand ("+movedown",IN_DownDown);
@@ -1001,6 +1192,8 @@ void InitInput (void)
 	m_yaw				= gEngfuncs.pfnRegisterVariable ( "m_yaw","0.022", FCVAR_ARCHIVE );
 	m_forward			= gEngfuncs.pfnRegisterVariable ( "m_forward","1", FCVAR_ARCHIVE );
 	m_side				= gEngfuncs.pfnRegisterVariable ( "m_side","0.8", FCVAR_ARCHIVE );
+
+	cl_mtype = gEngfuncs.pfnRegisterVariable("cl_mtype", "1", 0);
 
 	// Initialize third person camera controls.
 	CAM_Init();
