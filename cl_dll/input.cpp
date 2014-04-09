@@ -840,50 +840,33 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 	float	speed;
 	float	up, down;
 	
-	if (in_speed.state & 1)
-	{
-		speed = frametime * cl_anglespeedkey->value;
-	}
-	else
-	{
-		speed = frametime;
-	}
+	speed = frametime;
 
 	if (do_setyaw.do_it)
 		viewangles[YAW] = do_setyaw.value;
 
-	if (!(in_strafe.state & 1))
+	if (strafetype == Nostrafe && !do_setyaw.do_it)
 	{
-		if (strafetype == Nostrafe && !do_setyaw.do_it)
-		{
-			viewangles[YAW] -= speed*cl_yawspeed->value*CL_KeyState (&in_right);
-			viewangles[YAW] += speed*cl_yawspeed->value*CL_KeyState (&in_left);
-		}
-		else if (strafetype == Leftstrafe || strafetype == Rightstrafe)
-		{
-			viewangles[YAW] = CL_TasStrafeYaw(viewangles[YAW], frametime, strafetype == Rightstrafe);
-		}
-		else if (strafetype == Linestrafe)
-		{
-			if (do_setyaw.do_it)
-			{
-				line_dir[0] = cos(do_setyaw.value * M_PI / 180);
-				line_dir[1] = sin(do_setyaw.value * M_PI / 180);
-			}
-			viewangles[YAW] = CL_TasLinestrafeYaw(viewangles[YAW], frametime);
-		}
-		viewangles[YAW] = anglemod(viewangles[YAW]);
+		viewangles[YAW] -= speed*cl_yawspeed->value*CL_KeyState (&in_right);
+		viewangles[YAW] += speed*cl_yawspeed->value*CL_KeyState (&in_left);
 	}
+	else if (strafetype == Leftstrafe || strafetype == Rightstrafe)
+	{
+		viewangles[YAW] = CL_TasStrafeYaw(viewangles[YAW], frametime, strafetype == Rightstrafe);
+	}
+	else if (strafetype == Linestrafe)
+	{
+		if (do_setyaw.do_it)
+		{
+			line_dir[0] = cos(do_setyaw.value * M_PI / 180);
+			line_dir[1] = sin(do_setyaw.value * M_PI / 180);
+		}
+		viewangles[YAW] = CL_TasLinestrafeYaw(viewangles[YAW], frametime);
+	}
+	viewangles[YAW] = anglemod(viewangles[YAW]);
 
 	do_setyaw.do_it = false;
 
-	if (in_klook.state & 1)
-	{
-		V_StopPitchDrift ();
-		viewangles[PITCH] -= speed*cl_pitchspeed->value * CL_KeyState (&in_forward);
-		viewangles[PITCH] += speed*cl_pitchspeed->value * CL_KeyState (&in_back);
-	}
-	
 	up = CL_KeyState (&in_lookup);
 	down = CL_KeyState(&in_lookdown);
 	
@@ -952,12 +935,6 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 		
 		gEngfuncs.SetViewAngles( (float *)viewangles );
 
-		if ( in_strafe.state & 1 && strafetype == Nostrafe )
-		{
-			cmd->sidemove += cl_sidespeed->value * CL_KeyState (&in_right);
-			cmd->sidemove -= cl_sidespeed->value * CL_KeyState (&in_left);
-		}
-
 		if (strafetype == Nostrafe)
 		{
 			cmd->sidemove += cl_sidespeed->value * CL_KeyState (&in_moveright);
@@ -971,19 +948,11 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 		cmd->upmove += cl_upspeed->value * CL_KeyState (&in_up);
 		cmd->upmove -= cl_upspeed->value * CL_KeyState (&in_down);
 
-		if ( !(in_klook.state & 1 ) && strafetype == Nostrafe )
+		if (strafetype == Nostrafe)
 		{	
 			cmd->forwardmove += cl_forwardspeed->value * CL_KeyState (&in_forward);
 			cmd->forwardmove -= cl_backspeed->value * CL_KeyState (&in_back);
 		}	
-
-		// adjust for speed key
-		if ( in_speed.state & 1 && strafetype == Nostrafe )
-		{
-			cmd->forwardmove *= cl_movespeedkey->value;
-			cmd->sidemove *= cl_movespeedkey->value;
-			cmd->upmove *= cl_movespeedkey->value;
-		}
 
 		// clip to maxspeed
 		spd = gEngfuncs.GetClientMaxspeed();
@@ -1034,19 +1003,6 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 	// If they're in a modal dialog, ignore the attack button.
 	if(GetClientVoiceMgr()->IsInSquelchMode())
 		cmd->buttons &= ~IN_ATTACK;
-
-	// Using joystick?
-	if ( in_joystick->value )
-	{
-		if ( cmd->forwardmove > 0 )
-		{
-			cmd->buttons |= IN_FORWARD;
-		}
-		else if ( cmd->forwardmove < 0 )
-		{
-			cmd->buttons |= IN_BACK;
-		}
-	}
 
 	gEngfuncs.GetViewAngles( (float *)viewangles );
 	// Set current view angles.
