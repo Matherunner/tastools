@@ -52,6 +52,10 @@ static bool plr_onground;
 static bool plr_ducked;
 static float plr_friction;
 static StrafeType strafetype = Nostrafe;
+static int final_strafe_dir;
+
+static double line_origin[2] = {0, 0};
+static double line_dir[2] = {0, 0};
 
 static float airaccel;
 static float grndaccel;
@@ -570,6 +574,32 @@ void IN_MLookUp (void)
 	}
 }
 
+void IN_LinestrafeDown()
+{
+	strafetype = Linestrafe;
+
+	line_origin[0] = plr_origin[0];
+	line_origin[1] = plr_origin[1];
+	double speed = hypot(plr_velocity[0], plr_velocity[1]);
+	if (speed > 0.1)
+	{
+		line_dir[0] = plr_velocity[0] / speed;
+		line_dir[1] = plr_velocity[1] / speed;
+	}
+	else
+	{
+		float viewangles[3];
+		gEngfuncs.GetViewAngles(viewangles);
+		line_dir[0] = cos(viewangles[YAW] * M_PI / 180);
+		line_dir[1] = sin(viewangles[YAW] * M_PI / 180);
+	}
+}
+void IN_LinestrafeUp()
+{
+	strafetype = Nostrafe;
+	line_dir[0] = 0;
+	line_dir[1] = 0;
+}
 void IN_LeftstrafeDown() { strafetype = Leftstrafe; }
 void IN_LeftstrafeUp() { strafetype = Nostrafe; }
 void IN_RightstrafeDown() { strafetype = Rightstrafe; }
@@ -663,11 +693,9 @@ double CL_ApplyFriction(float frametime, double speed)
 	return 0;
 }
 
-float CL_TasStrafeYaw(float yaw, float frametime, bool right)
+void CL_GetLASpeed(double frametime, double &L, double &A, double &speed)
 {
-	double L, A;
-	double speed = hypot(plr_velocity[0], plr_velocity[1]);
-
+	speed = hypot(plr_velocity[0], plr_velocity[1]);
 	if (plr_onground)
 	{
 		L = maxspeed;
@@ -679,35 +707,32 @@ float CL_TasStrafeYaw(float yaw, float frametime, bool right)
 		L = 30;
 		A = airaccel;
 	}
+}
 
-	double dir = right ? 1 : -1;
+double CL_AngleOptimal(double speed, double L, float frametime, double M, double A)
+{
+	double tmp = L - frametime * A * M;
+	if (tmp <= 0)
+		return 90;
+	else if (tmp <= speed)
+		return acos(tmp / speed) * 180 / M_PI;
+	else
+		return 0;
+}
+
+float CL_TasStrafeYaw(float yaw, double speed, double L, float frametime, double A, double theta, bool right)
+{
+	final_strafe_dir = right ? 1 : -1;
 	double alpha[2];
 	double testspd[2];
-	double theta;
-	double tmp;
-
-	switch (cl_mtype->string[0]) {
-	case '1':
-		tmp = L - frametime * A * maxspeed;
-		if (tmp <= 0)
-			theta = 90;
-		else if (tmp <= speed)
-			theta = acos(tmp / speed) * 180 / M_PI;
-		else
-			theta = 0;
-		break;
-	default:
-		return yaw;
-	}
-
 	double beta = speed > 0.1 ? atan2(plr_velocity[1], plr_velocity[0]) * 180 / M_PI : yaw;
-	beta += dir * (90 - theta);
+	beta += final_strafe_dir * (90 - theta);
 	alpha[0] = beta;
 	alpha[1] = beta + (beta >= 0 ? M_U : -M_U);
 
 	for (int i = 0; i < 2; i++)
 	{
-		double ang = anglemod(alpha[i]) * M_PI / 180 - dir * M_PI_2;
+		double ang = anglemod(alpha[i]) * M_PI / 180 - final_strafe_dir * M_PI_2;
 		double avec[2] = {cos(ang), sin(ang)};
 		double gamma2 = L - plr_velocity[0] * avec[0] - plr_velocity[1] * avec[1];
 		if (gamma2 < 0)
@@ -723,6 +748,65 @@ float CL_TasStrafeYaw(float yaw, float frametime, bool right)
 		return alpha[0];
 	else
 		return alpha[1];
+}
+
+float CL_TasStrafeYaw(float yaw, float frametime, bool right)
+{
+	double L, A, speed;
+	CL_GetLASpeed(frametime, L, A, speed);
+
+	double theta;
+	if (cl_mtype->string[0] == '1')
+		theta = CL_AngleOptimal(speed, L, frametime, maxspeed, A);
+	else
+		return yaw;
+
+	return CL_TasStrafeYaw(yaw, speed, L, frametime, A, theta, right);
+}
+
+double CL_PointToLineDist(const double p[2])
+{
+	double tmp[2] = {line_origin[0] - p[0], line_origin[1] - p[1]};
+	double dotprod = line_dir[0] * tmp[0] + line_dir[1] * tmp[1];
+	return hypot(tmp[0] - line_dir[0] * dotprod, tmp[1] - line_dir[1] * dotprod);
+}
+
+float CL_TasLinestrafeYaw(float yaw, float frametime)
+{
+	double avec[2], ct, st, gamma2, mu, theta = 0;
+	double newpos_sright[2], newpos_sleft[2];
+	double L, A, speed;
+	CL_GetLASpeed(frametime, L, A, speed);
+
+	if (speed < 0.1)
+		goto fallback;
+
+	if (cl_mtype->string[0] == '1')
+		theta = CL_AngleOptimal(speed, L, frametime, maxspeed, A);
+	else
+		goto fallback;
+
+	ct = cos(theta * M_PI / 180);
+	st = sin(theta * M_PI / 180);
+	gamma2 = L - speed * ct;
+	if (gamma2 < 0)
+		goto fallback;
+	mu = fmin(frametime * maxspeed * A, gamma2) / speed;
+
+	avec[0] = (plr_velocity[0] * ct + plr_velocity[1] * st) * mu;
+	avec[1] = (-plr_velocity[0] * st + plr_velocity[1] * ct) * mu;
+	newpos_sright[0] = plr_origin[0] + frametime * (plr_velocity[0] + avec[0]);
+	newpos_sright[1] = plr_origin[1] + frametime * (plr_velocity[1] + avec[1]);
+
+	avec[0] = (plr_velocity[0] * ct - plr_velocity[1] * st) * mu;
+	avec[1] = (plr_velocity[0] * st + plr_velocity[1] * ct) * mu;
+	newpos_sleft[0] = plr_origin[0] + frametime * (plr_velocity[0] + avec[0]);
+	newpos_sleft[1] = plr_origin[1] + frametime * (plr_velocity[1] + avec[1]);
+
+	return CL_TasStrafeYaw(yaw, speed, L, frametime, A, theta, CL_PointToLineDist(newpos_sright) <= CL_PointToLineDist(newpos_sleft));
+
+fallback:
+	return CL_TasStrafeYaw(yaw, speed, L, frametime, A, theta, true);
 }
 
 /*
@@ -756,6 +840,10 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 		else if (strafetype == Leftstrafe || strafetype == Rightstrafe)
 		{
 			viewangles[YAW] = CL_TasStrafeYaw(viewangles[YAW], frametime, strafetype == Rightstrafe);
+		}
+		else if (strafetype == Linestrafe)
+		{
+			viewangles[YAW] = CL_TasLinestrafeYaw(viewangles[YAW], frametime);
 		}
 		viewangles[YAW] = anglemod(viewangles[YAW]);
 	}
@@ -835,13 +923,9 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 			cmd->sidemove += cl_sidespeed->value * CL_KeyState (&in_moveright);
 			cmd->sidemove -= cl_sidespeed->value * CL_KeyState (&in_moveleft);
 		}
-		else if (strafetype == Leftstrafe)
+		else
 		{
-			cmd->sidemove = -cl_sidespeed->value;
-		}
-		else if (strafetype == Rightstrafe)
-		{
-			cmd->sidemove = cl_sidespeed->value;
+			cmd->sidemove = final_strafe_dir * cl_sidespeed->value;
 		}
 
 		cmd->upmove += cl_upspeed->value * CL_KeyState (&in_up);
@@ -891,19 +975,20 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 	// set button and flag bits
 	//
 	cmd->buttons = CL_ButtonBits( 1 );
-	if (strafetype == Leftstrafe)
+	if (strafetype != Nostrafe)
 	{
 		cmd->buttons &= ~IN_FORWARD;
 		cmd->buttons &= ~IN_BACK;
-		cmd->buttons &= ~IN_MOVERIGHT;
-		cmd->buttons |= IN_MOVELEFT;
-	}
-	else if (strafetype == Rightstrafe)
-	{
-		cmd->buttons &= ~IN_FORWARD;
-		cmd->buttons &= ~IN_BACK;
-		cmd->buttons |= IN_MOVERIGHT;
-		cmd->buttons &= ~IN_MOVELEFT;
+		if (final_strafe_dir == 1)
+		{
+			cmd->buttons &= ~IN_MOVELEFT;
+			cmd->buttons |= IN_MOVERIGHT;
+		}
+		else
+		{
+			cmd->buttons |= IN_MOVELEFT;
+			cmd->buttons &= ~IN_MOVERIGHT;
+		}
 	}
 
 	// If they're in a modal dialog, ignore the attack button.
@@ -1114,6 +1199,8 @@ InitInput
 void InitInput (void)
 {
 	gEngfuncs.pfnHookUserMsg("TasPlrInfo", MsgFunc_TasPlrInfo);
+	gEngfuncs.pfnAddCommand("+linestrafe", IN_LinestrafeDown);
+	gEngfuncs.pfnAddCommand("-linestrafe", IN_LinestrafeUp);
 	gEngfuncs.pfnAddCommand("+leftstrafe", IN_LeftstrafeDown);
 	gEngfuncs.pfnAddCommand("-leftstrafe", IN_LeftstrafeUp);
 	gEngfuncs.pfnAddCommand("+rightstrafe", IN_RightstrafeDown);
