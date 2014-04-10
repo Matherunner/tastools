@@ -1,6 +1,7 @@
 #include "hud.h"
 #include "cl_util.h"
 #include "parsemsg.h"
+#include "pm_defs.h"
 
 DECLARE_MESSAGE(m_PlrInfo, Velocity)
 DECLARE_MESSAGE(m_PlrInfo, EntHealth)
@@ -11,6 +12,7 @@ DECLARE_MESSAGE(m_PlrInfo, EntClassN)
 
 extern float g_ColorYellow[3];
 static int line_height;
+extern playermove_t *pmove;
 
 int CHudPlrInfo::Init()
 {
@@ -142,6 +144,15 @@ void CHudPlrInfo::DrawMyCrosshair()
 	FillRGBA((ScreenWidth - chwidth) / 2, (ScreenHeight - chwidth) / 2, chwidth, chwidth, 255, 0, 0, 255);
 }
 
+void CHudPlrInfo::DrawDucked()
+{
+	int w, h;
+	GetConsoleStringSize("DS: ", &w, &h);
+	DrawConsoleString(10, line_height * 11, "DS: ");
+	if (pmove && (pmove->flags & FL_DUCKING))
+		FillRGBA(10 + w + 1, line_height * 11 + 1, line_height - 1, line_height - 1, 255, 0, 255, 255);
+}
+
 int CHudPlrInfo::Draw(float flTime)
 {
 	gEngfuncs.pfnDrawSetTextColor(g_ColorYellow[0], g_ColorYellow[1], g_ColorYellow[2]);
@@ -153,6 +164,7 @@ int CHudPlrInfo::Draw(float flTime)
 	DrawViewangles();
 	DrawEntClassname();
 	DrawMyCrosshair();
+	DrawDucked();
 
 	return 1;
 }
