@@ -717,19 +717,20 @@ double CL_ApplyFriction(float frametime, double speed)
 	return 0;
 }
 
-void CL_GetLASpeed(double frametime, double &L, double &A, double &speed)
+void CL_GetLASpeeds(double frametime, double &L, double &A, double &prevspeed, double &speed)
 {
-	speed = hypot(plr_velocity[0], plr_velocity[1]);
+	prevspeed = hypot(plr_velocity[0], plr_velocity[1]);
 	if (plr_onground)
 	{
 		L = maxspeed;
 		A = grndaccel;
-		speed = CL_ApplyFriction(frametime, speed);
+		speed = CL_ApplyFriction(frametime, prevspeed);
 	}
 	else
 	{
 		L = 30;
 		A = airaccel;
+		speed = prevspeed;
 	}
 }
 
@@ -742,6 +743,33 @@ double CL_AngleOptimal(double speed, double L, float frametime, double A)
 		return acos(tmp / speed) * 180 / M_PI;
 	else
 		return 0;
+}
+
+double CL_AngleConstSpeed(double prevspeed, double speed, double L, float frametime, double A)
+{
+	double tauMA = frametime * maxspeed * A;
+	if (plr_onground)
+	{
+		double tmpquo = (prevspeed * prevspeed - speed * speed) / tauMA;
+		double ct1top = 0.5 * (tmpquo - tauMA);
+		if (tauMA + tmpquo <= L + L && speed >= fabs(ct1top))
+			return acos(ct1top / speed) * 180 / M_PI;
+		else
+		{
+			double tmp = sqrt(prevspeed * prevspeed - L * L);
+			if (speed >= tmp)
+				return 180 * (1 - asin(tmp / speed) / M_PI);
+		}
+	}
+	else
+	{
+		tauMA *= 0.5;
+		if (tauMA <= L && speed >= tauMA)
+			return acos(-tauMA / speed) * 180 / M_PI;
+		else if (speed >= L)
+			return acos(-L / speed) * 180 / M_PI;
+	}
+	return CL_AngleOptimal(speed, L, frametime, A);
 }
 
 float CL_TasStrafeYaw(float yaw, double speed, double L, float frametime, double A, double theta, bool right)
@@ -763,10 +791,13 @@ float CL_TasStrafeYaw(float yaw, double speed, double L, float frametime, double
 		strafe_buttons = IN_BACK;
 		phi = 0;
 	}
-	double alpha[2];
-	double testspd[2];
 	double beta = speed > 0.1 ? atan2(plr_velocity[1], plr_velocity[0]) * 180 / M_PI : yaw;
 	beta += dir * (phi - theta);
+	if (cl_mtype->string[0] == '2')
+		return beta;
+
+	double alpha[2];
+	double testspd[2];
 	alpha[0] = beta;
 	alpha[1] = beta + (beta >= 0 ? M_U : -M_U);
 
@@ -792,12 +823,14 @@ float CL_TasStrafeYaw(float yaw, double speed, double L, float frametime, double
 
 float CL_TasStrafeYaw(float yaw, float frametime, bool right)
 {
-	double L, A, speed;
-	CL_GetLASpeed(frametime, L, A, speed);
+	double L, A, prevspeed, speed;
+	CL_GetLASpeeds(frametime, L, A, prevspeed, speed);
 
 	double theta;
 	if (cl_mtype->string[0] == '1')
 		theta = CL_AngleOptimal(speed, L, frametime, A);
+	else if (cl_mtype->string[0] == '2')
+		theta = CL_AngleConstSpeed(prevspeed, speed, L, frametime, A);
 	else
 		return yaw;
 
@@ -815,14 +848,16 @@ float CL_TasLinestrafeYaw(float yaw, float frametime)
 {
 	double avec[2], ct, st, gamma2, mu, theta = 0;
 	double newpos_sright[2], newpos_sleft[2];
-	double L, A, speed;
-	CL_GetLASpeed(frametime, L, A, speed);
+	double L, A, prevspeed, speed;
+	CL_GetLASpeeds(frametime, L, A, prevspeed, speed);
 
 	if (speed < 0.1)
 		goto fallback;
 
 	if (cl_mtype->string[0] == '1')
 		theta = CL_AngleOptimal(speed, L, frametime, A);
+	else if (cl_mtype->string[0] == '2')
+		theta = CL_AngleConstSpeed(prevspeed, speed, L, frametime, A);
 	else
 		goto fallback;
 
