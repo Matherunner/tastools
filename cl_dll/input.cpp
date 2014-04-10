@@ -610,6 +610,14 @@ void IN_LinestrafeUp()
 	line_dir[0] = 0;
 	line_dir[1] = 0;
 }
+void IN_BackpedalDown()
+{
+	strafetype = Backpedal;
+}
+void IN_BackpedalUp()
+{
+	strafetype = Nostrafe;
+}
 void IN_LeftstrafeDown() { strafetype = Leftstrafe; }
 void IN_LeftstrafeUp() { strafetype = Nostrafe; }
 void IN_RightstrafeDown() { strafetype = Rightstrafe; }
@@ -893,6 +901,17 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 		}
 		viewangles[YAW] = CL_TasLinestrafeYaw(viewangles[YAW], frametime);
 	}
+	else if (strafetype == Backpedal)
+	{
+		strafe_buttons = IN_BACK;
+		viewangles[YAW] = atan2(plr_velocity[1], plr_velocity[0]) * 180 / M_PI;
+		float frac = viewangles[YAW] / M_U;
+		frac -= trunc(frac);
+		if (frac > 0.5)
+			viewangles[YAW] += M_U;
+		else if (frac < -0.5)
+			viewangles[YAW] -= M_U;
+	}
 	viewangles[YAW] = anglemod(viewangles[YAW]);
 
 	do_setyaw.do_it = false;
@@ -970,6 +989,8 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 		{
 			cmd->sidemove += cl_sidespeed->value * CL_KeyState (&in_moveright);
 			cmd->sidemove -= cl_sidespeed->value * CL_KeyState (&in_moveleft);
+			cmd->forwardmove += cl_forwardspeed->value * CL_KeyState (&in_forward);
+			cmd->forwardmove -= cl_backspeed->value * CL_KeyState (&in_back);
 		}
 		else
 		{
@@ -979,17 +1000,15 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 				cmd->sidemove = -cl_sidespeed->value;
 
 			if (strafe_buttons & IN_BACK)
+			{
 				cmd->forwardmove = cl_backspeed->value;
+				if (strafetype == Backpedal)
+					cmd->forwardmove = -cmd->forwardmove;
+			}
 		}
 
 		cmd->upmove += cl_upspeed->value * CL_KeyState (&in_up);
 		cmd->upmove -= cl_upspeed->value * CL_KeyState (&in_down);
-
-		if (strafetype == Nostrafe)
-		{	
-			cmd->forwardmove += cl_forwardspeed->value * CL_KeyState (&in_forward);
-			cmd->forwardmove -= cl_backspeed->value * CL_KeyState (&in_back);
-		}	
 
 		// clip to maxspeed
 		spd = gEngfuncs.GetClientMaxspeed();
@@ -1224,6 +1243,8 @@ void InitInput (void)
 	gEngfuncs.pfnHookUserMsg("TasPlrInfo", MsgFunc_TasPlrInfo);
 	gEngfuncs.pfnAddCommand("+linestrafe", IN_LinestrafeDown);
 	gEngfuncs.pfnAddCommand("-linestrafe", IN_LinestrafeUp);
+	gEngfuncs.pfnAddCommand("+backpedal", IN_BackpedalDown);
+	gEngfuncs.pfnAddCommand("-backpedal", IN_BackpedalUp);
 	gEngfuncs.pfnAddCommand("+leftstrafe", IN_LeftstrafeDown);
 	gEngfuncs.pfnAddCommand("-leftstrafe", IN_LeftstrafeUp);
 	gEngfuncs.pfnAddCommand("+rightstrafe", IN_RightstrafeDown);
