@@ -733,9 +733,9 @@ void CL_GetLASpeed(double frametime, double &L, double &A, double &speed)
 	}
 }
 
-double CL_AngleOptimal(double speed, double L, float frametime, double M, double A)
+double CL_AngleOptimal(double speed, double L, float frametime, double A)
 {
-	double tmp = L - frametime * A * M;
+	double tmp = L - frametime * A * maxspeed;
 	if (tmp <= 0)
 		return 90;
 	else if (tmp <= speed)
@@ -797,7 +797,7 @@ float CL_TasStrafeYaw(float yaw, float frametime, bool right)
 
 	double theta;
 	if (cl_mtype->string[0] == '1')
-		theta = CL_AngleOptimal(speed, L, frametime, maxspeed, A);
+		theta = CL_AngleOptimal(speed, L, frametime, A);
 	else
 		return yaw;
 
@@ -822,7 +822,7 @@ float CL_TasLinestrafeYaw(float yaw, float frametime)
 		goto fallback;
 
 	if (cl_mtype->string[0] == '1')
-		theta = CL_AngleOptimal(speed, L, frametime, maxspeed, A);
+		theta = CL_AngleOptimal(speed, L, frametime, A);
 	else
 		goto fallback;
 
