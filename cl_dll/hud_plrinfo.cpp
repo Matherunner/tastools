@@ -133,7 +133,7 @@ void CHudPlrInfo::DrawEntClassname()
 {
 	char numstr[30];
 	int width, tmph;
-	GetConsoleStringSize("EC: ", &width, &tmph);
+	GetConsoleStringSize("CN: ", &width, &tmph);
 	DrawConsoleString(10, line_height * 10, "CN: ");
 	DrawConsoleString(10 + width, line_height * 10, m_entClassname);
 }
