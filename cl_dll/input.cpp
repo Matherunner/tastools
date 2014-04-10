@@ -71,6 +71,7 @@ static float stopspeed;
 
 static tas_cmd_t do_setpitch = {0, false};
 static tas_cmd_t do_setyaw = {0, false};
+static tas_cmd_t do_olsshift = {0, false};
 
 extern playermove_t *pmove;
 
@@ -623,6 +624,11 @@ void IN_SetYaw()
 	do_setyaw.value = atof(gEngfuncs.Cmd_Argv(1));
 	do_setyaw.do_it = true;
 }
+void IN_OLSShift()
+{
+	do_olsshift.value = atof(gEngfuncs.Cmd_Argv(1));
+	do_olsshift.do_it = true;
+}
 
 /*
 ===============
@@ -821,6 +827,13 @@ float CL_TasLinestrafeYaw(float yaw, float frametime)
 	else
 		goto fallback;
 
+	if (do_olsshift.do_it)
+	{
+		line_origin[0] += do_olsshift.value * line_dir[1];
+		line_origin[1] -= do_olsshift.value * line_dir[0];
+		do_olsshift.do_it = false;
+	}
+
 	ct = cos(theta * M_PI / 180);
 	st = sin(theta * M_PI / 180);
 	gamma2 = L - speed * ct;
@@ -883,6 +896,7 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 	viewangles[YAW] = anglemod(viewangles[YAW]);
 
 	do_setyaw.do_it = false;
+	do_olsshift.do_it = false;
 
 	up = CL_KeyState (&in_lookup);
 	down = CL_KeyState(&in_lookdown);
@@ -1216,6 +1230,7 @@ void InitInput (void)
 	gEngfuncs.pfnAddCommand("-rightstrafe", IN_RightstrafeUp);
 	gEngfuncs.pfnAddCommand("tas_pitch", IN_SetPitch);
 	gEngfuncs.pfnAddCommand("tas_yaw", IN_SetYaw);
+	gEngfuncs.pfnAddCommand("tas_olsshift", IN_OLSShift);
 
 	gEngfuncs.pfnAddCommand ("+moveup",IN_UpDown);
 	gEngfuncs.pfnAddCommand ("-moveup",IN_UpUp);
