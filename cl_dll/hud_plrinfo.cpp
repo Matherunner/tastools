@@ -13,6 +13,7 @@ DECLARE_MESSAGE(m_PlrInfo, EntClassN)
 extern float g_ColorYellow[3];
 static int line_height;
 extern playermove_t *pmove;
+extern StrafeType strafetype;
 
 int CHudPlrInfo::Init()
 {
@@ -153,6 +154,33 @@ void CHudPlrInfo::DrawDucked()
 		FillRGBA(10 + w + 1, line_height * 11 + 1, line_height - 1, line_height - 1, 255, 0, 255, 255);
 }
 
+void CHudPlrInfo::DrawStrafetype()
+{
+	char dispstr[7], c;
+	switch (strafetype) {
+	case Rightstrafe:
+		c = 'R';
+		break;
+	case Leftstrafe:
+		c = 'L';
+		break;
+	case Linestrafe:
+		c = 'F';
+		break;
+	case Backpedal:
+		c = 'B';
+		break;
+	default:
+		c = '-';
+	}
+	snprintf(dispstr, sizeof(dispstr), "ST: %c", c);
+	if (c != '-')
+		gEngfuncs.pfnDrawSetTextColor(0, 1, 0);
+	DrawConsoleString(10, line_height * 12, dispstr);
+	if (c != '-')
+		gEngfuncs.pfnDrawSetTextColor(g_ColorYellow[0], g_ColorYellow[1], g_ColorYellow[2]);
+}
+
 int CHudPlrInfo::Draw(float flTime)
 {
 	gEngfuncs.pfnDrawSetTextColor(g_ColorYellow[0], g_ColorYellow[1], g_ColorYellow[2]);
@@ -165,6 +193,7 @@ int CHudPlrInfo::Draw(float flTime)
 	DrawEntClassname();
 	DrawMyCrosshair();
 	DrawDucked();
+	DrawStrafetype();
 
 	return 1;
 }

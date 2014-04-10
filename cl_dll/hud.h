@@ -546,6 +546,7 @@ public:
 	void DrawEntClassname();
 	void DrawMyCrosshair();
 	void DrawDucked();
+	void DrawStrafetype();
 	int MsgFunc_Velocity(const char *name, int size, void *buf);
 	int MsgFunc_EntHealth(const char *name, int size, void *buf);
 	int MsgFunc_PlaneNZ(const char *name, int size, void *buf);

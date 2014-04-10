@@ -194,3 +194,12 @@ inline void UnpackRGB(int &r, int &g, int &b, unsigned long ulRGB)\
 }
 
 HSPRITE LoadSprite(const char *pszName);
+
+enum StrafeType
+{
+	Nostrafe = 0,
+	Linestrafe = 2,
+	Leftstrafe = -1,
+	Rightstrafe = 1,
+	Backpedal = 3,
+};

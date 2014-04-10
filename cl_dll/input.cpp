@@ -41,15 +41,6 @@ typedef struct tas_cmd_s
 	bool do_it;
 } tas_cmd_t;
 
-enum StrafeType
-{
-	Nostrafe = 0,
-	Linestrafe = 2,
-	Leftstrafe = -1,
-	Rightstrafe = 1,
-	Backpedal = 3,
-};
-
 static const double M_U = 360.0 / 65536;
 
 static vec3_t plr_velocity;
@@ -57,7 +48,7 @@ static vec3_t plr_origin;
 static bool plr_onground;
 static bool plr_ducked;
 static float plr_friction;
-static StrafeType strafetype = Nostrafe;
+StrafeType strafetype = Nostrafe;
 static unsigned short strafe_buttons;
 
 static double line_origin[2] = {0, 0};
