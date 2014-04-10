@@ -58,7 +58,7 @@ static bool plr_onground;
 static bool plr_ducked;
 static float plr_friction;
 static StrafeType strafetype = Nostrafe;
-static int final_strafe_dir;
+static unsigned short strafe_buttons;
 
 static double line_origin[2] = {0, 0};
 static double line_dir[2] = {0, 0};
@@ -741,17 +741,33 @@ double CL_AngleOptimal(double speed, double L, float frametime, double M, double
 
 float CL_TasStrafeYaw(float yaw, double speed, double L, float frametime, double A, double theta, bool right)
 {
-	final_strafe_dir = right ? 1 : -1;
+	double dir = right ? 1 : -1;
+	double phi;
+	if (theta >= 67.5)
+	{
+		strafe_buttons = right ? IN_MOVERIGHT : IN_MOVELEFT;
+		phi = 90;
+	}
+	else if (22.5 < theta && theta < 67.5)
+	{
+		strafe_buttons = (right ? IN_MOVERIGHT : IN_MOVELEFT) | IN_BACK;
+		phi = 45;
+	}
+	else
+	{
+		strafe_buttons = IN_BACK;
+		phi = 0;
+	}
 	double alpha[2];
 	double testspd[2];
 	double beta = speed > 0.1 ? atan2(plr_velocity[1], plr_velocity[0]) * 180 / M_PI : yaw;
-	beta += final_strafe_dir * (90 - theta);
+	beta += dir * (phi - theta);
 	alpha[0] = beta;
 	alpha[1] = beta + (beta >= 0 ? M_U : -M_U);
 
 	for (int i = 0; i < 2; i++)
 	{
-		double ang = anglemod(alpha[i]) * M_PI / 180 - final_strafe_dir * M_PI_2;
+		double ang = (anglemod(alpha[i]) - phi * dir) * M_PI / 180;
 		double avec[2] = {cos(ang), sin(ang)};
 		double gamma2 = L - plr_velocity[0] * avec[0] - plr_velocity[1] * avec[1];
 		if (gamma2 < 0)
@@ -809,8 +825,9 @@ float CL_TasLinestrafeYaw(float yaw, float frametime)
 	st = sin(theta * M_PI / 180);
 	gamma2 = L - speed * ct;
 	if (gamma2 < 0)
-		goto fallback;
-	mu = fmin(frametime * maxspeed * A, gamma2) / speed;
+		mu = 0;
+	else
+		mu = fmin(frametime * maxspeed * A, gamma2) / speed;
 
 	avec[0] = (plr_velocity[0] * ct + plr_velocity[1] * st) * mu;
 	avec[1] = (-plr_velocity[0] * st + plr_velocity[1] * ct) * mu;
@@ -942,7 +959,13 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 		}
 		else
 		{
-			cmd->sidemove = final_strafe_dir * cl_sidespeed->value;
+			if (strafe_buttons & IN_MOVERIGHT)
+				cmd->sidemove = cl_sidespeed->value;
+			else if (strafe_buttons & IN_MOVELEFT)
+				cmd->sidemove = -cl_sidespeed->value;
+
+			if (strafe_buttons & IN_BACK)
+				cmd->forwardmove = cl_backspeed->value;
 		}
 
 		cmd->upmove += cl_upspeed->value * CL_KeyState (&in_up);
@@ -987,17 +1010,7 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 	if (strafetype != Nostrafe)
 	{
 		cmd->buttons &= ~IN_FORWARD;
-		cmd->buttons &= ~IN_BACK;
-		if (final_strafe_dir == 1)
-		{
-			cmd->buttons &= ~IN_MOVELEFT;
-			cmd->buttons |= IN_MOVERIGHT;
-		}
-		else
-		{
-			cmd->buttons |= IN_MOVELEFT;
-			cmd->buttons &= ~IN_MOVERIGHT;
-		}
+		cmd->buttons |= (strafe_buttons & IN_BACK) | (strafe_buttons & IN_MOVERIGHT) | (strafe_buttons & IN_MOVELEFT);
 	}
 
 	// If they're in a modal dialog, ignore the attack button.
