@@ -63,6 +63,7 @@ static tas_cmd_t do_olsshift = {0, false};
 static int tas_cjmp = 0;
 static int tas_dtap = 0;
 static int tas_dwj = 0;
+static int tas_lgagst = 0;
 
 extern playermove_t *pmove;
 
@@ -640,6 +641,10 @@ void IN_DuckWhenJump()
 {
 	tas_dwj = atoi(gEngfuncs.Cmd_Argv(1));
 }
+void IN_LGAGST()
+{
+	tas_lgagst = atoi(gEngfuncs.Cmd_Argv(1));
+}
 
 /*
 ===============
@@ -782,6 +787,22 @@ double CL_AngleConstSpeed(double prevspeed, double speed, double L, double A)
 			return acos(-L / speed) * 180 / M_PI;
 	}
 	return CL_AngleOptimal(speed, L, A);
+}
+
+bool CL_IsAirAccelGreater()
+{
+	double speed_air = hypot(pmove->velocity[0], pmove->velocity[1]);
+	double speed_grnd = speed_air;
+	if (speed_air >= 0.1)
+		speed_grnd *= fmax(1 - fmax(1, stopspeed / speed_air) * friction * pmove->frametime, 0);
+	double ctheta_air = cos(CL_AngleOptimal(speed_air, 30, airaccel) * M_PI / 180);
+	double ctheta_grnd = cos(CL_AngleOptimal(speed_grnd, maxspeed, grndaccel) * M_PI / 180);
+	double mu_air = fmin(pmove->frametime * maxspeed * airaccel, 30 - speed_air * ctheta_air);
+	double mu_grnd = fmin(pmove->frametime * maxspeed * grndaccel, maxspeed - speed_grnd * ctheta_grnd);
+	// Square roots are unnecessary here
+	speed_air = speed_air * speed_air + mu_air * mu_air + 2 * speed_air * mu_air * ctheta_air;
+	speed_grnd = speed_grnd * speed_grnd + mu_grnd * mu_grnd + 2 * speed_grnd * mu_grnd * ctheta_grnd;
+	return speed_air >= speed_grnd;
 }
 
 float CL_TasStrafeYaw(float yaw, double speed, double L, double A, double theta, bool right)
@@ -1075,10 +1096,37 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 		in_duck.state &= ~(8 + 16);
 
 		PM_CatagorizePosition();
+
+		int old_tas_dtap;
+		int old_tas_cjmp;
+		bool lg_prevented = false;
+		// tas_lgagst only makes sense when optimal strafing on the ground
+		if (tas_lgagst && cl_mtype->string[0] == '1' && strafetype != Nostrafe && pmove->onground != -1)
+		{
+			if (CL_IsAirAccelGreater())
+			{
+				tas_lgagst--;
+			}
+			else
+			{
+				old_tas_dtap = tas_dtap;
+				old_tas_cjmp = tas_cjmp;
+				tas_dtap = 0;
+				tas_cjmp = 0;
+				lg_prevented = true;
+			}
+		}
+
 		if (tas_dtap)
 			CL_DuckTap();
 		if (!(in_duck.state & (8 + 16)))
 			CL_HandleJump();
+
+		if (lg_prevented)
+		{
+			tas_dtap = old_tas_dtap;
+			tas_cjmp = old_tas_cjmp;
+		}
 
 		//memset( viewangles, 0, sizeof( vec3_t ) );
 		//viewangles[ 0 ] = viewangles[ 1 ] = viewangles[ 2 ] = 0.0;
@@ -1368,6 +1416,7 @@ void InitInput (void)
 	gEngfuncs.pfnAddCommand("tas_cjmp", IN_ContJump);
 	gEngfuncs.pfnAddCommand("tas_dtap", IN_DuckTap);
 	gEngfuncs.pfnAddCommand("tas_dwj", IN_DuckWhenJump);
+	gEngfuncs.pfnAddCommand("tas_lgagst", IN_LGAGST);
 
 	gEngfuncs.pfnAddCommand ("+moveup",IN_UpDown);
 	gEngfuncs.pfnAddCommand ("-moveup",IN_UpUp);
