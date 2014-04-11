@@ -62,6 +62,7 @@ static tas_cmd_t do_setyaw = {0, false};
 static tas_cmd_t do_olsshift = {0, false};
 static int tas_cjmp = 0;
 static int tas_dtap = 0;
+static int tas_dwj = 0;
 
 extern playermove_t *pmove;
 
@@ -635,6 +636,10 @@ void IN_DuckTap()
 {
 	tas_dtap = atoi(gEngfuncs.Cmd_Argv(1));
 }
+void IN_DuckWhenJump()
+{
+	tas_dwj = atoi(gEngfuncs.Cmd_Argv(1));
+}
 
 /*
 ===============
@@ -1015,8 +1020,15 @@ void CL_DuckTap()
 
 void CL_HandleJump()
 {
-	if (pmove->flags & FL_DUCKING && !(in_duck.state & 1))
+	if (tas_dwj && pmove->onground != -1 && (in_jump.state & 1 || tas_cjmp))
+	{
+		tas_dwj--;
+		in_duck.state |= 8;
+	}
+	else if (pmove->flags & FL_DUCKING && !(in_duck.state & 1))
+	{
 		PM_UnDuck();
+	}
 	if (pmove->onground == -1 || pmove->oldbuttons & IN_JUMP)
 		return;
 	if (in_jump.state & 1)
@@ -1355,6 +1367,7 @@ void InitInput (void)
 	gEngfuncs.pfnAddCommand("tas_olsshift", IN_OLSShift);
 	gEngfuncs.pfnAddCommand("tas_cjmp", IN_ContJump);
 	gEngfuncs.pfnAddCommand("tas_dtap", IN_DuckTap);
+	gEngfuncs.pfnAddCommand("tas_dwj", IN_DuckWhenJump);
 
 	gEngfuncs.pfnAddCommand ("+moveup",IN_UpDown);
 	gEngfuncs.pfnAddCommand ("-moveup",IN_UpUp);
