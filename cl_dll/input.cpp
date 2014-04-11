@@ -45,9 +45,11 @@ static const double M_U = 360.0 / 65536;
 
 static vec3_t plr_velocity;
 static vec3_t plr_origin;
+static vec3_t plr_basevel;
 static bool plr_onground;
 static bool plr_ducked;
 static float plr_friction;
+static byte plr_waterlvl;
 StrafeType strafetype = Nostrafe;
 static unsigned short strafe_buttons;
 
@@ -1246,9 +1248,14 @@ int MsgFunc_TasPlrInfo(const char *, int size, void *buf)
 	plr_origin[0] = READ_FLOAT();
 	plr_origin[1] = READ_FLOAT();
 	plr_origin[2] = READ_FLOAT();
+	plr_basevel[0] = READ_FLOAT();
+	plr_basevel[1] = READ_FLOAT();
+	plr_basevel[2] = READ_FLOAT();
 	plr_onground = READ_BYTE();
 	plr_ducked = READ_BYTE();
 	plr_friction = READ_FLOAT();
+	plr_waterlvl = READ_BYTE();
+
 	return 1;
 }
 
