@@ -827,12 +827,10 @@ float CL_TasStrafeYaw(float yaw, float frametime, bool right)
 	CL_GetLASpeeds(frametime, L, A, prevspeed, speed);
 
 	double theta;
-	if (cl_mtype->string[0] == '1')
-		theta = CL_AngleOptimal(speed, L, frametime, A);
-	else if (cl_mtype->string[0] == '2')
+	if (cl_mtype->string[0] == '2')
 		theta = CL_AngleConstSpeed(prevspeed, speed, L, frametime, A);
 	else
-		return yaw;
+		theta = CL_AngleOptimal(speed, L, frametime, A);
 
 	return CL_TasStrafeYaw(yaw, speed, L, frametime, A, theta, right);
 }
@@ -852,14 +850,12 @@ float CL_TasLinestrafeYaw(float yaw, float frametime)
 	CL_GetLASpeeds(frametime, L, A, prevspeed, speed);
 
 	if (speed < 0.1)
-		goto fallback;
+		return CL_TasStrafeYaw(yaw, speed, L, frametime, A, theta, true);
 
-	if (cl_mtype->string[0] == '1')
-		theta = CL_AngleOptimal(speed, L, frametime, A);
-	else if (cl_mtype->string[0] == '2')
+	if (cl_mtype->string[0] == '2')
 		theta = CL_AngleConstSpeed(prevspeed, speed, L, frametime, A);
 	else
-		goto fallback;
+		theta = CL_AngleOptimal(speed, L, frametime, A);
 
 	if (do_olsshift.do_it)
 	{
@@ -887,9 +883,6 @@ float CL_TasLinestrafeYaw(float yaw, float frametime)
 	newpos_sleft[1] = plr_origin[1] + frametime * (plr_velocity[1] + avec[1]);
 
 	return CL_TasStrafeYaw(yaw, speed, L, frametime, A, theta, CL_PointToLineDist(newpos_sright) <= CL_PointToLineDist(newpos_sleft));
-
-fallback:
-	return CL_TasStrafeYaw(yaw, speed, L, frametime, A, theta, true);
 }
 
 /*
