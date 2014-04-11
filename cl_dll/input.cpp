@@ -1127,7 +1127,9 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 	if (strafetype != Nostrafe)
 	{
 		cmd->buttons &= ~IN_FORWARD;
-		cmd->buttons |= (strafe_buttons & IN_BACK) | (strafe_buttons & IN_MOVERIGHT) | (strafe_buttons & IN_MOVELEFT);
+		cmd->buttons = (cmd->buttons & ~IN_BACK) | (strafe_buttons & IN_BACK);
+		cmd->buttons = (cmd->buttons & ~IN_MOVERIGHT) | (strafe_buttons & IN_MOVERIGHT);
+		cmd->buttons = (cmd->buttons & ~IN_MOVELEFT) | (strafe_buttons & IN_MOVELEFT);
 	}
 	in_jump.state = 0;
 
