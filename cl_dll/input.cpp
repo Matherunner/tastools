@@ -1013,6 +1013,24 @@ void CL_DuckTap()
 	}
 }
 
+void CL_HandleJump()
+{
+	if (pmove->flags & FL_DUCKING && !(in_duck.state & 1))
+		PM_UnDuck();
+	if (pmove->onground == -1 || pmove->oldbuttons & IN_JUMP)
+		return;
+	if (in_jump.state & 1)
+	{
+		pmove->onground = -1;
+	}
+	else if (tas_cjmp)
+	{
+		tas_cjmp--;
+		pmove->onground = -1;
+		in_jump.state = 1;
+	}
+}
+
 /*
 ================
 CL_CreateMove
@@ -1048,16 +1066,7 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 		if (tas_dtap)
 			CL_DuckTap();
 		if (!(in_duck.state & (8 + 16)))
-		{
-			if (pmove->flags & FL_DUCKING && !(in_duck.state & 1))
-				PM_UnDuck();
-			if (pmove->onground != -1 && tas_cjmp)
-			{
-				tas_cjmp--;
-				pmove->onground = -1;
-				in_jump.state = 1;
-			}
-		}
+			CL_HandleJump();
 
 		//memset( viewangles, 0, sizeof( vec3_t ) );
 		//viewangles[ 0 ] = viewangles[ 1 ] = viewangles[ 2 ] = 0.0;
