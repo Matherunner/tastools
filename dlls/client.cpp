@@ -1691,10 +1691,10 @@ void UpdateClientData ( const edict_t *ent, int sendweapons, struct clientdata_s
 	WRITE_LONG(*(int *)&pev->basevelocity[0]);
 	WRITE_LONG(*(int *)&pev->basevelocity[1]);
 	WRITE_LONG(*(int *)&pev->basevelocity[2]);
-	WRITE_BYTE((pev->flags & FL_ONGROUND) != 0);
 	WRITE_LONG(pev->flags);
 	WRITE_LONG(*(int *)&pev->friction);
 	WRITE_BYTE(pev->waterlevel);
+	WRITE_BYTE(pev->bInDuck);
 	MESSAGE_END();
 
 	cd->flags			= pev->flags;

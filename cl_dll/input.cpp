@@ -61,6 +61,7 @@ static tas_cmd_t do_setpitch = {0, false};
 static tas_cmd_t do_setyaw = {0, false};
 static tas_cmd_t do_olsshift = {0, false};
 static int tas_cjmp = 0;
+static int tas_dtap = 0;
 
 extern playermove_t *pmove;
 
@@ -630,6 +631,10 @@ void IN_ContJump()
 {
 	tas_cjmp = atoi(gEngfuncs.Cmd_Argv(1));
 }
+void IN_DuckTap()
+{
+	tas_dtap = atoi(gEngfuncs.Cmd_Argv(1));
+}
 
 /*
 ===============
@@ -968,6 +973,46 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 		viewangles[ROLL] = -50;
 }
 
+void CL_DuckTap()
+{
+	if (pmove->onground == -1)
+		return;
+
+	float target[3] = {pmove->origin[0], pmove->origin[1], pmove->origin[2] + 18};
+	if (pmove->flags & FL_DUCKING)
+	{
+		target[2] += 18;
+		pmove->usehull = 0;
+		pmtrace_t trace = pmove->PM_PlayerTrace(target, target, PM_NORMAL, -1);
+		if (!trace.startsolid)
+		{
+			in_duck.state |= 16;
+			pmove->origin[2] += 18;
+			pmove->flags &= ~FL_DUCKING;
+		}
+		else
+		{
+			pmove->usehull = 1;
+		}
+		return;
+	}
+
+	pmtrace_t trace = pmove->PM_PlayerTrace(target, target, PM_NORMAL, -1);
+	if (trace.startsolid)
+		return;
+	if (pmove->bInDuck)
+	{
+		tas_dtap--;
+		in_duck.state |= 16;
+		pmove->origin[2] += 18;
+		PM_CatagorizePosition();
+	}
+	else
+	{
+		in_duck.state |= 8;
+	}
+}
+
 /*
 ================
 CL_CreateMove
@@ -997,15 +1042,21 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 		stopspeed = gEngfuncs.pfnGetCvarFloat("sv_stopspeed");
 		pmove->frametime = frametime;
 		pmove->usehull = (pmove->flags & FL_DUCKING) != 0;
+		in_duck.state &= ~(8 + 16);
 
 		PM_CatagorizePosition();
-		if (pmove->flags & FL_DUCKING && !(in_duck.state & 1))
-			PM_UnDuck();
-		if (pmove->onground != -1 && tas_cjmp)
+		if (tas_dtap)
+			CL_DuckTap();
+		if (!(in_duck.state & (8 + 16)))
 		{
-			tas_cjmp--;
-			pmove->onground = -1;
-			in_jump.state = 1;
+			if (pmove->flags & FL_DUCKING && !(in_duck.state & 1))
+				PM_UnDuck();
+			if (pmove->onground != -1 && tas_cjmp)
+			{
+				tas_cjmp--;
+				pmove->onground = -1;
+				in_jump.state = 1;
+			}
 		}
 
 		//memset( viewangles, 0, sizeof( vec3_t ) );
@@ -1129,11 +1180,10 @@ int CL_ButtonBits( int bResetState )
 		bits |= IN_ATTACK;
 	}
 	
-	if (in_duck.state & 3)
+	if (in_duck.state & (3 + 8) && !(in_duck.state & 16))
 	{
 		bits |= IN_DUCK;
 	}
- 
 	if (in_jump.state & 3)
 	{
 		bits |= IN_JUMP;
@@ -1264,10 +1314,11 @@ int MsgFunc_TasPlrInfo(const char *, int size, void *buf)
 	pmove->basevelocity[0] = READ_FLOAT();
 	pmove->basevelocity[1] = READ_FLOAT();
 	pmove->basevelocity[2] = READ_FLOAT();
-	pmove->onground = READ_BYTE() ? 0 : -1;
 	pmove->flags = READ_LONG();
+	pmove->onground = (pmove->flags & FL_ONGROUND) ? 0 : -1;
 	pmove->friction = READ_FLOAT();
 	pmove->waterlevel = READ_BYTE();
+	pmove->bInDuck = READ_BYTE();
 
 	return 1;
 }
@@ -1292,6 +1343,7 @@ void InitInput (void)
 	gEngfuncs.pfnAddCommand("tas_yaw", IN_SetYaw);
 	gEngfuncs.pfnAddCommand("tas_olsshift", IN_OLSShift);
 	gEngfuncs.pfnAddCommand("tas_cjmp", IN_ContJump);
+	gEngfuncs.pfnAddCommand("tas_dtap", IN_DuckTap);
 
 	gEngfuncs.pfnAddCommand ("+moveup",IN_UpDown);
 	gEngfuncs.pfnAddCommand ("-moveup",IN_UpUp);
