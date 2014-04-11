@@ -43,13 +43,6 @@ typedef struct tas_cmd_s
 
 static const double M_U = 360.0 / 65536;
 
-static vec3_t plr_velocity;
-static vec3_t plr_origin;
-static vec3_t plr_basevel;
-static bool plr_onground;
-static bool plr_ducked;
-static float plr_friction;
-static byte plr_waterlvl;
 StrafeType strafetype = Nostrafe;
 static unsigned short strafe_buttons;
 
@@ -581,13 +574,13 @@ void IN_LinestrafeDown()
 {
 	strafetype = Linestrafe;
 
-	line_origin[0] = plr_origin[0];
-	line_origin[1] = plr_origin[1];
-	double speed = hypot(plr_velocity[0], plr_velocity[1]);
+	line_origin[0] = pmove->origin[0];
+	line_origin[1] = pmove->origin[1];
+	double speed = hypot(pmove->velocity[0], pmove->velocity[1]);
 	if (speed > 0.1)
 	{
-		line_dir[0] = plr_velocity[0] / speed;
-		line_dir[1] = plr_velocity[1] / speed;
+		line_dir[0] = pmove->velocity[0] / speed;
+		line_dir[1] = pmove->velocity[1] / speed;
 	}
 	else
 	{
@@ -687,7 +680,7 @@ float CL_KeyState (kbutton_t *key)
 	return val;
 }
 
-// This function modifies plr_velocity.
+// This function modifies pmove->velocity.
 double CL_ApplyFriction(float frametime, double speed)
 {
 	if (speed < 0.1)
@@ -699,8 +692,8 @@ double CL_ApplyFriction(float frametime, double speed)
 		double tmp = (stopspeed * friction * frametime) / speed;
 		if (tmp <= 1)
 		{
-			plr_velocity[0] -= plr_velocity[0] * tmp;
-			plr_velocity[1] -= plr_velocity[1] * tmp;
+			pmove->velocity[0] -= pmove->velocity[0] * tmp;
+			pmove->velocity[1] -= pmove->velocity[1] * tmp;
 			return speed * (1 - tmp);
 		}
 	}
@@ -709,20 +702,20 @@ double CL_ApplyFriction(float frametime, double speed)
 		double tmp = 1 - friction * frametime;
 		if (tmp >= 0)
 		{
-			plr_velocity[0] *= tmp;
-			plr_velocity[1] *= tmp;
+			pmove->velocity[0] *= tmp;
+			pmove->velocity[1] *= tmp;
 			return speed * tmp;
 		}
 	}
-	plr_velocity[0] = 0;
-	plr_velocity[1] = 0;
+	pmove->velocity[0] = 0;
+	pmove->velocity[1] = 0;
 	return 0;
 }
 
 void CL_GetLASpeeds(double frametime, double &L, double &A, double &prevspeed, double &speed)
 {
-	prevspeed = hypot(plr_velocity[0], plr_velocity[1]);
-	if (plr_onground)
+	prevspeed = hypot(pmove->velocity[0], pmove->velocity[1]);
+	if (pmove->onground != -1)
 	{
 		L = maxspeed;
 		A = grndaccel;
@@ -750,7 +743,7 @@ double CL_AngleOptimal(double speed, double L, float frametime, double A)
 double CL_AngleConstSpeed(double prevspeed, double speed, double L, float frametime, double A)
 {
 	double tauMA = frametime * maxspeed * A;
-	if (plr_onground)
+	if (pmove->onground != -1)
 	{
 		double tmpquo = (prevspeed * prevspeed - speed * speed) / tauMA;
 		double ct1top = 0.5 * (tmpquo - tauMA);
@@ -793,7 +786,7 @@ float CL_TasStrafeYaw(float yaw, double speed, double L, float frametime, double
 		strafe_buttons = IN_BACK;
 		phi = 0;
 	}
-	double beta = speed > 0.1 ? atan2(plr_velocity[1], plr_velocity[0]) * 180 / M_PI : yaw;
+	double beta = speed > 0.1 ? atan2(pmove->velocity[1], pmove->velocity[0]) * 180 / M_PI : yaw;
 	beta += dir * (phi - theta);
 	if (cl_mtype->string[0] == '2')
 		return beta;
@@ -807,14 +800,14 @@ float CL_TasStrafeYaw(float yaw, double speed, double L, float frametime, double
 	{
 		double ang = (anglemod(alpha[i]) - phi * dir) * M_PI / 180;
 		double avec[2] = {cos(ang), sin(ang)};
-		double gamma2 = L - plr_velocity[0] * avec[0] - plr_velocity[1] * avec[1];
+		double gamma2 = L - pmove->velocity[0] * avec[0] - pmove->velocity[1] * avec[1];
 		if (gamma2 < 0)
 		{
 			testspd[i] = speed;
 			continue;
 		}
 		double mu = fmin(frametime * maxspeed * A, gamma2);
-		testspd[i] = hypot(plr_velocity[0] + mu * avec[0], plr_velocity[1] + mu * avec[1]);
+		testspd[i] = hypot(pmove->velocity[0] + mu * avec[0], pmove->velocity[1] + mu * avec[1]);
 	}
 
 	if (testspd[0] > testspd[1])
@@ -874,15 +867,15 @@ float CL_TasLinestrafeYaw(float yaw, float frametime)
 	else
 		mu = fmin(frametime * maxspeed * A, gamma2) / speed;
 
-	avec[0] = (plr_velocity[0] * ct + plr_velocity[1] * st) * mu;
-	avec[1] = (-plr_velocity[0] * st + plr_velocity[1] * ct) * mu;
-	newpos_sright[0] = plr_origin[0] + frametime * (plr_velocity[0] + avec[0]);
-	newpos_sright[1] = plr_origin[1] + frametime * (plr_velocity[1] + avec[1]);
+	avec[0] = (pmove->velocity[0] * ct + pmove->velocity[1] * st) * mu;
+	avec[1] = (-pmove->velocity[0] * st + pmove->velocity[1] * ct) * mu;
+	newpos_sright[0] = pmove->origin[0] + frametime * (pmove->velocity[0] + avec[0]);
+	newpos_sright[1] = pmove->origin[1] + frametime * (pmove->velocity[1] + avec[1]);
 
-	avec[0] = (plr_velocity[0] * ct - plr_velocity[1] * st) * mu;
-	avec[1] = (plr_velocity[0] * st + plr_velocity[1] * ct) * mu;
-	newpos_sleft[0] = plr_origin[0] + frametime * (plr_velocity[0] + avec[0]);
-	newpos_sleft[1] = plr_origin[1] + frametime * (plr_velocity[1] + avec[1]);
+	avec[0] = (pmove->velocity[0] * ct - pmove->velocity[1] * st) * mu;
+	avec[1] = (pmove->velocity[0] * st + pmove->velocity[1] * ct) * mu;
+	newpos_sleft[0] = pmove->origin[0] + frametime * (pmove->velocity[0] + avec[0]);
+	newpos_sleft[1] = pmove->origin[1] + frametime * (pmove->velocity[1] + avec[1]);
 
 	return CL_TasStrafeYaw(yaw, speed, L, frametime, A, theta, CL_PointToLineDist(newpos_sright) <= CL_PointToLineDist(newpos_sleft));
 }
@@ -925,7 +918,7 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 	else if (strafetype == Backpedal)
 	{
 		strafe_buttons = IN_BACK;
-		viewangles[YAW] = atan2(plr_velocity[1], plr_velocity[0]) * 180 / M_PI;
+		viewangles[YAW] = atan2(pmove->velocity[1], pmove->velocity[0]) * 180 / M_PI;
 		float frac = viewangles[YAW] / M_U;
 		frac -= trunc(frac);
 		if (frac > 0.5)
@@ -991,9 +984,9 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 		airaccel = gEngfuncs.pfnGetCvarFloat("sv_airaccelerate");
 		grndaccel = gEngfuncs.pfnGetCvarFloat("sv_accelerate");
 		maxspeed = gEngfuncs.pfnGetCvarFloat("sv_maxspeed");
-		if (plr_ducked)
+		if (pmove->flags & FL_DUCKING)
 			maxspeed *= 0.333;
-		friction = gEngfuncs.pfnGetCvarFloat("sv_friction") * plr_friction;
+		friction = gEngfuncs.pfnGetCvarFloat("sv_friction") * pmove->friction;
 		stopspeed = gEngfuncs.pfnGetCvarFloat("sv_stopspeed");
 
 		//memset( viewangles, 0, sizeof( vec3_t ) );
@@ -1242,19 +1235,19 @@ void CL_ResetButtonBits( int bits )
 int MsgFunc_TasPlrInfo(const char *, int size, void *buf)
 {
 	BEGIN_READ(buf, size);
-	plr_velocity[0] = READ_FLOAT();
-	plr_velocity[1] = READ_FLOAT();
-	plr_velocity[2] = READ_FLOAT();
-	plr_origin[0] = READ_FLOAT();
-	plr_origin[1] = READ_FLOAT();
-	plr_origin[2] = READ_FLOAT();
-	plr_basevel[0] = READ_FLOAT();
-	plr_basevel[1] = READ_FLOAT();
-	plr_basevel[2] = READ_FLOAT();
-	plr_onground = READ_BYTE();
-	plr_ducked = READ_BYTE();
-	plr_friction = READ_FLOAT();
-	plr_waterlvl = READ_BYTE();
+	pmove->velocity[0] = READ_FLOAT();
+	pmove->velocity[1] = READ_FLOAT();
+	pmove->velocity[2] = READ_FLOAT();
+	pmove->origin[0] = READ_FLOAT();
+	pmove->origin[1] = READ_FLOAT();
+	pmove->origin[2] = READ_FLOAT();
+	pmove->basevelocity[0] = READ_FLOAT();
+	pmove->basevelocity[1] = READ_FLOAT();
+	pmove->basevelocity[2] = READ_FLOAT();
+	pmove->onground = READ_BYTE() ? 0 : -1;
+	pmove->flags = READ_LONG();
+	pmove->friction = READ_FLOAT();
+	pmove->waterlevel = READ_BYTE();
 
 	return 1;
 }
