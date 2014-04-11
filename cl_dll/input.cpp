@@ -34,6 +34,8 @@ extern cl_enginefunc_t gEngfuncs;
 
 // Defined in pm_math.c
 extern "C" float anglemod( float a );
+extern "C" void PM_CatagorizePosition();
+extern "C" void PM_UnDuck();
 
 typedef struct tas_cmd_s
 {
@@ -58,6 +60,7 @@ static float stopspeed;
 static tas_cmd_t do_setpitch = {0, false};
 static tas_cmd_t do_setyaw = {0, false};
 static tas_cmd_t do_olsshift = {0, false};
+static int tas_cjmp = 0;
 
 extern playermove_t *pmove;
 
@@ -623,6 +626,10 @@ void IN_OLSShift()
 	do_olsshift.value = atof(gEngfuncs.Cmd_Argv(1));
 	do_olsshift.do_it = true;
 }
+void IN_ContJump()
+{
+	tas_cjmp = atoi(gEngfuncs.Cmd_Argv(1));
+}
 
 /*
 ===============
@@ -988,6 +995,18 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 			maxspeed *= 0.333;
 		friction = gEngfuncs.pfnGetCvarFloat("sv_friction") * pmove->friction;
 		stopspeed = gEngfuncs.pfnGetCvarFloat("sv_stopspeed");
+		pmove->frametime = frametime;
+		pmove->usehull = (pmove->flags & FL_DUCKING) != 0;
+
+		PM_CatagorizePosition();
+		if (pmove->flags & FL_DUCKING && !(in_duck.state & 1))
+			PM_UnDuck();
+		if (pmove->onground != -1 && tas_cjmp)
+		{
+			tas_cjmp--;
+			pmove->onground = -1;
+			in_jump.state = 1;
+		}
 
 		//memset( viewangles, 0, sizeof( vec3_t ) );
 		//viewangles[ 0 ] = viewangles[ 1 ] = viewangles[ 2 ] = 0.0;
@@ -1059,6 +1078,7 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 		cmd->buttons &= ~IN_FORWARD;
 		cmd->buttons |= (strafe_buttons & IN_BACK) | (strafe_buttons & IN_MOVERIGHT) | (strafe_buttons & IN_MOVELEFT);
 	}
+	in_jump.state = 0;
 
 	// If they're in a modal dialog, ignore the attack button.
 	if(GetClientVoiceMgr()->IsInSquelchMode())
@@ -1271,6 +1291,7 @@ void InitInput (void)
 	gEngfuncs.pfnAddCommand("tas_pitch", IN_SetPitch);
 	gEngfuncs.pfnAddCommand("tas_yaw", IN_SetYaw);
 	gEngfuncs.pfnAddCommand("tas_olsshift", IN_OLSShift);
+	gEngfuncs.pfnAddCommand("tas_cjmp", IN_ContJump);
 
 	gEngfuncs.pfnAddCommand ("+moveup",IN_UpDown);
 	gEngfuncs.pfnAddCommand ("-moveup",IN_UpUp);
