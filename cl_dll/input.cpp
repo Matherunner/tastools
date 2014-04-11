@@ -688,7 +688,7 @@ float CL_KeyState (kbutton_t *key)
 }
 
 // This function modifies pmove->velocity.
-double CL_ApplyFriction(float frametime, double speed)
+double CL_ApplyFriction(double speed)
 {
 	if (speed < 0.1)
 	{
@@ -696,7 +696,7 @@ double CL_ApplyFriction(float frametime, double speed)
 	}
 	else if (speed < stopspeed)
 	{
-		double tmp = (stopspeed * friction * frametime) / speed;
+		double tmp = (stopspeed * friction * pmove->frametime) / speed;
 		if (tmp <= 1)
 		{
 			pmove->velocity[0] -= pmove->velocity[0] * tmp;
@@ -706,7 +706,7 @@ double CL_ApplyFriction(float frametime, double speed)
 	}
 	else
 	{
-		double tmp = 1 - friction * frametime;
+		double tmp = 1 - friction * pmove->frametime;
 		if (tmp >= 0)
 		{
 			pmove->velocity[0] *= tmp;
@@ -719,14 +719,14 @@ double CL_ApplyFriction(float frametime, double speed)
 	return 0;
 }
 
-void CL_GetLASpeeds(double frametime, double &L, double &A, double &prevspeed, double &speed)
+void CL_GetLASpeeds(double &L, double &A, double &prevspeed, double &speed)
 {
 	prevspeed = hypot(pmove->velocity[0], pmove->velocity[1]);
 	if (pmove->onground != -1)
 	{
 		L = maxspeed;
 		A = grndaccel;
-		speed = CL_ApplyFriction(frametime, prevspeed);
+		speed = CL_ApplyFriction(prevspeed);
 	}
 	else
 	{
@@ -736,9 +736,9 @@ void CL_GetLASpeeds(double frametime, double &L, double &A, double &prevspeed, d
 	}
 }
 
-double CL_AngleOptimal(double speed, double L, float frametime, double A)
+double CL_AngleOptimal(double speed, double L, double A)
 {
-	double tmp = L - frametime * A * maxspeed;
+	double tmp = L - pmove->frametime * A * maxspeed;
 	if (tmp <= 0)
 		return 90;
 	else if (tmp <= speed)
@@ -747,9 +747,9 @@ double CL_AngleOptimal(double speed, double L, float frametime, double A)
 		return 0;
 }
 
-double CL_AngleConstSpeed(double prevspeed, double speed, double L, float frametime, double A)
+double CL_AngleConstSpeed(double prevspeed, double speed, double L, double A)
 {
-	double tauMA = frametime * maxspeed * A;
+	double tauMA = pmove->frametime * maxspeed * A;
 	if (pmove->onground != -1)
 	{
 		double tmpquo = (prevspeed * prevspeed - speed * speed) / tauMA;
@@ -771,10 +771,10 @@ double CL_AngleConstSpeed(double prevspeed, double speed, double L, float framet
 		else if (speed >= L)
 			return acos(-L / speed) * 180 / M_PI;
 	}
-	return CL_AngleOptimal(speed, L, frametime, A);
+	return CL_AngleOptimal(speed, L, A);
 }
 
-float CL_TasStrafeYaw(float yaw, double speed, double L, float frametime, double A, double theta, bool right)
+float CL_TasStrafeYaw(float yaw, double speed, double L, double A, double theta, bool right)
 {
 	double dir = right ? 1 : -1;
 	double phi;
@@ -813,7 +813,7 @@ float CL_TasStrafeYaw(float yaw, double speed, double L, float frametime, double
 			testspd[i] = speed;
 			continue;
 		}
-		double mu = fmin(frametime * maxspeed * A, gamma2);
+		double mu = fmin(pmove->frametime * maxspeed * A, gamma2);
 		testspd[i] = hypot(pmove->velocity[0] + mu * avec[0], pmove->velocity[1] + mu * avec[1]);
 	}
 
@@ -823,18 +823,18 @@ float CL_TasStrafeYaw(float yaw, double speed, double L, float frametime, double
 		return alpha[1];
 }
 
-float CL_TasStrafeYaw(float yaw, float frametime, bool right)
+float CL_TasStrafeYaw(float yaw, bool right)
 {
 	double L, A, prevspeed, speed;
-	CL_GetLASpeeds(frametime, L, A, prevspeed, speed);
+	CL_GetLASpeeds(L, A, prevspeed, speed);
 
 	double theta;
 	if (cl_mtype->string[0] == '2')
-		theta = CL_AngleConstSpeed(prevspeed, speed, L, frametime, A);
+		theta = CL_AngleConstSpeed(prevspeed, speed, L, A);
 	else
-		theta = CL_AngleOptimal(speed, L, frametime, A);
+		theta = CL_AngleOptimal(speed, L, A);
 
-	return CL_TasStrafeYaw(yaw, speed, L, frametime, A, theta, right);
+	return CL_TasStrafeYaw(yaw, speed, L, A, theta, right);
 }
 
 double CL_PointToLineDist(const double p[2])
@@ -844,20 +844,20 @@ double CL_PointToLineDist(const double p[2])
 	return hypot(tmp[0] - line_dir[0] * dotprod, tmp[1] - line_dir[1] * dotprod);
 }
 
-float CL_TasLinestrafeYaw(float yaw, float frametime)
+float CL_TasLinestrafeYaw(float yaw)
 {
 	double avec[2], ct, st, gamma2, mu, theta = 0;
 	double newpos_sright[2], newpos_sleft[2];
 	double L, A, prevspeed, speed;
-	CL_GetLASpeeds(frametime, L, A, prevspeed, speed);
+	CL_GetLASpeeds(L, A, prevspeed, speed);
 
 	if (speed < 0.1)
-		return CL_TasStrafeYaw(yaw, speed, L, frametime, A, theta, true);
+		return CL_TasStrafeYaw(yaw, speed, L, A, theta, true);
 
 	if (cl_mtype->string[0] == '2')
-		theta = CL_AngleConstSpeed(prevspeed, speed, L, frametime, A);
+		theta = CL_AngleConstSpeed(prevspeed, speed, L, A);
 	else
-		theta = CL_AngleOptimal(speed, L, frametime, A);
+		theta = CL_AngleOptimal(speed, L, A);
 
 	if (do_olsshift.do_it)
 	{
@@ -872,19 +872,19 @@ float CL_TasLinestrafeYaw(float yaw, float frametime)
 	if (gamma2 < 0)
 		mu = 0;
 	else
-		mu = fmin(frametime * maxspeed * A, gamma2) / speed;
+		mu = fmin(pmove->frametime * maxspeed * A, gamma2) / speed;
 
 	avec[0] = (pmove->velocity[0] * ct + pmove->velocity[1] * st) * mu;
 	avec[1] = (-pmove->velocity[0] * st + pmove->velocity[1] * ct) * mu;
-	newpos_sright[0] = pmove->origin[0] + frametime * (pmove->velocity[0] + avec[0]);
-	newpos_sright[1] = pmove->origin[1] + frametime * (pmove->velocity[1] + avec[1]);
+	newpos_sright[0] = pmove->origin[0] + pmove->frametime * (pmove->velocity[0] + avec[0]);
+	newpos_sright[1] = pmove->origin[1] + pmove->frametime * (pmove->velocity[1] + avec[1]);
 
 	avec[0] = (pmove->velocity[0] * ct - pmove->velocity[1] * st) * mu;
 	avec[1] = (pmove->velocity[0] * st + pmove->velocity[1] * ct) * mu;
-	newpos_sleft[0] = pmove->origin[0] + frametime * (pmove->velocity[0] + avec[0]);
-	newpos_sleft[1] = pmove->origin[1] + frametime * (pmove->velocity[1] + avec[1]);
+	newpos_sleft[0] = pmove->origin[0] + pmove->frametime * (pmove->velocity[0] + avec[0]);
+	newpos_sleft[1] = pmove->origin[1] + pmove->frametime * (pmove->velocity[1] + avec[1]);
 
-	return CL_TasStrafeYaw(yaw, speed, L, frametime, A, theta, CL_PointToLineDist(newpos_sright) <= CL_PointToLineDist(newpos_sleft));
+	return CL_TasStrafeYaw(yaw, speed, L, A, theta, CL_PointToLineDist(newpos_sright) <= CL_PointToLineDist(newpos_sleft));
 }
 
 /*
@@ -911,7 +911,7 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 	}
 	else if (strafetype == Leftstrafe || strafetype == Rightstrafe)
 	{
-		viewangles[YAW] = CL_TasStrafeYaw(viewangles[YAW], frametime, strafetype == Rightstrafe);
+		viewangles[YAW] = CL_TasStrafeYaw(viewangles[YAW], strafetype == Rightstrafe);
 	}
 	else if (strafetype == Linestrafe)
 	{
@@ -920,7 +920,7 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 			line_dir[0] = cos(do_setyaw.value * M_PI / 180);
 			line_dir[1] = sin(do_setyaw.value * M_PI / 180);
 		}
-		viewangles[YAW] = CL_TasLinestrafeYaw(viewangles[YAW], frametime);
+		viewangles[YAW] = CL_TasLinestrafeYaw(viewangles[YAW]);
 	}
 	else if (strafetype == Backpedal)
 	{
