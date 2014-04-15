@@ -36,6 +36,7 @@ extern cl_enginefunc_t gEngfuncs;
 extern "C" float anglemod( float a );
 extern "C" void PM_CatagorizePosition();
 extern "C" void PM_UnDuck();
+extern "C" void PM_Friction();
 
 typedef struct tas_cmd_s
 {
@@ -702,38 +703,6 @@ float CL_KeyState (kbutton_t *key)
 	return val;
 }
 
-// This function modifies pmove->velocity.
-double CL_ApplyFriction(double speed)
-{
-	if (speed < 0.1)
-	{
-		return 0;
-	}
-	else if (speed < stopspeed)
-	{
-		double tmp = (stopspeed * friction * pmove->frametime) / speed;
-		if (tmp <= 1)
-		{
-			pmove->velocity[0] -= pmove->velocity[0] * tmp;
-			pmove->velocity[1] -= pmove->velocity[1] * tmp;
-			return speed * (1 - tmp);
-		}
-	}
-	else
-	{
-		double tmp = 1 - friction * pmove->frametime;
-		if (tmp >= 0)
-		{
-			pmove->velocity[0] *= tmp;
-			pmove->velocity[1] *= tmp;
-			return speed * tmp;
-		}
-	}
-	pmove->velocity[0] = 0;
-	pmove->velocity[1] = 0;
-	return 0;
-}
-
 void CL_GetLASpeeds(double &L, double &A, double &prevspeed, double &speed)
 {
 	prevspeed = hypot(pmove->velocity[0], pmove->velocity[1]);
@@ -741,7 +710,9 @@ void CL_GetLASpeeds(double &L, double &A, double &prevspeed, double &speed)
 	{
 		L = maxspeed;
 		A = grndaccel;
-		speed = CL_ApplyFriction(prevspeed);
+		pmove->velocity[2] = 0;
+		PM_Friction();
+		speed = hypot(pmove->velocity[0], pmove->velocity[1]);
 	}
 	else
 	{
