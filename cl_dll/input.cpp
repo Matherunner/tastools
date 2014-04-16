@@ -11,6 +11,7 @@
 extern "C"
 {
 #include "pm_defs.h"
+#include "pm_movevars.h"
 #include "kbutton.h"
 }
 #include "cvardef.h"
@@ -51,12 +52,6 @@ static unsigned short strafe_buttons;
 
 static double line_origin[2] = {0, 0};
 static double line_dir[2] = {0, 0};
-
-static float airaccel;
-static float grndaccel;
-static float maxspeed;
-static float friction;
-static float stopspeed;
 
 static tas_cmd_t do_setpitch = {0, false};
 static tas_cmd_t do_setyaw = {0, false};
@@ -708,8 +703,8 @@ void CL_GetLASpeeds(double &L, double &A, double &prevspeed, double &speed)
 	prevspeed = hypot(pmove->velocity[0], pmove->velocity[1]);
 	if (pmove->onground != -1)
 	{
-		L = maxspeed;
-		A = grndaccel;
+		L = pmove->maxspeed;
+		A = pmove->movevars->accelerate;
 		pmove->velocity[2] = 0;
 		PM_Friction();
 		speed = hypot(pmove->velocity[0], pmove->velocity[1]);
@@ -717,14 +712,14 @@ void CL_GetLASpeeds(double &L, double &A, double &prevspeed, double &speed)
 	else
 	{
 		L = 30;
-		A = airaccel;
+		A = pmove->movevars->airaccelerate;
 		speed = prevspeed;
 	}
 }
 
 double CL_AngleOptimal(double speed, double L, double A)
 {
-	double tmp = L - pmove->frametime * A * maxspeed;
+	double tmp = L - pmove->frametime * A * pmove->maxspeed;
 	if (tmp <= 0)
 		return 90;
 	else if (tmp <= speed)
@@ -735,7 +730,7 @@ double CL_AngleOptimal(double speed, double L, double A)
 
 double CL_AngleConstSpeed(double prevspeed, double speed, double L, double A)
 {
-	double tauMA = pmove->frametime * maxspeed * A;
+	double tauMA = pmove->frametime * pmove->maxspeed * A;
 	if (pmove->onground != -1)
 	{
 		double tmpquo = (prevspeed * prevspeed - speed * speed) / tauMA;
@@ -765,11 +760,11 @@ bool CL_IsAirAccelGreater()
 	double speed_air = hypot(pmove->velocity[0], pmove->velocity[1]);
 	double speed_grnd = speed_air;
 	if (speed_air >= 0.1)
-		speed_grnd *= fmax(1 - fmax(1, stopspeed / speed_air) * friction * pmove->frametime, 0);
-	double ctheta_air = cos(CL_AngleOptimal(speed_air, 30, airaccel) * M_PI / 180);
-	double ctheta_grnd = cos(CL_AngleOptimal(speed_grnd, maxspeed, grndaccel) * M_PI / 180);
-	double mu_air = fmin(pmove->frametime * maxspeed * airaccel, 30 - speed_air * ctheta_air);
-	double mu_grnd = fmin(pmove->frametime * maxspeed * grndaccel, maxspeed - speed_grnd * ctheta_grnd);
+		speed_grnd *= fmax(1 - fmax(1, pmove->movevars->stopspeed / speed_air) * pmove->friction * pmove->movevars->friction * pmove->frametime, 0);
+	double ctheta_air = cos(CL_AngleOptimal(speed_air, 30, pmove->movevars->airaccelerate) * M_PI / 180);
+	double ctheta_grnd = cos(CL_AngleOptimal(speed_grnd, pmove->maxspeed, pmove->movevars->accelerate) * M_PI / 180);
+	double mu_air = fmin(pmove->frametime * pmove->maxspeed * pmove->movevars->airaccelerate, 30 - speed_air * ctheta_air);
+	double mu_grnd = fmin(pmove->frametime * pmove->maxspeed * pmove->movevars->accelerate, pmove->maxspeed - speed_grnd * ctheta_grnd);
 	// Square roots are unnecessary here
 	speed_air = speed_air * speed_air + mu_air * mu_air + 2 * speed_air * mu_air * ctheta_air;
 	speed_grnd = speed_grnd * speed_grnd + mu_grnd * mu_grnd + 2 * speed_grnd * mu_grnd * ctheta_grnd;
@@ -815,7 +810,7 @@ float CL_TasStrafeYaw(float yaw, double speed, double L, double A, double theta,
 			testspd[i] = speed;
 			continue;
 		}
-		double mu = fmin(pmove->frametime * maxspeed * A, gamma2);
+		double mu = fmin(pmove->frametime * pmove->maxspeed * A, gamma2);
 		testspd[i] = hypot(pmove->velocity[0] + mu * avec[0], pmove->velocity[1] + mu * avec[1]);
 	}
 
@@ -874,7 +869,7 @@ float CL_TasLinestrafeYaw(float yaw)
 	if (gamma2 < 0)
 		mu = 0;
 	else
-		mu = fmin(pmove->frametime * maxspeed * A, gamma2) / speed;
+		mu = fmin(pmove->frametime * pmove->maxspeed * A, gamma2) / speed;
 
 	avec[0] = (pmove->velocity[0] * ct + pmove->velocity[1] * st) * mu;
 	avec[1] = (-pmove->velocity[0] * st + pmove->velocity[1] * ct) * mu;
@@ -1055,13 +1050,8 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 	if ( active && !Bench_Active() )
 	{
 		g_bcap = gEngfuncs.pfnGetCvarString("sv_bcap")[0] != '0';
-		airaccel = gEngfuncs.pfnGetCvarFloat("sv_airaccelerate");
-		grndaccel = gEngfuncs.pfnGetCvarFloat("sv_accelerate");
-		maxspeed = gEngfuncs.pfnGetCvarFloat("sv_maxspeed");
 		if (pmove->flags & FL_DUCKING)
-			maxspeed *= 0.333;
-		friction = gEngfuncs.pfnGetCvarFloat("sv_friction") * pmove->friction;
-		stopspeed = gEngfuncs.pfnGetCvarFloat("sv_stopspeed");
+			pmove->maxspeed *= 0.333;
 		pmove->frametime = frametime;
 		pmove->usehull = (pmove->flags & FL_DUCKING) != 0;
 		in_duck.state &= ~(8 + 16);
