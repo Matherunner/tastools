@@ -733,15 +733,17 @@ double CL_AngleConstSpeed(double prevspeed, double speed, double L, double A)
 	double tauMA = pmove->frametime * pmove->maxspeed * A;
 	if (pmove->onground != -1)
 	{
-		double tmpquo = (prevspeed * prevspeed - speed * speed) / tauMA;
-		double ct1top = 0.5 * (tmpquo - tauMA);
-		if (tauMA + tmpquo <= L + L && speed >= fabs(ct1top))
-			return acos(ct1top / speed) * 180 / M_PI;
+		double sqdiff = prevspeed * prevspeed - speed * speed;
+		double tmp = sqdiff / tauMA;
+		if (tmp + tauMA < L + L && speed + speed >= fabs(tmp - tauMA))
+		{
+			return acos((tmp - tauMA) / (speed + speed)) * 180 / M_PI;
+		}
 		else
 		{
-			double tmp = sqrt(prevspeed * prevspeed - L * L);
-			if (speed >= tmp)
-				return 180 * (1 - asin(tmp / speed) / M_PI);
+			tmp = sqrt(L * L - sqdiff);
+			if (tauMA - L > tmp && speed >= tmp)
+				return acos(-tmp / speed) * 180 / M_PI;
 		}
 	}
 	else
