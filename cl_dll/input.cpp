@@ -60,6 +60,7 @@ static int tas_cjmp = 0;
 static int tas_dtap = 0;
 static int tas_dwj = 0;
 static int tas_lgagst = 0;
+static int tas_jb = 0;
 
 extern playermove_t *pmove;
 
@@ -641,6 +642,10 @@ void IN_LGAGST()
 {
 	tas_lgagst = atoi(gEngfuncs.Cmd_Argv(1));
 }
+void IN_JumpBug()
+{
+	tas_jb = atoi(gEngfuncs.Cmd_Argv(1));
+}
 
 /*
 ===============
@@ -1007,6 +1012,49 @@ void CL_DuckTap()
 	}
 }
 
+void CL_JumpBug()
+{
+	if (pmove->onground != -1 || pmove->velocity[2] > 180)
+		return;
+	if (pmove->flags & FL_DUCKING)
+	{
+		pmove->usehull = 0;
+		pmtrace_t trace = pmove->PM_PlayerTrace(pmove->origin, pmove->origin, PM_NORMAL, -1);
+		if (trace.startsolid)
+		{
+			pmove->usehull = 1;
+			return;
+		}
+		float target[3] = {pmove->origin[0], pmove->origin[1], pmove->origin[2] - 2};
+		trace = pmove->PM_PlayerTrace(pmove->origin, target, PM_NORMAL, -1);
+		if (trace.plane.normal[2] < 0.7)
+		{
+			pmove->usehull = 1;
+			return;
+		}
+		in_duck.state |= 16;
+		in_jump.state = 1;
+		pmove->flags &= ~FL_DUCKING;
+		pmove->onground = -1;
+		tas_jb--;
+	}
+	else
+	{
+		float newvz = pmove->velocity[2] + pmove->frametime * (pmove->basevelocity[2] - pmove->gravity * pmove->movevars->gravity * 0.5);
+		float newpos[3] = {
+			pmove->origin[0] + pmove->frametime * (pmove->velocity[0] + pmove->basevelocity[0]),
+			pmove->origin[1] + pmove->frametime * (pmove->velocity[1] + pmove->basevelocity[1]),
+			pmove->origin[2] + pmove->frametime * newvz
+		};
+		float target[3] = {newpos[0], newpos[1], newpos[2] - 2};
+		pmtrace_t trace = pmove->PM_PlayerTrace(newpos, target, PM_NORMAL, -1);
+		if (trace.plane.normal[2] < 0.7)
+			return;
+		in_duck.state |= 8;
+		pmove->flags |= FL_DUCKING;
+	}
+}
+
 void CL_HandleJump()
 {
 	if (tas_dwj && pmove->onground != -1 && (in_jump.state & 1 || tas_cjmp))
@@ -1079,6 +1127,9 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 				lg_prevented = true;
 			}
 		}
+
+		if (tas_jb)
+			CL_JumpBug();
 
 		if (tas_dtap)
 			CL_DuckTap();
@@ -1351,6 +1402,7 @@ int MsgFunc_TasPlrInfo(const char *, int size, void *buf)
 	pmove->flags = READ_LONG();
 	pmove->onground = (pmove->flags & FL_ONGROUND) ? 0 : -1;
 	pmove->friction = READ_FLOAT();
+	pmove->gravity = READ_FLOAT();
 	pmove->waterlevel = READ_BYTE();
 	pmove->bInDuck = READ_BYTE();
 
@@ -1380,6 +1432,7 @@ void InitInput (void)
 	gEngfuncs.pfnAddCommand("tas_dtap", IN_DuckTap);
 	gEngfuncs.pfnAddCommand("tas_dwj", IN_DuckWhenJump);
 	gEngfuncs.pfnAddCommand("tas_lgagst", IN_LGAGST);
+	gEngfuncs.pfnAddCommand("tas_jb", IN_JumpBug);
 
 	gEngfuncs.pfnAddCommand ("+moveup",IN_UpDown);
 	gEngfuncs.pfnAddCommand ("-moveup",IN_UpUp);

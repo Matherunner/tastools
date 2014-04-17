@@ -86,7 +86,7 @@ called when a player connects to a server
 */
 BOOL ClientConnect( edict_t *pEntity, const char *pszName, const char *pszAddress, char szRejectReason[ 128 ]  )
 {	
-	tasPlrInfo = REG_USER_MSG("TasPlrInfo", 46);
+	tasPlrInfo = REG_USER_MSG("TasPlrInfo", 50);
 	return g_pGameRules->ClientConnected( pEntity, pszName, pszAddress, szRejectReason );
 
 // a client connecting during an intermission can cause problems
@@ -1693,6 +1693,7 @@ void UpdateClientData ( const edict_t *ent, int sendweapons, struct clientdata_s
 	WRITE_LONG(*(int *)&pev->basevelocity[2]);
 	WRITE_LONG(pev->flags);
 	WRITE_LONG(*(int *)&pev->friction);
+	WRITE_LONG(*(int *)&pev->gravity);
 	WRITE_BYTE(pev->waterlevel);
 	WRITE_BYTE(pev->bInDuck);
 	MESSAGE_END();
