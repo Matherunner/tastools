@@ -61,6 +61,7 @@ static int tas_dtap = 0;
 static int tas_dwj = 0;
 static int tas_lgagst = 0;
 static int tas_jb = 0;
+static int tas_db4c = 0;
 
 extern playermove_t *pmove;
 
@@ -98,6 +99,7 @@ cvar_t	*cl_anglespeedkey;
 cvar_t	*cl_vsmoothing;
 
 cvar_t *cl_mtype;
+cvar_t *cl_db4c_ceil;
 
 /*
 ===============================================================================
@@ -646,6 +648,10 @@ void IN_JumpBug()
 {
 	tas_jb = atoi(gEngfuncs.Cmd_Argv(1));
 }
+void IN_DuckB4Col()
+{
+	tas_db4c = atoi(gEngfuncs.Cmd_Argv(1));
+}
 
 /*
 ===============
@@ -1055,6 +1061,37 @@ void CL_JumpBug()
 	}
 }
 
+void CL_DuckB4Col()
+{
+	if (pmove->onground != -1 || in_duck.state & 1)
+		return;
+	float newvz = pmove->velocity[2] + pmove->frametime * (pmove->basevelocity[2] - pmove->gravity * pmove->movevars->gravity * 0.5);
+	float target[3] = {
+		pmove->origin[0] + (pmove->basevelocity[0] + pmove->velocity[0]) * pmove->frametime,
+		pmove->origin[1] + (pmove->basevelocity[1] + pmove->velocity[1]) * pmove->frametime,
+		pmove->origin[2] + newvz * pmove->frametime
+	};
+	int old_usehull = pmove->usehull;
+	pmove->usehull = 0;
+	pmtrace_t trace = pmove->PM_PlayerTrace(pmove->origin, target, PM_NORMAL, -1);
+	if (trace.fraction == 1 || trace.plane.normal[2] >= 0.7 || trace.startsolid
+		|| (cl_db4c_ceil->string[0] == '0' && trace.plane.normal[2] == -1))
+	{
+		pmove->usehull = old_usehull;
+		return;
+	}
+	pmove->usehull = 1;
+	trace = pmove->PM_PlayerTrace(pmove->origin, target, PM_NORMAL, -1);
+	if (trace.fraction != 1)
+	{
+		pmove->usehull = old_usehull;
+		return;
+	}
+	in_duck.state |= 8;
+	pmove->flags |= FL_DUCKING;
+	tas_db4c--;
+}
+
 void CL_HandleJump()
 {
 	if (tas_dwj && pmove->onground != -1 && (in_jump.state & 1 || tas_cjmp))
@@ -1130,6 +1167,9 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 
 		if (tas_jb)
 			CL_JumpBug();
+
+		if (tas_db4c)
+			CL_DuckB4Col();
 
 		if (tas_dtap)
 			CL_DuckTap();
@@ -1433,6 +1473,7 @@ void InitInput (void)
 	gEngfuncs.pfnAddCommand("tas_dwj", IN_DuckWhenJump);
 	gEngfuncs.pfnAddCommand("tas_lgagst", IN_LGAGST);
 	gEngfuncs.pfnAddCommand("tas_jb", IN_JumpBug);
+	gEngfuncs.pfnAddCommand("tas_db4c", IN_DuckB4Col);
 
 	gEngfuncs.pfnAddCommand ("+moveup",IN_UpDown);
 	gEngfuncs.pfnAddCommand ("-moveup",IN_UpUp);
@@ -1509,6 +1550,7 @@ void InitInput (void)
 	m_side				= gEngfuncs.pfnRegisterVariable ( "m_side","0.8", FCVAR_ARCHIVE );
 
 	cl_mtype = gEngfuncs.pfnRegisterVariable("cl_mtype", "1", 0);
+	cl_db4c_ceil = gEngfuncs.pfnRegisterVariable("cl_db4c_ceil", "0", 0);
 
 	// Initialize third person camera controls.
 	CAM_Init();
