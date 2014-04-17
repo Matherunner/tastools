@@ -62,6 +62,7 @@ static int tas_dwj = 0;
 static int tas_lgagst = 0;
 static int tas_jb = 0;
 static int tas_db4c = 0;
+static int tas_db4l = 0;
 
 extern playermove_t *pmove;
 
@@ -652,6 +653,10 @@ void IN_DuckB4Col()
 {
 	tas_db4c = atoi(gEngfuncs.Cmd_Argv(1));
 }
+void IN_DuckB4Land()
+{
+	tas_db4l = atoi(gEngfuncs.Cmd_Argv(1));
+}
 
 /*
 ===============
@@ -1018,6 +1023,13 @@ void CL_DuckTap()
 	}
 }
 
+bool CL_IsGroundEntBelow(float pos[3])
+{
+	float target[3] = {pos[0], pos[1], pos[2] - 2};
+	pmtrace_t tr = pmove->PM_PlayerTrace(pos, target, PM_NORMAL, -1);
+	return tr.plane.normal[2] >= 0.7;
+}
+
 void CL_JumpBug()
 {
 	if (pmove->onground != -1 || pmove->velocity[2] > 180)
@@ -1052,18 +1064,66 @@ void CL_JumpBug()
 			pmove->origin[1] + pmove->frametime * (pmove->velocity[1] + pmove->basevelocity[1]),
 			pmove->origin[2] + pmove->frametime * newvz
 		};
-		float target[3] = {newpos[0], newpos[1], newpos[2] - 2};
-		pmtrace_t trace = pmove->PM_PlayerTrace(newpos, target, PM_NORMAL, -1);
-		if (trace.plane.normal[2] < 0.7)
+		if (!CL_IsGroundEntBelow(newpos))
 			return;
 		in_duck.state |= 8;
 		pmove->flags |= FL_DUCKING;
 	}
 }
 
+void CL_DuckB4Land()
+{
+	static int db4l_state = 0;
+
+	if (pmove->onground != -1 || in_duck.state & (1 + 8 + 16) || pmove->velocity[2] > 180)
+		return;
+
+	if (pmove->flags & FL_DUCKING && db4l_state == 1)
+	{
+		pmove->usehull = 0;
+		pmtrace_t trace = pmove->PM_PlayerTrace(pmove->origin, pmove->origin, PM_NORMAL, -1);
+		if (trace.startsolid || !CL_IsGroundEntBelow(pmove->origin))
+		{
+			tas_db4l--;
+			db4l_state = 0;
+			pmove->usehull = trace.startsolid;
+		}
+		else
+		{
+			in_duck.state |= 8;
+			pmove->usehull = 1;
+		}
+		return;
+	}
+	float newvz = pmove->velocity[2] + pmove->frametime * (pmove->basevelocity[2] - pmove->gravity * pmove->movevars->gravity * 0.5);
+	float target[3] = {
+		pmove->origin[0] + (pmove->basevelocity[0] + pmove->velocity[0]) * pmove->frametime,
+		pmove->origin[1] + (pmove->basevelocity[1] + pmove->velocity[1]) * pmove->frametime,
+		pmove->origin[2] + newvz * pmove->frametime
+	};
+	int old_usehull = pmove->usehull;
+	pmove->usehull = 0;
+	pmtrace_t trace = pmove->PM_PlayerTrace(pmove->origin, target, PM_NORMAL, -1);
+	if (!CL_IsGroundEntBelow(trace.endpos))
+	{
+		pmove->usehull = old_usehull;
+		return;
+	}
+	pmove->usehull = 1;
+	trace = pmove->PM_PlayerTrace(pmove->origin, target, PM_NORMAL, -1);
+	if (CL_IsGroundEntBelow(trace.endpos))
+	{
+		pmove->usehull = old_usehull;
+		return;
+	}
+	in_duck.state |= 8;
+	pmove->flags |= FL_DUCKING;
+	db4l_state = 1;
+}
+
 void CL_DuckB4Col()
 {
-	if (pmove->onground != -1 || in_duck.state & 1)
+	if (pmove->onground != -1 || in_duck.state & (1 + 8 + 16))
 		return;
 	float newvz = pmove->velocity[2] + pmove->frametime * (pmove->basevelocity[2] - pmove->gravity * pmove->movevars->gravity * 0.5);
 	float target[3] = {
@@ -1170,6 +1230,8 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 
 		if (tas_db4c)
 			CL_DuckB4Col();
+		if (tas_db4l)
+			CL_DuckB4Land();
 
 		if (tas_dtap)
 			CL_DuckTap();
@@ -1474,6 +1536,7 @@ void InitInput (void)
 	gEngfuncs.pfnAddCommand("tas_lgagst", IN_LGAGST);
 	gEngfuncs.pfnAddCommand("tas_jb", IN_JumpBug);
 	gEngfuncs.pfnAddCommand("tas_db4c", IN_DuckB4Col);
+	gEngfuncs.pfnAddCommand("tas_db4l", IN_DuckB4Land);
 
 	gEngfuncs.pfnAddCommand ("+moveup",IN_UpDown);
 	gEngfuncs.pfnAddCommand ("-moveup",IN_UpUp);
