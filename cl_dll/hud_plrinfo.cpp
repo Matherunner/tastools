@@ -9,11 +9,17 @@ DECLARE_MESSAGE(m_PlrInfo, PlaneNZ)
 DECLARE_MESSAGE(m_PlrInfo, DispVec)
 DECLARE_MESSAGE(m_PlrInfo, Viewangles)
 DECLARE_MESSAGE(m_PlrInfo, EntClassN)
+DECLARE_MESSAGE(m_PlrInfo, Selfgauss)
 
 extern float g_ColorYellow[3];
 static int line_height;
 extern playermove_t *pmove;
 extern StrafeType strafetype;
+
+inline void reset_color()
+{
+	gEngfuncs.pfnDrawSetTextColor(g_ColorYellow[0], g_ColorYellow[1], g_ColorYellow[2]);
+}
 
 int CHudPlrInfo::Init()
 {
@@ -28,6 +34,7 @@ int CHudPlrInfo::Init()
 	m_entHealth = 0;
 	m_planeNZ = 0;
 	m_entClassname = "N/A";
+	m_sgaussDist = -1;
 
 	HOOK_MESSAGE(Velocity);
 	HOOK_MESSAGE(EntHealth);
@@ -35,6 +42,7 @@ int CHudPlrInfo::Init()
 	HOOK_MESSAGE(DispVec);
 	HOOK_MESSAGE(Viewangles);
 	HOOK_MESSAGE(EntClassN);
+	HOOK_MESSAGE(Selfgauss);
 
 	return 1;
 }
@@ -83,6 +91,13 @@ int CHudPlrInfo::MsgFunc_EntClassN(const char *name, int size, void *buf)
 {
 	BEGIN_READ(buf, size);
 	m_entClassname = READ_STRING();
+	return 1;
+}
+
+int CHudPlrInfo::MsgFunc_Selfgauss(const char *name, int size, void *buf)
+{
+	BEGIN_READ(buf, size);
+	m_sgaussDist = READ_FLOAT();
 	return 1;
 }
 
@@ -178,12 +193,29 @@ void CHudPlrInfo::DrawStrafetype()
 		gEngfuncs.pfnDrawSetTextColor(0, 1, 0);
 	DrawConsoleString(10, line_height * 12, dispstr);
 	if (c != '-')
-		gEngfuncs.pfnDrawSetTextColor(g_ColorYellow[0], g_ColorYellow[1], g_ColorYellow[2]);
+		reset_color();
+}
+
+void CHudPlrInfo::DrawSelfgauss()
+{
+	char numstr[30];
+	if (m_sgaussDist != -1)
+	{
+		snprintf(numstr, sizeof(numstr), "SG: %.8g", m_sgaussDist);
+		gEngfuncs.pfnDrawSetTextColor(0, 1, 0);
+	}
+	else
+	{
+		strcpy(numstr, "SG: -");
+	}
+	DrawConsoleString(10, line_height * 13, numstr);
+	if (m_sgaussDist != -1)
+		reset_color();
 }
 
 int CHudPlrInfo::Draw(float flTime)
 {
-	gEngfuncs.pfnDrawSetTextColor(g_ColorYellow[0], g_ColorYellow[1], g_ColorYellow[2]);
+	reset_color();
 
 	DrawVelocity();
 	DrawEntHealth();
@@ -194,6 +226,7 @@ int CHudPlrInfo::Draw(float flTime)
 	DrawMyCrosshair();
 	DrawDucked();
 	DrawStrafetype();
+	DrawSelfgauss();
 
 	return 1;
 }

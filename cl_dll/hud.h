@@ -547,12 +547,14 @@ public:
 	void DrawMyCrosshair();
 	void DrawDucked();
 	void DrawStrafetype();
+	void DrawSelfgauss();
 	int MsgFunc_Velocity(const char *name, int size, void *buf);
 	int MsgFunc_EntHealth(const char *name, int size, void *buf);
 	int MsgFunc_PlaneNZ(const char *name, int size, void *buf);
 	int MsgFunc_DispVec(const char *name, int size, void *buf);
 	int MsgFunc_Viewangles(const char *name, int size, void *buf);
 	int MsgFunc_EntClassN(const char *name, int size, void *buf);
+	int MsgFunc_Selfgauss(const char *name, int size, void *buf);
 
 private:
 	float m_velocity[3];
@@ -560,6 +562,7 @@ private:
 	float m_planeNZ;
 	float m_dispVec[3];
 	float m_viewangles[2];
+	float m_sgaussDist;
 	const char *m_entClassname;
 };
 

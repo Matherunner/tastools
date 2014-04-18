@@ -197,6 +197,7 @@ int gmsgPlaneNZ = 0;
 int gmsgDispVec = 0;
 int gmsgViewangles = 0;
 int gmsgEntClassname = 0;
+int gmsgSelfgauss = 0;
 
 
 void LinkUserMessages( void )
@@ -213,6 +214,7 @@ void LinkUserMessages( void )
 	gmsgDispVec = REG_USER_MSG("DispVec", 12);
 	gmsgViewangles = REG_USER_MSG("Viewangles", 8);
 	gmsgEntClassname = REG_USER_MSG("EntClassN", -1);
+	gmsgSelfgauss = REG_USER_MSG("Selfgauss", 4);
 
 	gmsgSelAmmo = REG_USER_MSG("SelAmmo", sizeof(SelAmmo));
 	gmsgCurWeapon = REG_USER_MSG("CurWeapon", 3);
@@ -2593,6 +2595,48 @@ void CBasePlayer :: UpdatePlayerSound ( void )
 	//ALERT ( at_console, "%d/%d\n", iVolume, m_iTargetVolume );
 }
 
+void CBasePlayer::SendSelfgaussInfo()
+{
+	UTIL_MakeVectors(pev->v_angle + pev->punchangle);
+	Vector vecAim = gpGlobals->v_forward;
+	Vector vecSrc = GetGunPosition();
+	Vector vecDest = vecSrc + 8192 * vecAim;
+	TraceResult tr, beam_tr;
+	CBaseEntity *pEntity;
+	float dist;
+
+	UTIL_TraceLine(vecSrc, vecDest, dont_ignore_monsters, ENT(pev), &tr);
+	if (tr.fAllSolid)
+		goto cannot_selfgauss;
+
+	pEntity = CBaseEntity::Instance(tr.pHit);
+	if (!pEntity || !pEntity->ReflectGauss())
+		goto cannot_selfgauss;
+	if (DotProduct(tr.vecPlaneNormal, vecAim) > -0.5)
+		goto cannot_selfgauss;
+
+	UTIL_TraceLine(tr.vecEndPos + vecAim * 8, vecDest, dont_ignore_monsters, NULL, &beam_tr);
+	if (beam_tr.fAllSolid)
+		goto cannot_selfgauss;
+	UTIL_TraceLine(beam_tr.vecEndPos, tr.vecEndPos, dont_ignore_monsters, NULL, &beam_tr);
+	dist = (beam_tr.vecEndPos - tr.vecEndPos).Length();
+	if (dist < 25)
+		goto cannot_selfgauss;
+
+	MESSAGE_BEGIN(MSG_ONE, gmsgSelfgauss, NULL, pev);
+	WRITE_LONG(*(int *)&dist);
+	MESSAGE_END();
+
+	return;
+
+cannot_selfgauss:
+
+	dist = -1;
+	MESSAGE_BEGIN(MSG_ONE, gmsgSelfgauss, NULL, pev);
+	WRITE_LONG(*(int *)&dist);
+	MESSAGE_END();
+}
+
 void CBasePlayer::SendInfoToClient()
 {
 	Vector vecActualVel = (pev->origin - old_origin) / gpGlobals->frametime;
@@ -2638,6 +2682,8 @@ void CBasePlayer::SendInfoToClient()
 	else
 		WRITE_STRING("N/A");
 	MESSAGE_END();
+
+	SendSelfgaussInfo();
 }
 
 void CBasePlayer::PostThink()
