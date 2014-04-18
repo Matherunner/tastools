@@ -1051,7 +1051,7 @@ void CL_JumpBug()
 			return;
 		}
 		in_duck.state |= 16;
-		in_jump.state = 1;
+		in_jump.state |= 8;
 		pmove->flags &= ~FL_DUCKING;
 		pmove->onground = -1;
 		tas_jb--;
@@ -1154,7 +1154,7 @@ void CL_DuckB4Col()
 
 void CL_HandleJump()
 {
-	if (tas_dwj && pmove->onground != -1 && (in_jump.state & 1 || tas_cjmp))
+	if (tas_dwj && pmove->onground != -1 && (in_jump.state & (1 + 8) || tas_cjmp))
 	{
 		tas_dwj--;
 		in_duck.state |= 8;
@@ -1165,7 +1165,7 @@ void CL_HandleJump()
 	}
 	if (pmove->onground == -1 || pmove->oldbuttons & IN_JUMP)
 		return;
-	if (in_jump.state & 1)
+	if (in_jump.state & (1 + 8))
 	{
 		pmove->onground = -1;
 	}
@@ -1173,7 +1173,7 @@ void CL_HandleJump()
 	{
 		tas_cjmp--;
 		pmove->onground = -1;
-		in_jump.state = 1;
+		in_jump.state |= 8;
 	}
 }
 
@@ -1202,6 +1202,7 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 		pmove->frametime = frametime;
 		pmove->usehull = (pmove->flags & FL_DUCKING) != 0;
 		in_duck.state &= ~(8 + 16);
+		in_jump.state &= ~(8 + 16);
 
 		PM_CatagorizePosition();
 
@@ -1316,7 +1317,6 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 		cmd->buttons = (cmd->buttons & ~IN_MOVERIGHT) | (strafe_buttons & IN_MOVERIGHT);
 		cmd->buttons = (cmd->buttons & ~IN_MOVELEFT) | (strafe_buttons & IN_MOVELEFT);
 	}
-	in_jump.state = 0;
 
 	// If they're in a modal dialog, ignore the attack button.
 	if(GetClientVoiceMgr()->IsInSquelchMode())
@@ -1371,7 +1371,7 @@ int CL_ButtonBits( int bResetState )
 	{
 		bits |= IN_DUCK;
 	}
-	if (in_jump.state & 3)
+	if (in_jump.state & (3 + 8) && !(in_jump.state & 16))
 	{
 		bits |= IN_JUMP;
 	}
