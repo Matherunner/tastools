@@ -57,6 +57,7 @@ extern cvar_t allow_spectators;
 
 extern int g_teamplay;
 int tasPlrInfo = 0;
+static const char *weapon_str = NULL;
 
 void LinkUserMessages( void );
 
@@ -554,6 +555,7 @@ void ClientCommand( edict_t *pEntity )
 	}
 	else if (((pstr = strstr(pcmd, "weapon_")) != NULL)  && (pstr == pcmd))
 	{
+		weapon_str = pcmd;
 		GetClassPtr((CBasePlayer *)pev)->SelectItem(pcmd);
 	}
 	else if (FStrEq(pcmd, "lastinv" ))
@@ -748,12 +750,20 @@ void PlayerPreThink( edict_t *pEntity )
 	entvars_t *pev = &pEntity->v;
 	CBasePlayer *pPlayer = (CBasePlayer *)GET_PRIVATE(pEntity);
 
-	if (pPlayer)
+	if (!pPlayer)
+		return;
+
+	if (CVAR_GET_STRING("sv_taslog")[0] != '0')
 	{
-		if (CVAR_GET_STRING("sv_taslog")[0] != '0')
-			ALERT(at_console, "prethink %u %.8g\n", g_ulFrameCount, gpGlobals->frametime);
-		pPlayer->PreThink( );
+		ALERT(at_console, "prethink %u %.8g\n", g_ulFrameCount, gpGlobals->frametime);
+		if (weapon_str)
+		{
+			ALERT(at_console, "%s\n", weapon_str);
+			weapon_str = NULL;
+		}
 	}
+
+	pPlayer->PreThink( );
 }
 
 /*
