@@ -48,7 +48,8 @@ typedef struct tas_cmd_s
 static const double M_U = 360.0 / 65536;
 
 StrafeType strafetype = Nostrafe;
-static unsigned short strafe_buttons;
+static float old_backspeed;
+static float old_sidespeed;
 
 static double line_origin[2] = {0, 0};
 static double line_dir[2] = {0, 0};
@@ -444,12 +445,14 @@ void IN_ForwardUp(void)
 void IN_BackDown(void)
 {
 	KeyDown(&in_back);
+	in_back.state |= 32;
 	gHUD.m_Spectator.HandleButtonsDown( IN_BACK );
 }
 
 void IN_BackUp(void)
 {
 	KeyUp(&in_back);
+	in_back.state &= ~32;
 	gHUD.m_Spectator.HandleButtonsUp( IN_BACK );
 }
 void IN_LookupDown(void) {KeyDown(&in_lookup);}
@@ -459,24 +462,28 @@ void IN_LookdownUp(void) {KeyUp(&in_lookdown);}
 void IN_MoveleftDown(void)
 {
 	KeyDown(&in_moveleft);
+	in_moveleft.state |= 32;
 	gHUD.m_Spectator.HandleButtonsDown( IN_MOVELEFT );
 }
 
 void IN_MoveleftUp(void)
 {
 	KeyUp(&in_moveleft);
+	in_moveleft.state &= ~32;
 	gHUD.m_Spectator.HandleButtonsUp( IN_MOVELEFT );
 }
 
 void IN_MoverightDown(void)
 {
 	KeyDown(&in_moveright);
+	in_moveright.state |= 32;
 	gHUD.m_Spectator.HandleButtonsDown( IN_MOVERIGHT );
 }
 
 void IN_MoverightUp(void)
 {
 	KeyUp(&in_moveright);
+	in_moveright.state &= ~32;
 	gHUD.m_Spectator.HandleButtonsUp( IN_MOVERIGHT );
 }
 void IN_SpeedDown(void) {KeyDown(&in_speed);}
@@ -793,19 +800,33 @@ float CL_TasStrafeYaw(float yaw, double speed, double L, double A, double theta,
 {
 	double dir = right ? 1 : -1;
 	double phi;
+	KeyUp(&in_forward);
 	if (theta >= 67.5)
 	{
-		strafe_buttons = right ? IN_MOVERIGHT : IN_MOVELEFT;
+		KeyDown(right ? &in_moveright : &in_moveleft);
+		KeyUp(right ? &in_moveleft : &in_moveright);
+		KeyUp(&in_back);
 		phi = 90;
 	}
 	else if (22.5 < theta && theta < 67.5)
 	{
-		strafe_buttons = (right ? IN_MOVERIGHT : IN_MOVELEFT) | IN_BACK;
+		KeyDown(right ? &in_moveright : &in_moveleft);
+		KeyUp(right ? &in_moveleft : &in_moveright);
+		KeyDown(&in_back);
+		cl_backspeed->value = -cl_backspeed->value;
+		int side = (right ? in_moveright : in_moveleft).state & 3;
+		int back = in_back.state & 3;
+		// Make sure phi is _really_ 45 degrees
+		if (side != back)
+			(side ? cl_sidespeed : cl_backspeed)->value *= 2;
 		phi = 45;
 	}
 	else
 	{
-		strafe_buttons = IN_BACK;
+		KeyUp(right ? &in_moveright : &in_moveleft);
+		KeyUp(right ? &in_moveleft : &in_moveright);
+		KeyDown(&in_back);
+		cl_backspeed->value = -cl_backspeed->value;
 		phi = 0;
 	}
 	double beta = speed > 0.1 ? atan2(pmove->velocity[1], pmove->velocity[0]) * 180 / M_PI : yaw;
@@ -816,7 +837,7 @@ float CL_TasStrafeYaw(float yaw, double speed, double L, double A, double theta,
 	double alpha[2];
 	double testspd[2];
 	alpha[0] = beta;
-	alpha[1] = beta + (beta >= 0 ? M_U : -M_U);
+	alpha[1] = beta + copysign(M_U, beta);
 
 	for (int i = 0; i < 2; i++)
 	{
@@ -939,7 +960,10 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 	}
 	else if (strafetype == Backpedal)
 	{
-		strafe_buttons = IN_BACK;
+		KeyUp(&in_forward);
+		KeyUp(&in_moveright);
+		KeyUp(&in_moveleft);
+		KeyDown(&in_back);
 		viewangles[YAW] = atan2(pmove->velocity[1], pmove->velocity[0]) * 180 / M_PI;
 		float frac = viewangles[YAW] / M_U;
 		frac -= trunc(frac);
@@ -1193,6 +1217,10 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 	float spd;
 	vec3_t viewangles;
 	static vec3_t oldangles;
+	static StrafeType old_strafetype = Nostrafe;
+
+	old_backspeed = cl_backspeed->value;
+	old_sidespeed = cl_sidespeed->value;
 
 	if ( active && !Bench_Active() )
 	{
@@ -1245,38 +1273,29 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 			tas_cjmp = old_tas_cjmp;
 		}
 
-		//memset( viewangles, 0, sizeof( vec3_t ) );
-		//viewangles[ 0 ] = viewangles[ 1 ] = viewangles[ 2 ] = 0.0;
 		gEngfuncs.GetViewAngles( (float *)viewangles );
-
 		CL_AdjustAngles ( frametime, viewangles );
-
 		memset (cmd, 0, sizeof(*cmd));
-		
 		gEngfuncs.SetViewAngles( (float *)viewangles );
 
-		if (strafetype == Nostrafe)
+		if (strafetype == Nostrafe && old_strafetype != Nostrafe)
 		{
-			cmd->sidemove += cl_sidespeed->value * CL_KeyState (&in_moveright);
-			cmd->sidemove -= cl_sidespeed->value * CL_KeyState (&in_moveleft);
-			cmd->forwardmove += cl_forwardspeed->value * CL_KeyState (&in_forward);
-			cmd->forwardmove -= cl_backspeed->value * CL_KeyState (&in_back);
+			if (!(in_moveright.state & 32))
+				KeyUp(&in_moveright);
+			if (!(in_moveleft.state & 32))
+				KeyUp(&in_moveleft);
+			if (!(in_back.state & 32))
+				KeyUp(&in_back);
 		}
-		else
-		{
-			if (strafe_buttons & IN_MOVERIGHT)
-				cmd->sidemove = cl_sidespeed->value;
-			else if (strafe_buttons & IN_MOVELEFT)
-				cmd->sidemove = -cl_sidespeed->value;
+		in_moveright.state &= ~32;
+		in_moveleft.state &= ~32;
+		in_back.state &= ~32;
+		old_strafetype = strafetype;
 
-			if (strafe_buttons & IN_BACK)
-			{
-				cmd->forwardmove = cl_backspeed->value;
-				if (strafetype == Backpedal)
-					cmd->forwardmove = -cmd->forwardmove;
-			}
-		}
-
+		cmd->sidemove += cl_sidespeed->value * CL_KeyState (&in_moveright);
+		cmd->sidemove -= cl_sidespeed->value * CL_KeyState (&in_moveleft);
+		cmd->forwardmove += cl_forwardspeed->value * CL_KeyState (&in_forward);
+		cmd->forwardmove -= cl_backspeed->value * CL_KeyState (&in_back);
 		cmd->upmove += cl_upspeed->value * CL_KeyState (&in_up);
 		cmd->upmove -= cl_upspeed->value * CL_KeyState (&in_down);
 
@@ -1310,13 +1329,6 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 	// set button and flag bits
 	//
 	cmd->buttons = CL_ButtonBits( 1 );
-	if (strafetype != Nostrafe)
-	{
-		cmd->buttons &= ~IN_FORWARD;
-		cmd->buttons = (cmd->buttons & ~IN_BACK) | (strafe_buttons & IN_BACK);
-		cmd->buttons = (cmd->buttons & ~IN_MOVERIGHT) | (strafe_buttons & IN_MOVERIGHT);
-		cmd->buttons = (cmd->buttons & ~IN_MOVELEFT) | (strafe_buttons & IN_MOVELEFT);
-	}
 
 	// If they're in a modal dialog, ignore the attack button.
 	if(GetClientVoiceMgr()->IsInSquelchMode())
@@ -1336,6 +1348,9 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 	}
 
 	Bench_SetViewAngles( 1, (float *)&cmd->viewangles, frametime, cmd );
+
+	cl_backspeed->value = old_backspeed;
+	cl_sidespeed->value = old_sidespeed;
 }
 
 /*
