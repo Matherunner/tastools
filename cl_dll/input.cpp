@@ -1009,7 +1009,7 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 
 void CL_DuckTap()
 {
-	if (pmove->onground == -1)
+	if (!tas_dtap || pmove->onground == -1)
 		return;
 
 	float target[3] = {pmove->origin[0], pmove->origin[1], pmove->origin[2] + 18};
@@ -1056,7 +1056,7 @@ bool CL_IsGroundEntBelow(float pos[3])
 
 void CL_JumpBug()
 {
-	if (pmove->onground != -1 || pmove->velocity[2] > 180)
+	if (!tas_jb || pmove->onground != -1 || pmove->velocity[2] > 180)
 		return;
 	if (pmove->flags & FL_DUCKING)
 	{
@@ -1099,7 +1099,7 @@ void CL_DuckB4Land()
 {
 	static int db4l_state = 0;
 
-	if (pmove->onground != -1 || in_duck.state & (1 + 8 + 16) || pmove->velocity[2] > 180)
+	if (!tas_db4l || pmove->onground != -1 || in_duck.state & (1 + 8 + 16) || pmove->velocity[2] > 180)
 		return;
 
 	if (pmove->flags & FL_DUCKING && db4l_state == 1)
@@ -1147,7 +1147,7 @@ void CL_DuckB4Land()
 
 void CL_DuckB4Col()
 {
-	if (pmove->onground != -1 || in_duck.state & (1 + 8 + 16))
+	if (!tas_db4c || pmove->onground != -1 || in_duck.state & (1 + 8 + 16))
 		return;
 	float newvz = pmove->velocity[2] + pmove->frametime * (pmove->basevelocity[2] - pmove->gravity * pmove->movevars->gravity * 0.5);
 	float target[3] = {
@@ -1178,6 +1178,8 @@ void CL_DuckB4Col()
 
 void CL_HandleJump()
 {
+	if (in_duck.state & (8 + 16))
+		return;
 	if (tas_dwj && pmove->onground != -1 && (in_jump.state & (1 + 8) || tas_cjmp))
 	{
 		tas_dwj--;
@@ -1254,18 +1256,11 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 			}
 		}
 
-		if (tas_jb)
-			CL_JumpBug();
-
-		if (tas_db4c)
-			CL_DuckB4Col();
-		if (tas_db4l)
-			CL_DuckB4Land();
-
-		if (tas_dtap)
-			CL_DuckTap();
-		if (!(in_duck.state & (8 + 16)))
-			CL_HandleJump();
+		CL_JumpBug();
+		CL_DuckB4Col();
+		CL_DuckB4Land();
+		CL_DuckTap();
+		CL_HandleJump();
 
 		if (lg_prevented)
 		{
