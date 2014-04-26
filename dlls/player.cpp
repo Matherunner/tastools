@@ -494,6 +494,9 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		return 0;
 	}
 
+	if (CVAR_GET_STRING("sv_taslog")[0] != '0')
+		ALERT(at_console, "dmg %.8g %d ", flDamage, bitsDamageType);
+
 	// keep track of amount of damage last sustained
 	m_lastDamageAmount = flDamage;
 
@@ -519,9 +522,6 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		
 		flDamage = flNew;
 	}
-
-	if (CVAR_GET_STRING("sv_taslog")[0] != '0')
-		ALERT(at_console, "dmg %d %d ", (int)flDamage, bitsDamageType);
 
 	// this cast to INT is critical!!! If a player ends up with 0.5 health, the engine will get that
 	// as an int (zero) and think the player is dead! (this will incite a clientside screentilt, etc)
