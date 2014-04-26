@@ -1081,6 +1081,7 @@ void PM_WalkMove ()
 	float downdist, updist;
 
 	pmtrace_t trace;
+	int old_numtouch;
 	
 	// Copy movement amounts
 	fmove = pmove->cmd.forwardmove;
@@ -1162,6 +1163,8 @@ void PM_WalkMove ()
 
 	// Slide move
 	clip = PM_FlyMove ();
+	old_numtouch = pmove->numtouch;
+	pmove->numtouch = 0;
 
 	// Copy the results out
 	VectorCopy (pmove->origin  , down);
@@ -1219,6 +1222,7 @@ void PM_WalkMove ()
 usedown:
 		VectorCopy (down   , pmove->origin);
 		VectorCopy (downvel, pmove->velocity);
+		pmove->numtouch = old_numtouch;
 	} else // copy z value from slide move
 		pmove->velocity[2] = downvel[2];
 
