@@ -865,7 +865,9 @@ float CL_TasStrafeYaw(float yaw, bool right)
 	CL_GetLASpeeds(L, A, prevspeed, speed);
 
 	double theta;
-	if (cl_mtype->string[0] == '2')
+	if (speed < 0.1)
+		theta = 0;
+	else if (cl_mtype->string[0] == '2')
 		theta = CL_AngleConstSpeed(prevspeed, speed, L, A);
 	else
 		theta = CL_AngleOptimal(speed, L, A);
