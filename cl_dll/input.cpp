@@ -324,6 +324,28 @@ void KB_Shutdown( void )
 	g_kbkeys = NULL;
 }
 
+// Simulate key up or down from the console.  If we use KeyDown or KeyUp
+// functions instead, sometimes the leftover gEngfuncs.Cmd_Argv(1) from the
+// previous command can mess things up.
+void TasKeyDown(kbutton_t *b)
+{
+	if (b->down[0] == -1 || b->down[1] == -1 || b->state & 1)
+		return;
+	if (!b->down[0])
+		b->down[0] = -1;
+	else if (!b->down[1])
+		b->down[1] = -1;
+	else
+		return;
+	b->state |= 1 + 2;
+}
+
+void TasKeyUp(kbutton_t *b)
+{
+	b->down[0] = b->down[1] = 0;
+	b->state = 4;
+}
+
 /*
 ============
 KeyDown
@@ -800,19 +822,19 @@ float CL_TasStrafeYaw(float yaw, double speed, double L, double A, double theta,
 {
 	double dir = right ? 1 : -1;
 	double phi;
-	KeyUp(&in_forward);
+	TasKeyUp(&in_forward);
 	if (theta >= 67.5)
 	{
-		KeyDown(right ? &in_moveright : &in_moveleft);
-		KeyUp(right ? &in_moveleft : &in_moveright);
-		KeyUp(&in_back);
+		TasKeyDown(right ? &in_moveright : &in_moveleft);
+		TasKeyUp(right ? &in_moveleft : &in_moveright);
+		TasKeyUp(&in_back);
 		phi = 90;
 	}
 	else if (22.5 < theta && theta < 67.5)
 	{
-		KeyDown(right ? &in_moveright : &in_moveleft);
-		KeyUp(right ? &in_moveleft : &in_moveright);
-		KeyDown(&in_back);
+		TasKeyDown(right ? &in_moveright : &in_moveleft);
+		TasKeyUp(right ? &in_moveleft : &in_moveright);
+		TasKeyDown(&in_back);
 		cl_backspeed->value = -cl_backspeed->value;
 		int side = (right ? in_moveright : in_moveleft).state & 3;
 		int back = in_back.state & 3;
@@ -823,9 +845,9 @@ float CL_TasStrafeYaw(float yaw, double speed, double L, double A, double theta,
 	}
 	else
 	{
-		KeyUp(right ? &in_moveright : &in_moveleft);
-		KeyUp(right ? &in_moveleft : &in_moveright);
-		KeyDown(&in_back);
+		TasKeyUp(right ? &in_moveright : &in_moveleft);
+		TasKeyUp(right ? &in_moveleft : &in_moveright);
+		TasKeyDown(&in_back);
 		cl_backspeed->value = -cl_backspeed->value;
 		phi = 0;
 	}
@@ -962,10 +984,10 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 	}
 	else if (strafetype == Backpedal)
 	{
-		KeyUp(&in_forward);
-		KeyUp(&in_moveright);
-		KeyUp(&in_moveleft);
-		KeyDown(&in_back);
+		TasKeyUp(&in_forward);
+		TasKeyUp(&in_moveright);
+		TasKeyUp(&in_moveleft);
+		TasKeyDown(&in_back);
 		viewangles[YAW] = atan2(pmove->velocity[1], pmove->velocity[0]) * 180 / M_PI;
 		float frac = viewangles[YAW] / M_U;
 		frac -= trunc(frac);
@@ -1278,11 +1300,11 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 		if (strafetype == Nostrafe && old_strafetype != Nostrafe)
 		{
 			if (!(in_moveright.state & 32))
-				KeyUp(&in_moveright);
+				TasKeyUp(&in_moveright);
 			if (!(in_moveleft.state & 32))
-				KeyUp(&in_moveleft);
+				TasKeyUp(&in_moveleft);
 			if (!(in_back.state & 32))
-				KeyUp(&in_back);
+				TasKeyUp(&in_back);
 		}
 		in_moveright.state &= ~32;
 		in_moveleft.state &= ~32;
