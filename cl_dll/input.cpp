@@ -831,7 +831,7 @@ float CL_TasStrafeYaw(float yaw, double speed, double L, double A, double theta,
 	}
 	double beta = speed > 0.1 ? atan2(pmove->velocity[1], pmove->velocity[0]) * 180 / M_PI : yaw;
 	beta += dir * (phi - theta);
-	if (cl_mtype->string[0] == '2')
+	if (cl_mtype->value == 2)
 		return beta;
 
 	double alpha[2];
@@ -867,7 +867,7 @@ float CL_TasStrafeYaw(float yaw, bool right)
 	double theta;
 	if (speed < 0.1)
 		theta = 0;
-	else if (cl_mtype->string[0] == '2')
+	else if (cl_mtype->value == 2)
 		theta = CL_AngleConstSpeed(prevspeed, speed, L, A);
 	else
 		theta = CL_AngleOptimal(speed, L, A);
@@ -892,7 +892,7 @@ float CL_TasLinestrafeYaw(float yaw)
 	if (speed < 0.1)
 		return CL_TasStrafeYaw(yaw, speed, L, A, theta, true);
 
-	if (cl_mtype->string[0] == '2')
+	if (cl_mtype->value == 2)
 		theta = CL_AngleConstSpeed(prevspeed, speed, L, A);
 	else
 		theta = CL_AngleOptimal(speed, L, A);
@@ -1161,7 +1161,7 @@ void CL_DuckB4Col()
 	pmove->usehull = 0;
 	pmtrace_t trace = pmove->PM_PlayerTrace(pmove->origin, target, PM_NORMAL, -1);
 	if (trace.fraction == 1 || trace.plane.normal[2] >= 0.7 || trace.startsolid
-		|| (cl_db4c_ceil->string[0] == '0' && trace.plane.normal[2] == -1))
+		|| (!cl_db4c_ceil->value && trace.plane.normal[2] == -1))
 	{
 		pmove->usehull = old_usehull;
 		return;
@@ -1228,7 +1228,7 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 
 	if ( active && !Bench_Active() )
 	{
-		g_bcap = gEngfuncs.pfnGetCvarString("sv_bcap")[0] != '0';
+		g_bcap = gEngfuncs.pfnGetCvarFloat("sv_bcap") != 0;
 		if (pmove->flags & FL_DUCKING)
 			pmove->maxspeed *= 0.333;
 		pmove->frametime = frametime;
@@ -1242,7 +1242,7 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 		int old_tas_cjmp;
 		bool lg_prevented = false;
 		// tas_lgagst only makes sense when optimal strafing on the ground
-		if (tas_lgagst && cl_mtype->string[0] == '1' && strafetype != Nostrafe && pmove->onground != -1)
+		if (tas_lgagst && cl_mtype->value == 1 && strafetype != Nostrafe && pmove->onground != -1)
 		{
 			if (CL_IsAirAccelGreater())
 			{

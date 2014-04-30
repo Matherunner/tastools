@@ -2596,7 +2596,7 @@ void PM_Jump (void)
     pmove->onground = -1;
 
 #ifndef CLIENT_DLL
-	if (g_sv_bcap.string[0] != '0')
+	if (g_sv_bcap.value)
 #else
 	if (g_bcap)
 #endif

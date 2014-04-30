@@ -494,7 +494,7 @@ int CBasePlayer :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker, 
 		return 0;
 	}
 
-	if (CVAR_GET_STRING("sv_taslog")[0] != '0')
+	if (CVAR_GET_FLOAT("sv_taslog"))
 		ALERT(at_console, "dmg %.8g %d ", flDamage, bitsDamageType);
 
 	// keep track of amount of damage last sustained
@@ -1867,7 +1867,7 @@ void CBasePlayer::UpdateStatusBar()
 
 void CBasePlayer::PreThink(void)
 {
-	if (CVAR_GET_STRING("sv_taslog")[0] != '0')
+	if (CVAR_GET_FLOAT("sv_taslog"))
 		ALERT(at_console, "health %.8g %.8g\n", pev->health, pev->armorvalue);
 
 	if (g_cheatHealth != -1)

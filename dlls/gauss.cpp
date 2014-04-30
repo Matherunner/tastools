@@ -167,7 +167,7 @@ void CGauss::PrimaryAttack()
 	m_fInAttack = 0;
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.0;
 #ifndef CLIENT_DLL
-	if (CVAR_GET_STRING("sv_sim_grf")[0] == '0')
+	if (!CVAR_GET_FLOAT("sv_sim_grf"))
 #endif
 		m_pPlayer->m_flNextAttack = UTIL_WeaponTimeBase() + 0.2;
 }
@@ -317,7 +317,7 @@ void CGauss::StartFire( void )
 	Vector vecSrc = m_pPlayer->GetGunPosition( ); // + gpGlobals->v_up * -8 + gpGlobals->v_right * 8;
 
 #ifndef CLIENT_DLL
-	if (CVAR_GET_STRING("sv_sim_qg")[0] != '0')
+	if (CVAR_GET_FLOAT("sv_sim_qg"))
 		m_pPlayer->m_flStartCharge = 0;
 #endif
 	

@@ -877,7 +877,7 @@ int CBaseMonster :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttacker,
 	// todo: remove after combining shotgun blasts?
 	if ( IsPlayer() )
 	{
-		if (CVAR_GET_STRING("sv_taslog")[0] != '0')
+		if (CVAR_GET_FLOAT("sv_taslog"))
 			ALERT(at_console, "%.8g %.8g %.8g\n", vecDir.x, vecDir.y, vecDir.z);
 
 		if ( pevInflictor )
@@ -1096,7 +1096,7 @@ void RadiusDamage( Vector vecSrc, entvars_t *pevInflictor, entvars_t *pevAttacke
 					flAdjustedDamage = 0;
 				}
 
-				if (CVAR_GET_STRING("sv_taslog")[0] != '0' && pEntity->IsPlayer())
+				if (CVAR_GET_FLOAT("sv_taslog") && pEntity->IsPlayer())
 				{
 					ALERT(at_console, "expld %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g %.8g\n", vecSrc.x, vecSrc.y, vecSrc.z, vecSpot.x, vecSpot.y, vecSpot.z, tr.vecEndPos.x, tr.vecEndPos.y, tr.vecEndPos.z);
 				}

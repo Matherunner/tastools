@@ -753,7 +753,7 @@ void PlayerPreThink( edict_t *pEntity )
 	if (!pPlayer)
 		return;
 
-	if (CVAR_GET_STRING("sv_taslog")[0] != '0')
+	if (CVAR_GET_FLOAT("sv_taslog"))
 	{
 		ALERT(at_console, "prethink %u %.8g\n", g_ulFrameCount, gpGlobals->frametime);
 		if (weapon_str)

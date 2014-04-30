@@ -956,7 +956,7 @@ void CPushable :: Move( CBaseEntity *pOther, int push )
 	else 
 		factor = 0.25;
 
-	if (playerTouch && CVAR_GET_STRING("sv_taslog")[0] != '0')
+	if (playerTouch && CVAR_GET_FLOAT("sv_taslog"))
 		ALERT(at_console, "obj %d %.8g %.8g\n", push, pev->velocity.x, pev->velocity.y);
 	pev->velocity.x += pevToucher->velocity.x * factor;
 	pev->velocity.y += pevToucher->velocity.y * factor;

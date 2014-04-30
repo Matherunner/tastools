@@ -998,7 +998,7 @@ BOOL CBasePlayerWeapon :: DefaultDeploy( char *szViewModel, char *szWeaponModel,
 	strcpy( m_pPlayer->m_szAnimExtention, szAnimExt );
 	SendWeaponAnim( iAnim, skiplocal, body );
 
-	m_pPlayer->m_flNextAttack = CVAR_GET_STRING("sv_sim_qws")[0] == '0' ? UTIL_WeaponTimeBase() + 0.5 : 0;
+	m_pPlayer->m_flNextAttack = CVAR_GET_FLOAT("sv_sim_qws") ? 0 : UTIL_WeaponTimeBase() + 0.5;
 	m_flTimeWeaponIdle = UTIL_WeaponTimeBase() + 1.0;
 	m_flLastFireTime = 0.0;
 
