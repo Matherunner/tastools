@@ -1021,7 +1021,7 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 		if (viewangles[PITCH] > cl_pitchdown->value)
 			gEngfuncs.Cvar_SetValue("cl_pitchdown", viewangles[PITCH]);
 		if (viewangles[PITCH] < -cl_pitchup->value)
-			gEngfuncs.Cvar_SetValue("cl_pitchup", viewangles[PITCH]);
+			gEngfuncs.Cvar_SetValue("cl_pitchup", -viewangles[PITCH]);
 		do_setpitch.do_it = false;
 	}
 
