@@ -1086,14 +1086,7 @@ void CL_JumpBug()
 	{
 		pmove->usehull = 0;
 		pmtrace_t trace = pmove->PM_PlayerTrace(pmove->origin, pmove->origin, PM_NORMAL, -1);
-		if (trace.startsolid)
-		{
-			pmove->usehull = 1;
-			return;
-		}
-		float target[3] = {pmove->origin[0], pmove->origin[1], pmove->origin[2] - 2};
-		trace = pmove->PM_PlayerTrace(pmove->origin, target, PM_NORMAL, -1);
-		if (trace.plane.normal[2] < 0.7)
+		if (trace.startsolid || !CL_IsGroundEntBelow(pmove->origin))
 		{
 			pmove->usehull = 1;
 			return;
