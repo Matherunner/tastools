@@ -1123,12 +1123,14 @@ bool CL_IsGroundEntBelow(int usehull)
 	return tr.plane.normal[2] >= 0.7;
 }
 
-bool CL_IsUnduckable()
+// Assume duckstate is 1 or 2.
+bool CL_CanUnduck()
 {
-	if (!(pmove->flags & FL_DUCKING))
-		return true;
+	float target[3] = {pmove->origin[0], pmove->origin[1], pmove->origin[2]};
+	if (pmove->onground != -1)
+		target[2] += 18;
 	pmove->usehull = 0;
-	pmtrace_s tr = pmove->PM_PlayerTrace(pmove->origin, pmove->origin, PM_NORMAL, -1);
+	pmtrace_s tr = pmove->PM_PlayerTrace(target, target, PM_NORMAL, -1);
 	pmove->usehull = 1;
 	return !tr.startsolid;
 }
@@ -1139,7 +1141,7 @@ bool CL_JumpBug(bool &updated, float frametime, struct usercmd_s *cmd)
 	if (!tas_jb || pmove->onground != -1 || pmove->velocity[2] > 180)
 		return false;
 
-	if (pmove->flags & FL_DUCKING && CL_IsUnduckable() && !(pmove->oldbuttons & IN_JUMP) && CL_IsGroundEntBelow(0))
+	if (pmove->flags & FL_DUCKING && CL_CanUnduck() && !(pmove->oldbuttons & IN_JUMP) && CL_IsGroundEntBelow(0))
 	{
 		tas_jb--;
 		in_duck.state |= 16;
@@ -1149,7 +1151,7 @@ bool CL_JumpBug(bool &updated, float frametime, struct usercmd_s *cmd)
 
 	CL_AnglesAndMoves(frametime, cmd);
 	updated = true;
-	if (CL_IsUnduckable() && CL_IsGroundEntBelow(0))
+	if ((!(pmove->flags & FL_DUCKING) || CL_CanUnduck()) && CL_IsGroundEntBelow(0))
 	{
 		in_duck.state |= 8;
 		in_jump.state |= 16;	// unset the IN_JUMP bit in pmove->oldbuttons
@@ -1159,18 +1161,80 @@ bool CL_JumpBug(bool &updated, float frametime, struct usercmd_s *cmd)
 	return false;
 }
 
+bool CL_DuckTap()
+{
+	if (!tas_dtap)
+		return false;
+
+	if (pmove->onground == -1)
+	{
+		if (pmove->velocity[2] <= 180 && !(in_duck.state & 1) && pmove->flags & FL_DUCKING && CL_CanUnduck() && CL_IsGroundEntBelow(0))
+		{
+			in_jump.state |= 16;	// prevent accidental jumpbug
+			return true;
+		}
+		return false;
+	}
+
+	if (pmove->flags & FL_DUCKING)
+	{
+		pmove->origin[2] += 18;
+		if (!CL_CanUnduck())
+		{
+			pmove->origin[2] -= 18;
+			return false;
+		}
+		in_duck.state |= 16;
+		in_jump.state |= 16;
+		return true;
+	}
+
+	if (!CL_CanUnduck())
+		return false;
+
+	if (pmove->bInDuck)
+	{
+		tas_dtap--;
+		in_duck.state |= 16;
+	}
+	else
+	{
+		in_duck.state |= 8;
+		in_jump.state |= 16;
+	}
+	return true;
+}
+
 void CL_Autoactions(float frametime, struct usercmd_s *cmd)
 {
 	bool updated;		 // If this is true, then CL_AnglesAndMoves was called.
 
 	if (CL_JumpBug(updated, frametime, cmd))
-		return;
+		goto final;
+	if (CL_DuckTap())
+		goto final;
+
+final:
 
 	if (updated)
 		return;
 
-	if (in_jump.state & (1 + 8) && !(in_jump.state & 16) && !(pmove->oldbuttons & IN_JUMP))
+	// Ducktap
+	if (pmove->bInDuck && (!(in_duck.state & (1 + 8)) || in_duck.state & 16) && CL_CanUnduck())
 		pmove->onground = -1;
+
+	// Jump
+	if (in_jump.state & (1 + 8) && !(in_jump.state & 16) && !(pmove->oldbuttons & IN_JUMP) && pmove->onground != -1)
+	{
+		pmove->onground = -1;
+		if (tas_dwj)
+		{
+			in_duck.state |= 8;
+			tas_dwj--;
+		}
+	}
+
+	// Vertical speed doesn't matter at this point.
 	CL_AnglesAndMoves(frametime, cmd);
 }
 
