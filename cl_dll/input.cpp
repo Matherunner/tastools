@@ -818,7 +818,7 @@ bool CL_IsAirAccelGreater()
 	return speed_air >= speed_grnd;
 }
 
-float CL_TasStrafeYaw(float yaw, double speed, double L, double A, double theta, bool right)
+float CL_Sidestrafe(float yaw, double speed, double L, double A, double theta, bool right)
 {
 	double dir = right ? 1 : -1;
 	double phi;
@@ -881,7 +881,7 @@ float CL_TasStrafeYaw(float yaw, double speed, double L, double A, double theta,
 		return alpha[1];
 }
 
-float CL_TasStrafeYaw(float yaw, bool right)
+float CL_Sidestrafe(float yaw, bool right)
 {
 	double L, A, prevspeed, speed;
 	CL_GetLASpeeds(L, A, prevspeed, speed);
@@ -894,7 +894,7 @@ float CL_TasStrafeYaw(float yaw, bool right)
 	else
 		theta = CL_AngleOptimal(speed, L, A);
 
-	return CL_TasStrafeYaw(yaw, speed, L, A, theta, right);
+	return CL_Sidestrafe(yaw, speed, L, A, theta, right);
 }
 
 double CL_PointToLineDist(const double p[2])
@@ -904,7 +904,7 @@ double CL_PointToLineDist(const double p[2])
 	return hypot(tmp[0] - line_dir[0] * dotprod, tmp[1] - line_dir[1] * dotprod);
 }
 
-float CL_TasLinestrafeYaw(float yaw)
+float CL_Linestrafe(float yaw)
 {
 	double avec[2], ct, st, gamma2, mu, theta = 0;
 	double newpos_sright[2], newpos_sleft[2];
@@ -912,7 +912,7 @@ float CL_TasLinestrafeYaw(float yaw)
 	CL_GetLASpeeds(L, A, prevspeed, speed);
 
 	if (speed < 0.1)
-		return CL_TasStrafeYaw(yaw, speed, L, A, theta, true);
+		return CL_Sidestrafe(yaw, speed, L, A, theta, true);
 
 	if (cl_mtype->value == 2)
 		theta = CL_AngleConstSpeed(prevspeed, speed, L, A);
@@ -944,7 +944,7 @@ float CL_TasLinestrafeYaw(float yaw)
 	newpos_sleft[0] = pmove->origin[0] + pmove->frametime * (pmove->velocity[0] + avec[0]);
 	newpos_sleft[1] = pmove->origin[1] + pmove->frametime * (pmove->velocity[1] + avec[1]);
 
-	return CL_TasStrafeYaw(yaw, speed, L, A, theta, CL_PointToLineDist(newpos_sright) <= CL_PointToLineDist(newpos_sleft));
+	return CL_Sidestrafe(yaw, speed, L, A, theta, CL_PointToLineDist(newpos_sright) <= CL_PointToLineDist(newpos_sleft));
 }
 
 /*
@@ -971,7 +971,7 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 	}
 	else if (strafetype == Leftstrafe || strafetype == Rightstrafe)
 	{
-		viewangles[YAW] = CL_TasStrafeYaw(viewangles[YAW], strafetype == Rightstrafe);
+		viewangles[YAW] = CL_Sidestrafe(viewangles[YAW], strafetype == Rightstrafe);
 	}
 	else if (strafetype == Linestrafe)
 	{
@@ -980,7 +980,7 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 			line_dir[0] = cos(do_setyaw.value * M_PI / 180);
 			line_dir[1] = sin(do_setyaw.value * M_PI / 180);
 		}
-		viewangles[YAW] = CL_TasLinestrafeYaw(viewangles[YAW]);
+		viewangles[YAW] = CL_Linestrafe(viewangles[YAW]);
 	}
 	else if (strafetype == Backpedal)
 	{
