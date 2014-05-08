@@ -947,18 +947,12 @@ float CL_Linestrafe(float yaw)
 	return CL_Sidestrafe(yaw, speed, L, A, theta, CL_PointToLineDist(newpos_sright) <= CL_PointToLineDist(newpos_sleft));
 }
 
-/*
-================
-CL_AdjustAngles
-
-Moves the local angle positions
-================
-*/
-void CL_AdjustAngles ( float frametime, float *viewangles )
+void CL_AnglesAndMoves ( float frametime, float *viewangles, struct usercmd_s *cmd )
 {
 	float	speed;
-	float	up, down;
+	static StrafeType old_strafetype = Nostrafe;
 	
+	gEngfuncs.GetViewAngles( (float *)viewangles );
 	speed = frametime;
 
 	if (do_setyaw.do_it)
@@ -968,6 +962,13 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 	{
 		viewangles[YAW] -= speed*cl_yawspeed->value*CL_KeyState (&in_right);
 		viewangles[YAW] += speed*cl_yawspeed->value*CL_KeyState (&in_left);
+		float	up, down;
+		up = CL_KeyState (&in_lookup);
+		down = CL_KeyState(&in_lookdown);
+		viewangles[PITCH] -= speed*cl_pitchspeed->value * up;
+		viewangles[PITCH] += speed*cl_pitchspeed->value * down;
+		if (up || down)
+			V_StopPitchDrift ();
 	}
 	else if (strafetype == Leftstrafe || strafetype == Rightstrafe)
 	{
@@ -1001,15 +1002,6 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 	do_setyaw.do_it = false;
 	do_olsshift.do_it = false;
 
-	up = CL_KeyState (&in_lookup);
-	down = CL_KeyState(&in_lookdown);
-	
-	viewangles[PITCH] -= speed*cl_pitchspeed->value * up;
-	viewangles[PITCH] += speed*cl_pitchspeed->value * down;
-
-	if (up || down)
-		V_StopPitchDrift ();
-		
 	if (viewangles[PITCH] > cl_pitchdown->value)
 		viewangles[PITCH] = cl_pitchdown->value;
 	if (viewangles[PITCH] < -cl_pitchup->value)
@@ -1029,6 +1021,29 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 		viewangles[ROLL] = 50;
 	if (viewangles[ROLL] < -50)
 		viewangles[ROLL] = -50;
+
+	gEngfuncs.SetViewAngles( (float *)viewangles );
+
+	if (strafetype == Nostrafe && old_strafetype != Nostrafe)
+	{
+		if (!(in_moveright.state & 32))
+			TasKeyUp(&in_moveright);
+		if (!(in_moveleft.state & 32))
+			TasKeyUp(&in_moveleft);
+		if (!(in_back.state & 32))
+			TasKeyUp(&in_back);
+	}
+	in_moveright.state &= ~32;
+	in_moveleft.state &= ~32;
+	in_back.state &= ~32;
+	old_strafetype = strafetype;
+
+	cmd->sidemove += cl_sidespeed->value * CL_KeyState (&in_moveright);
+	cmd->sidemove -= cl_sidespeed->value * CL_KeyState (&in_moveleft);
+	cmd->forwardmove += cl_forwardspeed->value * CL_KeyState (&in_forward);
+	cmd->forwardmove -= cl_backspeed->value * CL_KeyState (&in_back);
+	cmd->upmove += cl_upspeed->value * CL_KeyState (&in_up);
+	cmd->upmove -= cl_upspeed->value * CL_KeyState (&in_down);
 }
 
 bool CL_IsGroundEntBelow(float pos[3])
@@ -1054,13 +1069,13 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 	float spd;
 	vec3_t viewangles;
 	static vec3_t oldangles;
-	static StrafeType old_strafetype = Nostrafe;
 
 	old_backspeed = cl_backspeed->value;
 	old_sidespeed = cl_sidespeed->value;
 
 	if ( active && !Bench_Active() )
 	{
+		memset (cmd, 0, sizeof(*cmd));
 		g_bcap = gEngfuncs.pfnGetCvarFloat("sv_bcap") != 0;
 		if (pmove->flags & FL_DUCKING)
 			pmove->maxspeed *= 0.333;
@@ -1070,47 +1085,7 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 
 		PM_CatagorizePosition();
 
-		gEngfuncs.GetViewAngles( (float *)viewangles );
-		CL_AdjustAngles ( frametime, viewangles );
-		memset (cmd, 0, sizeof(*cmd));
-		gEngfuncs.SetViewAngles( (float *)viewangles );
-
-		if (strafetype == Nostrafe && old_strafetype != Nostrafe)
-		{
-			if (!(in_moveright.state & 32))
-				TasKeyUp(&in_moveright);
-			if (!(in_moveleft.state & 32))
-				TasKeyUp(&in_moveleft);
-			if (!(in_back.state & 32))
-				TasKeyUp(&in_back);
-		}
-		in_moveright.state &= ~32;
-		in_moveleft.state &= ~32;
-		in_back.state &= ~32;
-		old_strafetype = strafetype;
-
-		cmd->sidemove += cl_sidespeed->value * CL_KeyState (&in_moveright);
-		cmd->sidemove -= cl_sidespeed->value * CL_KeyState (&in_moveleft);
-		cmd->forwardmove += cl_forwardspeed->value * CL_KeyState (&in_forward);
-		cmd->forwardmove -= cl_backspeed->value * CL_KeyState (&in_back);
-		cmd->upmove += cl_upspeed->value * CL_KeyState (&in_up);
-		cmd->upmove -= cl_upspeed->value * CL_KeyState (&in_down);
-
-		// clip to maxspeed
-		spd = gEngfuncs.GetClientMaxspeed();
-		if ( spd != 0.0 )
-		{
-			// scale the 3 speeds so that the total velocity is not > cl.maxspeed
-			float fmov = sqrt( (cmd->forwardmove*cmd->forwardmove) + (cmd->sidemove*cmd->sidemove) + (cmd->upmove*cmd->upmove) );
-
-			if ( fmov > spd )
-			{
-				float fratio = spd / fmov;
-				cmd->forwardmove *= fratio;
-				cmd->sidemove *= fratio;
-				cmd->upmove *= fratio;
-			}
-		}
+		CL_AnglesAndMoves ( frametime, viewangles, cmd );
 
 		// Allow mice and other controllers to add their inputs
 		if (strafetype == Nostrafe)
