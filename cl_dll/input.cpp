@@ -38,6 +38,7 @@ extern "C" float anglemod( float a );
 extern "C" void PM_CatagorizePosition();
 extern "C" void PM_UnDuck();
 extern "C" void PM_Friction();
+extern "C" void PM_AddCorrectGravity();
 
 typedef struct tas_cmd_s
 {
@@ -762,6 +763,18 @@ void CL_GetLASpeeds(double &L, double &A, double &prevspeed, double &speed)
 	}
 }
 
+void CL_VectorFME(double vel[2], const double avec[2], double L, double A)
+{
+	double tmp = L - vel[0] * avec[0] - vel[1] * avec[1];
+	if (tmp < 0)
+		return;
+	double tauMA = pmove->frametime * pmove->maxspeed * A;
+	if (tauMA < tmp)
+		tmp = tauMA;
+	vel[0] += avec[0] * tmp;
+	vel[1] += avec[1] * tmp;
+}
+
 double CL_CTOptimal(double speed, double L, double A)
 {
 	double tmp = L - pmove->frametime * A * pmove->maxspeed;
@@ -857,29 +870,31 @@ float CL_Sidestrafe(float yaw, double speed, double L, double A, double ctheta, 
 	if (cl_mtype->value == 2)
 		return beta;
 
-	double alpha[2];
-	double testspd[2];
-	alpha[0] = beta;
-	alpha[1] = beta + copysign(M_U, beta);
-
+	double alpha[2] = {beta, beta + copysign(M_U, beta)};
+	double testvel[2][2] = {
+		{pmove->velocity[0], pmove->velocity[1]},
+		{pmove->velocity[0], pmove->velocity[1]}
+	};
 	for (int i = 0; i < 2; i++)
 	{
 		double ang = (anglemod(alpha[i]) - phi * dir) * M_PI / 180;
 		double avec[2] = {cos(ang), sin(ang)};
-		double gamma2 = L - pmove->velocity[0] * avec[0] - pmove->velocity[1] * avec[1];
-		if (gamma2 < 0)
-		{
-			testspd[i] = speed;
-			continue;
-		}
-		double mu = fmin(pmove->frametime * pmove->maxspeed * A, gamma2);
-		testspd[i] = hypot(pmove->velocity[0] + mu * avec[0], pmove->velocity[1] + mu * avec[1]);
+		CL_VectorFME(testvel[i], avec, L, A);
 	}
 
-	if (testspd[0] > testspd[1])
+	if (testvel[0][0] * testvel[0][0] + testvel[0][1] * testvel[0][1] >
+		testvel[1][0] * testvel[1][0] + testvel[1][1] * testvel[1][1])
+	{
+		pmove->velocity[0] = testvel[0][0];
+		pmove->velocity[1] = testvel[0][1];
 		return alpha[0];
+	}
 	else
+	{
+		pmove->velocity[0] = testvel[1][0];
+		pmove->velocity[1] = testvel[1][1];
 		return alpha[1];
+	}
 }
 
 float CL_Sidestrafe(float yaw, bool right)
@@ -948,6 +963,28 @@ float CL_Linestrafe(float yaw)
 	return CL_Sidestrafe(yaw, speed, L, A, ct, CL_PointToLineDist(newpos_sright) <= CL_PointToLineDist(newpos_sleft));
 }
 
+void CL_NostrafeAvec(double avec[2], double F, double S, double U, double yaw)
+{
+	if (!F || !S)
+	{
+		avec[0] = 0;
+		avec[1] = 0;
+		return;
+	}
+	double FSUmag = sqrt(F * F + S * S + U * U);
+	if (FSUmag > pmove->maxspeed)
+	{
+		F *= pmove->maxspeed / FSUmag;
+		S *= pmove->maxspeed / FSUmag;
+	}
+	double amag = hypot(F, S);
+	yaw *= M_PI / 180;
+	double ct = cos(yaw);
+	double st = sin(yaw);
+	avec[0] = (F * ct + S * st) / amag;
+	avec[1] = (F * st - S * ct) / amag;
+}
+
 void CL_AnglesAndMoves ( float frametime, float *viewangles, struct usercmd_s *cmd )
 {
 	float	speed;
@@ -959,10 +996,13 @@ void CL_AnglesAndMoves ( float frametime, float *viewangles, struct usercmd_s *c
 	if (do_setyaw.do_it)
 		viewangles[YAW] = do_setyaw.value;
 
-	if (strafetype == Nostrafe && !do_setyaw.do_it)
+	if (strafetype == Nostrafe)
 	{
-		viewangles[YAW] -= speed*cl_yawspeed->value*CL_KeyState (&in_right);
-		viewangles[YAW] += speed*cl_yawspeed->value*CL_KeyState (&in_left);
+		if (!do_setyaw.do_it)
+		{
+			viewangles[YAW] -= speed*cl_yawspeed->value*CL_KeyState (&in_right);
+			viewangles[YAW] += speed*cl_yawspeed->value*CL_KeyState (&in_left);
+		}
 		float	up, down;
 		up = CL_KeyState (&in_lookup);
 		down = CL_KeyState(&in_lookdown);
@@ -1045,6 +1085,29 @@ void CL_AnglesAndMoves ( float frametime, float *viewangles, struct usercmd_s *c
 	cmd->forwardmove -= cl_backspeed->value * CL_KeyState (&in_back);
 	cmd->upmove += cl_upspeed->value * CL_KeyState (&in_up);
 	cmd->upmove -= cl_upspeed->value * CL_KeyState (&in_down);
+
+	if (strafetype == Nostrafe || strafetype == Backpedal)
+	{
+		double L, A, prevspeed, speed;
+		CL_GetLASpeeds(L, A, prevspeed, speed);
+		double avec[2];
+		if (strafetype == Nostrafe)
+		{
+			CL_NostrafeAvec(avec, cmd->forwardmove, cmd->sidemove, cmd->upmove, viewangles[YAW]);
+		}
+		else
+		{
+			avec[0] = -cos(viewangles[YAW] * M_PI / 180);
+			avec[1] = -sin(viewangles[YAW] * M_PI / 180);
+		}
+		double newvel[2] = {pmove->velocity[0], pmove->velocity[1]};
+		CL_VectorFME(newvel, avec, L, A);
+	}
+
+	PM_AddCorrectGravity();
+	pmove->origin[0] += pmove->frametime * (pmove->velocity[0] + pmove->basevelocity[0]);
+	pmove->origin[1] += pmove->frametime * (pmove->velocity[1] + pmove->basevelocity[1]);
+	pmove->origin[2] += pmove->frametime * pmove->velocity[2];
 }
 
 bool CL_IsGroundEntBelow(float pos[3])
