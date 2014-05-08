@@ -762,18 +762,18 @@ void CL_GetLASpeeds(double &L, double &A, double &prevspeed, double &speed)
 	}
 }
 
-double CL_AngleOptimal(double speed, double L, double A)
+double CL_CTOptimal(double speed, double L, double A)
 {
 	double tmp = L - pmove->frametime * A * pmove->maxspeed;
 	if (tmp <= 0)
-		return 90;
-	else if (tmp <= speed)
-		return acos(tmp / speed) * 180 / M_PI;
-	else
 		return 0;
+	else if (tmp <= speed)
+		return tmp / speed;
+	else
+		return 1;
 }
 
-double CL_AngleConstSpeed(double prevspeed, double speed, double L, double A)
+double CL_CTConstSpeed(double prevspeed, double speed, double L, double A)
 {
 	double tauMA = pmove->frametime * pmove->maxspeed * A;
 	if (pmove->onground != -1)
@@ -782,24 +782,24 @@ double CL_AngleConstSpeed(double prevspeed, double speed, double L, double A)
 		double tmp = sqdiff / tauMA;
 		if (tmp + tauMA < L + L && speed + speed >= fabs(tmp - tauMA))
 		{
-			return acos((tmp - tauMA) / (speed + speed)) * 180 / M_PI;
+			return (tmp - tauMA) / (speed + speed);
 		}
 		else
 		{
 			tmp = sqrt(L * L - sqdiff);
 			if (tauMA - L > tmp && speed >= tmp)
-				return acos(-tmp / speed) * 180 / M_PI;
+				return -tmp / speed;
 		}
 	}
 	else
 	{
 		tauMA *= 0.5;
 		if (tauMA <= L && speed >= tauMA)
-			return acos(-tauMA / speed) * 180 / M_PI;
+			return -tauMA / speed;
 		else if (speed >= L)
-			return acos(-L / speed) * 180 / M_PI;
+			return -L / speed;
 	}
-	return CL_AngleOptimal(speed, L, A);
+	return CL_CTOptimal(speed, L, A);
 }
 
 bool CL_IsAirAccelGreater()
@@ -808,8 +808,8 @@ bool CL_IsAirAccelGreater()
 	double speed_grnd = speed_air;
 	if (speed_air >= 0.1)
 		speed_grnd *= fmax(1 - fmax(1, pmove->movevars->stopspeed / speed_air) * pmove->friction * pmove->movevars->friction * pmove->frametime, 0);
-	double ctheta_air = cos(CL_AngleOptimal(speed_air, 30, pmove->movevars->airaccelerate) * M_PI / 180);
-	double ctheta_grnd = cos(CL_AngleOptimal(speed_grnd, pmove->maxspeed, pmove->movevars->accelerate) * M_PI / 180);
+	double ctheta_air = CL_CTOptimal(speed_air, 30, pmove->movevars->airaccelerate);
+	double ctheta_grnd = CL_CTOptimal(speed_grnd, pmove->maxspeed, pmove->movevars->accelerate);
 	double mu_air = fmin(pmove->frametime * pmove->maxspeed * pmove->movevars->airaccelerate, 30 - speed_air * ctheta_air);
 	double mu_grnd = fmin(pmove->frametime * pmove->maxspeed * pmove->movevars->accelerate, pmove->maxspeed - speed_grnd * ctheta_grnd);
 	// Square roots are unnecessary here
@@ -818,10 +818,11 @@ bool CL_IsAirAccelGreater()
 	return speed_air >= speed_grnd;
 }
 
-float CL_Sidestrafe(float yaw, double speed, double L, double A, double theta, bool right)
+float CL_Sidestrafe(float yaw, double speed, double L, double A, double ctheta, bool right)
 {
 	double dir = right ? 1 : -1;
 	double phi;
+	double theta = acos(ctheta) * 180 / M_PI;
 	TasKeyUp(&in_forward);
 	if (theta >= 67.5)
 	{
@@ -886,15 +887,15 @@ float CL_Sidestrafe(float yaw, bool right)
 	double L, A, prevspeed, speed;
 	CL_GetLASpeeds(L, A, prevspeed, speed);
 
-	double theta;
+	double ctheta;
 	if (speed < 0.1)
-		theta = 0;
+		ctheta = 1;
 	else if (cl_mtype->value == 2)
-		theta = CL_AngleConstSpeed(prevspeed, speed, L, A);
+		ctheta = CL_CTConstSpeed(prevspeed, speed, L, A);
 	else
-		theta = CL_AngleOptimal(speed, L, A);
+		ctheta = CL_CTOptimal(speed, L, A);
 
-	return CL_Sidestrafe(yaw, speed, L, A, theta, right);
+	return CL_Sidestrafe(yaw, speed, L, A, ctheta, right);
 }
 
 double CL_PointToLineDist(const double p[2])
@@ -906,18 +907,17 @@ double CL_PointToLineDist(const double p[2])
 
 float CL_Linestrafe(float yaw)
 {
-	double avec[2], ct, st, gamma2, mu, theta = 0;
-	double newpos_sright[2], newpos_sleft[2];
 	double L, A, prevspeed, speed;
 	CL_GetLASpeeds(L, A, prevspeed, speed);
 
 	if (speed < 0.1)
-		return CL_Sidestrafe(yaw, speed, L, A, theta, true);
+		return CL_Sidestrafe(yaw, speed, L, A, 1, true);
 
+	double ct;
 	if (cl_mtype->value == 2)
-		theta = CL_AngleConstSpeed(prevspeed, speed, L, A);
+		ct = CL_CTConstSpeed(prevspeed, speed, L, A);
 	else
-		theta = CL_AngleOptimal(speed, L, A);
+		ct = CL_CTOptimal(speed, L, A);
 
 	if (do_olsshift.do_it)
 	{
@@ -926,13 +926,14 @@ float CL_Linestrafe(float yaw)
 		do_olsshift.do_it = false;
 	}
 
-	ct = cos(theta * M_PI / 180);
-	st = sin(theta * M_PI / 180);
-	gamma2 = L - speed * ct;
+	double gamma2 = L - speed * ct;
 	if (gamma2 < 0)
-		mu = 0;
-	else
-		mu = fmin(pmove->frametime * pmove->maxspeed * A, gamma2) / speed;
+		return CL_Sidestrafe(yaw, speed, L, A, ct, true);
+
+	double mu = fmin(pmove->frametime * pmove->maxspeed * A, gamma2) / speed;
+	double st = sqrt(1 - ct * ct);
+	double newpos_sright[2], newpos_sleft[2];
+	double avec[2];
 
 	avec[0] = (pmove->velocity[0] * ct + pmove->velocity[1] * st) * mu;
 	avec[1] = (-pmove->velocity[0] * st + pmove->velocity[1] * ct) * mu;
@@ -944,7 +945,7 @@ float CL_Linestrafe(float yaw)
 	newpos_sleft[0] = pmove->origin[0] + pmove->frametime * (pmove->velocity[0] + avec[0]);
 	newpos_sleft[1] = pmove->origin[1] + pmove->frametime * (pmove->velocity[1] + avec[1]);
 
-	return CL_Sidestrafe(yaw, speed, L, A, theta, CL_PointToLineDist(newpos_sright) <= CL_PointToLineDist(newpos_sleft));
+	return CL_Sidestrafe(yaw, speed, L, A, ct, CL_PointToLineDist(newpos_sright) <= CL_PointToLineDist(newpos_sleft));
 }
 
 void CL_AnglesAndMoves ( float frametime, float *viewangles, struct usercmd_s *cmd )
