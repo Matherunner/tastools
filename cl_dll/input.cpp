@@ -985,9 +985,10 @@ void CL_NostrafeAvec(double avec[2], double F, double S, double U, double yaw)
 	avec[1] = (F * st - S * ct) / amag;
 }
 
-void CL_AnglesAndMoves ( float frametime, float *viewangles, struct usercmd_s *cmd )
+void CL_AnglesAndMoves(float frametime, struct usercmd_s *cmd)
 {
 	float	speed;
+	vec3_t viewangles;
 	static StrafeType old_strafetype = Nostrafe;
 	
 	gEngfuncs.GetViewAngles( (float *)viewangles );
@@ -1102,6 +1103,8 @@ void CL_AnglesAndMoves ( float frametime, float *viewangles, struct usercmd_s *c
 		}
 		double newvel[2] = {pmove->velocity[0], pmove->velocity[1]};
 		CL_VectorFME(newvel, avec, L, A);
+		pmove->velocity[0] = newvel[0];
+		pmove->velocity[1] = newvel[1];
 	}
 
 	PM_AddCorrectGravity();
@@ -1110,11 +1113,65 @@ void CL_AnglesAndMoves ( float frametime, float *viewangles, struct usercmd_s *c
 	pmove->origin[2] += pmove->frametime * pmove->velocity[2];
 }
 
-bool CL_IsGroundEntBelow(float pos[3])
+bool CL_IsGroundEntBelow(int usehull)
 {
-	float target[3] = {pos[0], pos[1], pos[2] - 2};
-	pmtrace_t tr = pmove->PM_PlayerTrace(pos, target, PM_NORMAL, -1);
+	float target[3] = {pmove->origin[0], pmove->origin[1], pmove->origin[2] - 2};
+	int old_usehull = pmove->usehull;
+	pmove->usehull = usehull;
+	pmtrace_t tr = pmove->PM_PlayerTrace(pmove->origin, target, PM_NORMAL, -1);
+	pmove->usehull = old_usehull;
 	return tr.plane.normal[2] >= 0.7;
+}
+
+bool CL_IsUnduckable()
+{
+	if (!(pmove->flags & FL_DUCKING))
+		return true;
+	pmove->usehull = 0;
+	pmtrace_s tr = pmove->PM_PlayerTrace(pmove->origin, pmove->origin, PM_NORMAL, -1);
+	pmove->usehull = 1;
+	return !tr.startsolid;
+}
+
+bool CL_JumpBug(bool &updated, float frametime, struct usercmd_s *cmd)
+{
+	updated = false;
+	if (!tas_jb || pmove->onground != -1 || pmove->velocity[2] > 180)
+		return false;
+
+	if (pmove->flags & FL_DUCKING && CL_IsUnduckable() && !(pmove->oldbuttons & IN_JUMP) && CL_IsGroundEntBelow(0))
+	{
+		tas_jb--;
+		in_duck.state |= 16;
+		in_jump.state |= 8;
+		return true;
+	}
+
+	CL_AnglesAndMoves(frametime, cmd);
+	updated = true;
+	if (CL_IsUnduckable() && CL_IsGroundEntBelow(0))
+	{
+		in_duck.state |= 8;
+		in_jump.state |= 16;	// unset the IN_JUMP bit in pmove->oldbuttons
+		return true;
+	}
+
+	return false;
+}
+
+void CL_Autoactions(float frametime, struct usercmd_s *cmd)
+{
+	bool updated;		 // If this is true, then CL_AnglesAndMoves was called.
+
+	if (CL_JumpBug(updated, frametime, cmd))
+		return;
+
+	if (updated)
+		return;
+
+	if (in_jump.state & (1 + 8) && !(in_jump.state & 16) && !(pmove->oldbuttons & IN_JUMP))
+		pmove->onground = -1;
+	CL_AnglesAndMoves(frametime, cmd);
 }
 
 /*
@@ -1148,8 +1205,7 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 		in_jump.state &= ~(8 + 16);
 
 		PM_CatagorizePosition();
-
-		CL_AnglesAndMoves ( frametime, viewangles, cmd );
+		CL_Autoactions(frametime, cmd);
 
 		// Allow mice and other controllers to add their inputs
 		if (strafetype == Nostrafe)
