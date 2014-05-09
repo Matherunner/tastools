@@ -1249,64 +1249,64 @@ bool CL_DuckB4Land(bool &updated, float frametime, struct usercmd_s *cmd, float 
 		return false;
 	}
 
-	if (pmove->flags & FL_DUCKING)
+	if (!(pmove->flags & FL_DUCKING))
 	{
-		bool origin_restored = false;
-		vec3_t new_origin;
-		VectorCopy(pmove->origin, new_origin);
-		VectorCopy(old_origin, pmove->origin);
-
-		if (CL_CanUnduck())
+		if (!updated)
 		{
-			if (CL_IsGroundEntBelow(0))
-			{
-				db4l_state = 1;
-				in_duck.state |= 8;
-				in_jump.state |= 16;
-				VectorCopy(new_origin, pmove->origin);
-				return true;
-			}
-
-			if (updated)
-			{
-				VectorCopy(new_origin, pmove->origin);
-			}
-			else
-			{
-				updated = true;
-				CL_AnglesAndMoves(frametime, cmd);
-			}
-			origin_restored = true;
-
-			if (CL_HitGround(old_origin, pmove->origin, 0))
-			{
-				db4l_state = 1;
-				in_duck.state |= 8;
-				return true;
-			}
+			updated = true;
+			CL_AnglesAndMoves(frametime, cmd);
 		}
 
-		if (!origin_restored)
-			VectorCopy(new_origin, pmove->origin);
-		if (db4l_state == 1)
+		if (CL_HitGround(old_origin, pmove->origin, 0))
 		{
-			tas_db4l--;
-			db4l_state = 0;
+			db4l_state = 1;
+			in_duck.state |= 8;
 			return true;
 		}
 		return false;
 	}
 
-	if (!updated)
+	bool origin_restored = false;
+	vec3_t new_origin;
+	VectorCopy(pmove->origin, new_origin);
+	VectorCopy(old_origin, pmove->origin);
+
+	if (CL_CanUnduck())
 	{
-		updated = true;
-		CL_AnglesAndMoves(frametime, cmd);
+		if (CL_IsGroundEntBelow(0))
+		{
+			db4l_state = 1;
+			in_duck.state |= 8;
+			in_jump.state |= 16;
+			VectorCopy(new_origin, pmove->origin);
+			return true;
+		}
+
+		if (updated)
+		{
+			VectorCopy(new_origin, pmove->origin);
+		}
+		else
+		{
+			updated = true;
+			CL_AnglesAndMoves(frametime, cmd);
+		}
+		origin_restored = true;
+
+		if (CL_HitGround(old_origin, pmove->origin, 0))
+		{
+			db4l_state = 1;
+			in_duck.state |= 8;
+			return true;
+		}
 	}
 
-	if (CL_HitGround(old_origin, pmove->origin, 0))
+	if (!origin_restored)
+		VectorCopy(new_origin, pmove->origin);
+	if (db4l_state == 1)
 	{
-		db4l_state = 1;
-		in_duck.state |= 8;
+		tas_db4l--;
+		db4l_state = 0;
 		return true;
 	}
 	return false;
