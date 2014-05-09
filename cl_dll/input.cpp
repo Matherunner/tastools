@@ -1137,7 +1137,6 @@ bool CL_CanUnduck()
 
 bool CL_JumpBug(bool &updated, float frametime, struct usercmd_s *cmd, bool can_jumpbug)
 {
-	updated = false;
 	if (!tas_jb || pmove->onground != -1 || pmove->velocity[2] > 180)
 		return false;
 
@@ -1233,7 +1232,6 @@ bool CL_DuckB4Land(bool &updated, float frametime, struct usercmd_s *cmd, float 
 {
 	static int db4l_state = 0;
 
-	updated = false;
 	if (!tas_db4l || old_vz > 180)
 		return false;
 
@@ -1316,12 +1314,15 @@ bool CL_DuckB4Land(bool &updated, float frametime, struct usercmd_s *cmd, float 
 
 void CL_Autoactions(float frametime, struct usercmd_s *cmd)
 {
-	bool updated;		 // If this is true, then CL_AnglesAndMoves was called.
+	bool updated = false; // If this is true, then CL_AnglesAndMoves was called.
 	bool can_jumpbug = pmove->flags & FL_DUCKING && CL_CanUnduck() && CL_IsGroundEntBelow(0) && pmove->velocity[2] <= 180;
-
 	float old_vz = pmove->velocity[2];
 	vec3_t old_origin;
 	VectorCopy(pmove->origin, old_origin);
+
+	// If CL_JumpBug no longer stays at the top for some reasons (this should
+	// not happen, jumpbug _always_ has the priority), make sure it accepts
+	// old_origin and handles and updated == true correctly!
 	if (CL_JumpBug(updated, frametime, cmd, can_jumpbug))
 		goto final;
 	if (CL_DuckB4Land(updated, frametime, cmd, old_origin, old_vz))
