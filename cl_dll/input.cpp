@@ -1220,12 +1220,111 @@ bool CL_ContJump(bool can_jumpbug)
 	return true;
 }
 
+bool CL_HitGround(float start[3], float end[3], int usehull)
+{
+	int old_usehull = pmove->usehull;
+	pmove->usehull = usehull;
+	pmtrace_s tr = pmove->PM_PlayerTrace(start, end, PM_NORMAL, -1);
+	pmove->usehull = old_usehull;
+	return tr.fraction < 1 && tr.plane.normal[2] >= 0.7 || CL_IsGroundEntBelow(usehull);
+}
+
+bool CL_DuckB4Land(bool &updated, float frametime, struct usercmd_s *cmd, float old_origin[3], float old_vz)
+{
+	static int db4l_state = 0;
+
+	updated = false;
+	if (!tas_db4l || old_vz > 180)
+		return false;
+
+	// These are old states.  Even if CL_JumpBug called CL_AnglesAndMoves which
+	// updates the player velocity and position, the onground and flags etc
+	// will not be affected.
+	if (pmove->onground != -1)
+	{
+		if (pmove->flags & FL_DUCKING && db4l_state == 1)
+		{
+			db4l_state = 0;
+			tas_db4l--;
+			return true;
+		}
+		return false;
+	}
+
+	if (pmove->flags & FL_DUCKING)
+	{
+		bool origin_restored = false;
+		vec3_t new_origin;
+		VectorCopy(pmove->origin, new_origin);
+		VectorCopy(old_origin, pmove->origin);
+
+		if (CL_CanUnduck())
+		{
+			if (CL_IsGroundEntBelow(0))
+			{
+				db4l_state = 1;
+				in_duck.state |= 8;
+				in_jump.state |= 16;
+				VectorCopy(new_origin, pmove->origin);
+				return true;
+			}
+
+			if (updated)
+			{
+				VectorCopy(new_origin, pmove->origin);
+			}
+			else
+			{
+				updated = true;
+				CL_AnglesAndMoves(frametime, cmd);
+			}
+			origin_restored = true;
+
+			if (CL_HitGround(old_origin, pmove->origin, 0))
+			{
+				db4l_state = 1;
+				in_duck.state |= 8;
+				return true;
+			}
+		}
+
+		if (!origin_restored)
+			VectorCopy(new_origin, pmove->origin);
+		if (db4l_state == 1)
+		{
+			tas_db4l--;
+			db4l_state = 0;
+			return true;
+		}
+		return false;
+	}
+
+	if (!updated)
+	{
+		updated = true;
+		CL_AnglesAndMoves(frametime, cmd);
+	}
+
+	if (CL_HitGround(old_origin, pmove->origin, 0))
+	{
+		db4l_state = 1;
+		in_duck.state |= 8;
+		return true;
+	}
+	return false;
+}
+
 void CL_Autoactions(float frametime, struct usercmd_s *cmd)
 {
 	bool updated;		 // If this is true, then CL_AnglesAndMoves was called.
 	bool can_jumpbug = pmove->flags & FL_DUCKING && CL_CanUnduck() && CL_IsGroundEntBelow(0) && pmove->velocity[2] <= 180;
 
+	float old_vz = pmove->velocity[2];
+	vec3_t old_origin;
+	VectorCopy(pmove->origin, old_origin);
 	if (CL_JumpBug(updated, frametime, cmd, can_jumpbug))
+		goto final;
+	if (CL_DuckB4Land(updated, frametime, cmd, old_origin, old_vz))
 		goto final;
 	if (CL_DuckTap(can_jumpbug))
 		goto final;
