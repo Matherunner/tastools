@@ -965,7 +965,7 @@ float CL_Linestrafe(float yaw)
 
 void CL_NostrafeAvec(double avec[2], double F, double S, double U, double yaw)
 {
-	if (!F || !S)
+	if (!F && !S)
 	{
 		avec[0] = 0;
 		avec[1] = 0;
