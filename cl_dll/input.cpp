@@ -1205,6 +1205,29 @@ bool CL_DuckTap()
 	return true;
 }
 
+bool CL_ContJump()
+{
+	if (!tas_cjmp || pmove->velocity[2] > 180 || pmove->oldbuttons & IN_JUMP)
+		return false;
+
+	if (pmove->onground == -1)
+	{
+		if (pmove->flags & FL_DUCKING && !(in_duck.state & 1) && CL_CanUnduck() && CL_IsGroundEntBelow(0))
+		{
+			in_jump.state |= 8;	// jumpbug
+			tas_cjmp--;
+			return true;
+		}
+		return false;
+	}
+
+	if (pmove->bInDuck && !(in_duck.state & 1) && CL_CanUnduck())
+		in_duck.state |= 16;	// prevent accidental ducktap
+	in_jump.state |= 8;
+	tas_cjmp--;
+	return true;
+}
+
 void CL_Autoactions(float frametime, struct usercmd_s *cmd)
 {
 	bool updated;		 // If this is true, then CL_AnglesAndMoves was called.
@@ -1213,20 +1236,24 @@ void CL_Autoactions(float frametime, struct usercmd_s *cmd)
 		goto final;
 	if (CL_DuckTap())
 		goto final;
+	if (CL_ContJump())
+		goto final;
 
 final:
 
 	if (updated)
 		return;
 
-	// Ducktap
-	if (pmove->bInDuck && (!(in_duck.state & (1 + 8)) || in_duck.state & 16) && CL_CanUnduck())
-		pmove->onground = -1;
+	bool to_duck = in_duck.state & (1 + 8) && !(in_duck.state & 16);
 
-	// Jump
+	if (pmove->bInDuck && !to_duck && CL_CanUnduck())
+		pmove->onground = -1;	// ducktap
+	else if (pmove->onground == -1 && pmove->flags & FL_DUCKING && !to_duck && CL_CanUnduck() && CL_IsGroundEntBelow(0) && pmove->velocity[2] <= 180)
+		pmove->onground = 0;	// unduck onto ground
+
 	if (in_jump.state & (1 + 8) && !(in_jump.state & 16) && !(pmove->oldbuttons & IN_JUMP) && pmove->onground != -1)
 	{
-		pmove->onground = -1;
+		pmove->onground = -1;	// jump
 		if (tas_dwj)
 		{
 			in_duck.state |= 8;
@@ -1262,6 +1289,7 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 	{
 		memset (cmd, 0, sizeof(*cmd));
 		g_bcap = gEngfuncs.pfnGetCvarFloat("sv_bcap") != 0;
+		pmove->usehull = (pmove->flags & FL_DUCKING) != 0;
 		if (pmove->flags & FL_DUCKING)
 			pmove->maxspeed *= 0.333;
 		pmove->frametime = frametime;
