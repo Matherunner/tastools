@@ -1348,7 +1348,7 @@ void CL_Autoactions(float frametime, struct usercmd_s *cmd)
 
 	// If CL_JumpBug no longer stays at the top for some reasons (this should
 	// not happen, jumpbug _always_ has the priority), make sure it accepts
-	// old_origin and handles and updated == true correctly!
+	// old_origin and handles updated == true correctly!
 	if (CL_JumpBug(updated, frametime, cmd, can_jumpbug))
 		goto final;
 	if (CL_DuckB4Land(updated, frametime, cmd, old_origin, old_vz))
