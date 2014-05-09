@@ -1312,6 +1312,32 @@ bool CL_DuckB4Land(bool &updated, float frametime, struct usercmd_s *cmd, float 
 	return false;
 }
 
+bool CL_DuckB4Col(bool &updated, float frametime, struct usercmd_s *cmd, float old_origin[3])
+{
+	if (!tas_db4c || pmove->onground != -1 || pmove->flags & FL_DUCKING || in_duck.state & 1)
+		return false;
+
+	if (!updated)
+	{
+		updated = true;
+		CL_AnglesAndMoves(frametime, cmd);
+	}
+
+	pmtrace_s tr = pmove->PM_PlayerTrace(old_origin, pmove->origin, PM_NORMAL, -1);
+	if (tr.fraction == 1 || tr.plane.normal[2] >= 0.7 || !cl_db4c_ceil->value && tr.plane.normal[2] == -1)
+		return false;
+	pmove->usehull = 1;
+	tr = pmove->PM_PlayerTrace(old_origin, pmove->origin, PM_NORMAL, -1);
+	if (tr.fraction != 1)
+	{
+		pmove->usehull = 0;
+		return false;
+	}
+	tas_db4c--;
+	in_duck.state |= 8;
+	return true;
+}
+
 void CL_Autoactions(float frametime, struct usercmd_s *cmd)
 {
 	bool updated = false; // If this is true, then CL_AnglesAndMoves was called.
@@ -1326,6 +1352,8 @@ void CL_Autoactions(float frametime, struct usercmd_s *cmd)
 	if (CL_JumpBug(updated, frametime, cmd, can_jumpbug))
 		goto final;
 	if (CL_DuckB4Land(updated, frametime, cmd, old_origin, old_vz))
+		goto final;
+	if (CL_DuckB4Col(updated, frametime, cmd, old_origin))
 		goto final;
 	if (CL_DuckTap(can_jumpbug))
 		goto final;
