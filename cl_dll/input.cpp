@@ -1135,13 +1135,13 @@ bool CL_CanUnduck()
 	return !tr.startsolid;
 }
 
-bool CL_JumpBug(bool &updated, float frametime, struct usercmd_s *cmd)
+bool CL_JumpBug(bool &updated, float frametime, struct usercmd_s *cmd, bool can_jumpbug)
 {
 	updated = false;
 	if (!tas_jb || pmove->onground != -1 || pmove->velocity[2] > 180)
 		return false;
 
-	if (pmove->flags & FL_DUCKING && CL_CanUnduck() && !(pmove->oldbuttons & IN_JUMP) && CL_IsGroundEntBelow(0))
+	if (!(pmove->oldbuttons & IN_JUMP) && can_jumpbug)
 	{
 		tas_jb--;
 		in_duck.state |= 16;
@@ -1161,14 +1161,14 @@ bool CL_JumpBug(bool &updated, float frametime, struct usercmd_s *cmd)
 	return false;
 }
 
-bool CL_DuckTap()
+bool CL_DuckTap(bool can_jumpbug)
 {
 	if (!tas_dtap)
 		return false;
 
 	if (pmove->onground == -1)
 	{
-		if (pmove->velocity[2] <= 180 && !(in_duck.state & 1) && pmove->flags & FL_DUCKING && CL_CanUnduck() && CL_IsGroundEntBelow(0))
+		if (!(in_duck.state & 1) && can_jumpbug)
 		{
 			in_jump.state |= 16;	// prevent accidental jumpbug
 			return true;
@@ -1205,21 +1205,13 @@ bool CL_DuckTap()
 	return true;
 }
 
-bool CL_ContJump()
+bool CL_ContJump(bool can_jumpbug)
 {
 	if (!tas_cjmp || pmove->velocity[2] > 180 || pmove->oldbuttons & IN_JUMP)
 		return false;
 
-	if (pmove->onground == -1)
-	{
-		if (pmove->flags & FL_DUCKING && !(in_duck.state & 1) && CL_CanUnduck() && CL_IsGroundEntBelow(0))
-		{
-			in_jump.state |= 8;	// jumpbug
-			tas_cjmp--;
-			return true;
-		}
+	if (pmove->onground == -1 && (in_duck.state & 1 || !can_jumpbug))
 		return false;
-	}
 
 	if (pmove->bInDuck && !(in_duck.state & 1) && CL_CanUnduck())
 		in_duck.state |= 16;	// prevent accidental ducktap
@@ -1231,12 +1223,13 @@ bool CL_ContJump()
 void CL_Autoactions(float frametime, struct usercmd_s *cmd)
 {
 	bool updated;		 // If this is true, then CL_AnglesAndMoves was called.
+	bool can_jumpbug = pmove->flags & FL_DUCKING && CL_CanUnduck() && CL_IsGroundEntBelow(0) && pmove->velocity[2] <= 180;
 
-	if (CL_JumpBug(updated, frametime, cmd))
+	if (CL_JumpBug(updated, frametime, cmd, can_jumpbug))
 		goto final;
-	if (CL_DuckTap())
+	if (CL_DuckTap(can_jumpbug))
 		goto final;
-	if (CL_ContJump())
+	if (CL_ContJump(can_jumpbug))
 		goto final;
 
 final:
@@ -1248,7 +1241,7 @@ final:
 
 	if (pmove->bInDuck && !to_duck && CL_CanUnduck())
 		pmove->onground = -1;	// ducktap
-	else if (pmove->onground == -1 && pmove->flags & FL_DUCKING && !to_duck && CL_CanUnduck() && CL_IsGroundEntBelow(0) && pmove->velocity[2] <= 180)
+	else if (pmove->onground == -1 && !to_duck && can_jumpbug)
 		pmove->onground = 0;	// unduck onto ground
 
 	if (in_jump.state & (1 + 8) && !(in_jump.state & 16) && !(pmove->oldbuttons & IN_JUMP) && pmove->onground != -1)
