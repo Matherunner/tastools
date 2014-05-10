@@ -176,7 +176,7 @@ QVariant LogTableModel::data(const QModelIndex &index, int role) const
             break;
         case HEAD_WLVL:
             waterLevel = logTableData[HEAD_WLVL][index.row()].toInt();
-            if (waterLevel == 2)
+            if (waterLevel >= 2)
                 return brushBlue;
             else if (waterLevel == 1)
                 return brushDimBlue;
