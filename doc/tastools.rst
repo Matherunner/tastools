@@ -1,7 +1,7 @@
 .. highlight:: none
 
-TasTools mod and utilities
-===================================
+TasTools and utilities
+======================
 
 TasTools is a mod written for the latest version of Half-Life.  TasTools on its own is hardly useful, there are several small utilities that enhance one's productivity in TAS creation.
 
@@ -86,64 +86,6 @@ DS       a purple square will appear if the duckstate is 2, empty otherwise
 ST       strafetype, which shows "F" when linestrafing, "L" when leftstrafing, "R" when rightstrafing, and "B" when backpedalling
 SG       the maximum damage the gauss beam can have to trigger selfgauss
 =======  ===========
-
-
-Autoactions
------------
-
-An autoaction refers to a set of input that are generated automatically when certain conditions are met.  In TasTools they are (in order of precedence) ``tas_jb``, ``tas_lgagst``, ``tas_db4l``, ``tas_db4c``, ``tas_dtap``, ``tas_dwj`` and ``tas_cjmp``.  The tables below show the conditions and corresponding actions.  If a condition is not displayed, no-op is assumed.  Key: ``og`` is onground status, ``d`` is user ``+duck`` input, ``j`` is user ``+jump`` input, and ``dst`` is duckstate.  The abbreviation "a.u." stands for "after unducking", while "a.d." stands for "after ducking".
-
-When we say a command is taken precedence over the other, it means if the former command performs an action all lower precedence commands will be inhibited.
-
-Implementing automatic jumpbug can be tricky.  Suppose ``+duck`` is not active, player is not onground and falling.  We want to make sure the player is not onground after the final groundcheck, which requires predicting the new position after ``PM_AddCorrectGravity`` and movement physics.  The following is the action table for jumpbug implementation.  Jumpbug is usually prioritised over other autoactions.  If :math:`v_z > 180` then jumpbug is impossible.
-
-1. If dst 2 AND unduckable AND jumpable AND onground with dst 0, stop with ``-duck`` and ``+jump``.
-2. If new position is unduckable AND new position is onground with dst 0, stop with ``+duck`` and ``-jump``.
-
-Automatic ducktap is taken priority over automatic jump unless stated otherwise.  Recall that ducktapping only works if there exists sufficient space to accomodate the player bounding box if he is moved vertically up by 18 units, while the duckstate is not 2.  If the duckstate is 2 then the player must first unduck for this frame.  Ducktap is relatively complex:
-
-==  ==  ==  ===  ======
-og  d   j   dst  action
-==  ==  ==  ===  ======
-0   0   1   2    ``-jump`` if unduckable AND onground a.u..
-1   --  --  0    ``-jump`` and ``+duck`` if sufficient space, automatic jump otherwise.
-1   --  --  1    ``-duck`` and decrement if sufficient space., automatic jump otherwise.
-1   --  --  2    ``-jump`` and ``-duck`` if unduckable AND sufficient space a.u., automatic jump otherwise.
-==  ==  ==  ===  ======
-
-For automatic jumping, the need to handle ``pmove->oldbuttons`` complicates matters.  At the time of writing, TasTools assumes ``IN_JUMP`` is unset in ``pmove->oldbuttons``.  A rare use case for this would be to temporarily disable automatic jumping simply by issuing ``+jump``.
-
-==  ==  ==  ===  ======
-og  d   j   dst  action
-==  ==  ==  ===  ======
-0   0   1   0    ``-jump`` if new position is onground with dst 0.
-0   1   1   2    ``-jump`` if new position is onground with dst 2.
-0   0   --  2    Decrement and ``+jump`` if unduckable AND onground a.u. AND jumpable.  ``-jump`` if new position is unduckable AND new position is onground with dst 0.
-0   1   1   0    ``-jump`` if new position a.d. is onground.
-1   0   --  1    Decrement and ``+jump`` if jumpable AND insufficient space, ``-jump`` otherwise.
-1   1   --  1    Decrement and ``+jump`` if jumpable, ``-jump`` otherwise.
-1   --  --  0/2  Decrement and ``+jump`` if jumpable, ``-jump`` otherwise.
-==  ==  ==  ===  ======
-
-Next we have DB4L.  As with jumpbug, if :math:`v_z > 180` then this is impossible.
-
-==  ===  ======
-og  dst  action
-==  ===  ======
-1   2    Decrement and set state to 0 if state is 1
-0   0    ``+duck`` and set state to 1 if new position is obstructed by ground.
-0   2    ``+duck`` and set state to 1 if unduckable AND (onground a.u. OR new position a.u. is obstructed by onground).  Otherwise, decrement and set state to 0 if state is 1.
-==  ===  ======
-
-Then we have DB4C.
-
-==  ==  ===  ======
-og  d   dst  action
-==  ==  ===  ======
-0   0   0    Decrement and ``+duck`` if new position is obstructed OR (new position a.d. is obstructed AND new speed is less than new speed a.d.).
-==  ==  ===  ======
-
-We also have DWJ, which is inserting ``+duck`` at the instant the player jumps.  This can be useful for longjump and as a jumping style itself.  To selfgauss with headshot immediately after jumping usually requires this jumping style to work.  There is no action table for this -- the counter is decremented and ``+duck`` is inserted whenever the player successfully jumps.
 
 
 TAS logging
@@ -250,9 +192,9 @@ Nevertheless, we do not guarantee that this script will run successfully in your
 Scripting
 ---------
 
-There are two kinds of script as far as TasTools is concerned: simulation script and legitimate script.  Simulation scripts use TasTools-specific commands and cvars heavily to "simulate" a run. The console output, which is usually saved to qconsole.log, can then be parsed to produce the legitimate script.  This legitimate script can be run in either Minimod or unmodded Half-Life, depending on whether the bhop cap is meant to be present.
+There are two kinds of script as far as TasTools is concerned: the *simulation script* and the *legitimate script*.  Simulation scripts use TasTools-specific commands and cvars heavily to "simulate" a run. The console output, which is usually saved to qconsole.log, can then be parsed to produce the legitimate script.  This legitimate script can be run in either Minimod or unmodded Half-Life, depending on whether the bhop cap is meant to be present.
 
-One should define the following commonly used aliases in userconfig.cfg to reduce keystrokes when writing simulation scripts::
+One should define the following commonly used aliases in ``userconfig.cfg`` to reduce keystrokes when writing simulation scripts::
 
     alias +f +linestrafe; alias -f -linestrafe
     alias +l +leftstrafe; alias -l -leftstrafe
@@ -340,4 +282,3 @@ For "yaw" and "pitch", they may have light purple background.  In this case the 
 "fm", "sm" and "um" stands for forwardmove, sidemove and upmove.  They do not currently display the actual values, but rather, the signs of the values.  Blue denotes positive values and red denotes negative values.  "og" is green if the player is onground, and "ds" shows the duckstate, which is white, grey and black for duckstate 0, 1 and 2 respectively, both being states after ``PM_PlayerMove``.  "d", "j", "u", "at", "at2" and "rl" are not white if ``+duck``, ``+jump``, ``+use``, ``+attack``, ``+attack2`` and ``+reload`` are active respectively.  "wl" shows the waterlevel in white, light blue and blue for 0, 1 and 2 respectively, while "ld" tells whether the player is onladder.
 
 Lastly, we have the player positions.  The :math:`z` component is generally more useful.
-

@@ -17,4 +17,8 @@ We will use the angle bracket :math:`\langle \rangle` to write out the component
 .. toctree::
    :maxdepth: 2
 
+   basicphy
+   strafing
+   algorithms
+   health
    tastools
