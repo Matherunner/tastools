@@ -248,27 +248,3 @@ thus
 which is maximised when :math:`\alpha = \pi/2`, giving :math:`\lVert\mathbf{v}'\rVert = 200\sqrt{2}` if :math:`\lvert\mathcal{F}\rvert = \lvert\mathcal{S}\rvert = 200`.
 
 Lastly, regardless of viewangles, jumping off the ladder always sets :math:`\mathbf{v}' = 270\mathbf{\hat{n}}`.
-
-
-Object manoeuvre
-----------------
-
-Let :math:`V` the value of ``sv_maxvelocity``.  Define
-
-.. math:: \operatorname{clip}(\mathbf{v}) := \left[ \min(v_x, V), \min(v_y, V), \min(v_z, V) \right]
-
-which is basically ``PM_CheckVelocity``.  Assuming the player is not accelerating, :math:`\lVert\mathbf{v}\rVert > E` and the use key is pressed then with :math:`\mathbf{\tilde{v}}_0 = \mathbf{v}_0` the subsequence player velocities :math:`\mathbf{v}_k` and object velocities :math:`\mathbf{u}_k` is given by
-
-.. math:: \begin{align*}
-          \mathbf{v}_{k+1} &= (1 - k\tau) \operatorname{clip}(0.3\mathbf{\tilde{v}}_k) \\
-          \mathbf{\tilde{v}}_{k+1} &= \mathbf{u}_k + \mathbf{v}_k \\
-          \mathbf{u}_{k+1} &= (1 - k\tau) \operatorname{clip}(0.3\mathbf{\tilde{v}}_{k+1})
-          \end{align*}
-
-The physics of object boosting is well understood with trivial implementation.  A trickier technique is fast object manoeuvre, which is the act of "bringing" an object with the player at extreme speed for a relatively long duration.
-
-The general idea is to repeatedly activate ``+use`` for just one frame then deactive it for subsequent :math:`n` frames while pulling an object.  Observe that when ``+use`` is active the player velocity will be reduced significantly.  And yet, when ``+use`` is deactivated, the player velocity will be equal to the object velocity, which may well be moving very fast.  The player will then continue to experience friction.
-
-One important note to make is that despite the player velocity being scaled down by 0.3 when ``+use`` is active, the object velocity will actually increase in magnitude.  An implication of this is that the object will gradually overtake the player, until it goes out of the player's use radius.  To put it another way, we say that the *mean* object speed is greater than the mean player speed.  To control the mean player speed, :math:`n` must be adjusted.  If :math:`n` is too low or too high, the mean player speed will be very low.  Therefore there must exist an optimal :math:`n` at which the mean player speed is maximised.
-
-However, we do not often use the optimal :math:`n` when carrying out this trick.  Instead, we would use the smallest possible :math:`n` so that the object mean speed will be as high as possible while ensuring the object stays within the use radius.  This means the object will hit an obstruction as soon as possible, so that we can change direction as soon as that happens.
