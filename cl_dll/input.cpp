@@ -1123,6 +1123,19 @@ bool CL_IsGroundEntBelow(int usehull)
 	return tr.plane.normal[2] >= 0.7;
 }
 
+bool CL_CanLeaveGround()
+{
+	if (!tas_lgagst)
+		return true;
+
+	if (CL_IsAirAccelGreater())
+	{
+		tas_lgagst--;
+		return true;
+	}
+	return false;
+}
+
 // Assume duckstate is 1 or 2.
 bool CL_CanUnduck()
 {
@@ -1162,7 +1175,7 @@ bool CL_JumpBug(bool &updated, float frametime, struct usercmd_s *cmd, bool can_
 
 bool CL_DuckTap(bool can_jumpbug)
 {
-	if (!tas_dtap)
+	if (!tas_dtap || !CL_CanLeaveGround())
 		return false;
 
 	if (pmove->onground == -1)
@@ -1206,7 +1219,7 @@ bool CL_DuckTap(bool can_jumpbug)
 
 bool CL_ContJump(bool can_jumpbug)
 {
-	if (!tas_cjmp || pmove->velocity[2] > 180 || pmove->oldbuttons & IN_JUMP)
+	if (!tas_cjmp || pmove->velocity[2] > 180 || pmove->oldbuttons & IN_JUMP || !CL_CanLeaveGround())
 		return false;
 
 	if (pmove->onground == -1 && (in_duck.state & 1 || !can_jumpbug))
