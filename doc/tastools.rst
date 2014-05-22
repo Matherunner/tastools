@@ -192,7 +192,7 @@ Nevertheless, we do not guarantee that this script will run successfully in your
 Scripting
 ---------
 
-There are two kinds of script as far as TasTools is concerned: the *simulation script* and the *legitimate script*.  Simulation scripts use TasTools-specific commands and cvars heavily to "simulate" a run. The console output, which is usually saved to qconsole.log, can then be parsed to produce the legitimate script.  This legitimate script can be run in either Minimod or unmodded Half-Life, depending on whether the bhop cap is meant to be present.
+There are two kinds of script as far as TasTools is concerned: the *simulation script* and the *legitimate script*.  Simulation scripts use TasTools-specific commands and cvars heavily to "simulate" a run. The console output, which is usually saved to ``qconsole.log``, can then be parsed to produce the legitimate script.  This legitimate script can be run in either Minimod or unmodded Half-Life, depending on whether the bhop cap is meant to be present.
 
 One should define the following commonly used aliases in ``userconfig.cfg`` to reduce keystrokes when writing simulation scripts::
 
@@ -215,10 +215,10 @@ Along with these recommended settings::
 
 The 10000 for the last four cvars is to max out values of ``forwardmove``, ``sidemove`` and ``upmove`` in ``pmove->cmd``.  According to the file ``delta.lst``, the range for these variables is :math:`[-2047, 2047]`.  With 10000 they will always have the maximum value.
 
-One very convenient aspect of simulation script is that we do not need to write out the waits explicitly.  Instead, we can write mathematical expressions in place of them.  The magic lies in using gensim.py to convert the simulation script so that the expressions are evaluated and replaced by the correct number of wait statements.  Suppose we have ``myscript.cfg_`` which contains the following lines::
+One very convenient aspect of simulation script is that we do not need to write out the ``wait``\ s explicitly.  Instead, we can write mathematical expressions in RPN in place of them.  Then we use ``gensim.py`` which evaluates the expressions and replaces the expressions by the correct number of ``wait``\ s.  It also ignores lines containing only comments and blank lines.  Suppose we have ``myscript.cfg_`` which contains the following lines::
 
     +f
-    101 - 98 + 1
+    101 98 - 1 +
     -f
     +attack
     1
@@ -236,27 +236,51 @@ In Linux we can simply run ``gensim.py < myscript.cfg_`` which prints the follow
     wait
     -attack
 
-Very often ``r_norefresh 1`` can come in handy as it disables screen refreshing (though not rendering). This can dramatically increase the frame rate to skip over long sequences or parts that have been completed/finalised.
+This example is meant to be trivial, but suppose exactly 5452 waits are needed.  The traditional means of using ``wait`` aliases becomes cumbersome as one needs to define an enormous amount of them.  Suppose we write ``w2000;w2000;w1000;w452`` instead.  What if after analysing the log file we decided that 5452 ``wait``\ s are too long by 1738 frames?  As helpful as mental computation is for shopping in supermarkets, it will rarely be quicker than just writing an expression which subtracts 1738 from the original value, unless you calculates at John von Neumann's speed.
+
+If ``gensim.py`` encounters a line with this format: ``@U N1 N2`` where ``N1`` and ``N2`` are integers, then it will output ``N2`` of the following in place of that line::
+
+    <N1 waits>
+    +use
+    wait
+    -use
+
+This is immensely useful for object manoeuvring, instead of copying the same lines manually over and over again, resulting in an unmaintainable script.
+
+In general, very often ``r_norefresh 1`` can come in handy as it disables screen refreshing (though not rendering). This can dramatically increase the frame rate to skip over long sequences or parts that have been completed/finalised.
 
 
 Script execution
 ----------------
 
-We will focus on script execution in the latest version of Half-Life.  First of all, the content of game.cfg must have the following format::
+We will focus on script execution in the latest version of Half-Life.  The technique for older versions is simpler and easier to carry out.
+
+First of all, we must bind a key in ``userconfig.cfg`` to execute the script upon pressing.  Then the content of ``game.cfg`` must have the following format::
 
     sv_taslog 1
     <waits group 1>
     pause
     <waits group 2>
+    [save SAVE]
 
-There "waits group 1" and "waits group 2" are lines containing only ``wait`` commands.  The number of ``wait`` to put for the first group must be determined experimentally, usually 20.  The second group should contain no ``wait`` when executing legitimate scripts from a map or save.  When firing the game, the following command should be issued in Linux::
+where "waits group 1" and "waits group 2" are lines containing only ``wait`` commands.  The number for the first group must be determined experimentally, usually 20 for maps that are not too complex.  The second group should normally be empty and the ``save`` statement should not be present, except for handling level transitions (described in :ref:`segmentation`).
 
-    rm -f $HLP/qconsole.log; path/to/runhl.sh -condebug +host_framerate 0.0001 +load <savename>
+Yet another Python script called ``gamecfg.py`` is written to allow easy generation of ``game.cfg`` conforming to the format described above, though it prints to stdout.  It accepts two mandatory arguments, ``N1`` and ``N2`` which correspond to the wait number for waits group 1 and waits group 2.  It also accepts the optional flag ``--save`` which causes it to output the final ``save`` statement if specified.  In some rare cases we might not want to enable logging, hence the ``--nolog`` switch.
 
-where ``$HLP`` should be defined somewhere in ``.bashrc`` to point to the Half-Life directory.  Having this variable defined can save a lot of keystrokes.
+Usually, to run the game we should have some means of executing the following sequence of commands quickly (this is just an example that works most of the time)::
 
-The legitimate script must be generated using genlegit.py.  It reads the TAS log from stdin and emits the final script to stdout.  However, it makes one important assumption while generating the legitimate script: at least one frame after the ``CL_SignonReply: 2`` string has zero for ``MSEC`` in the ``usercmd`` line.  It requires such frame to exist in order to know the initial pitch and yaw so that the correct ``cl_yawspeed`` values can be computed.  If such frame does not exist, the runner might have to insert a fake frame manually into the log file to fool the generator.  It also always set ``cl_forwardspeed``, ``cl_sidespeed`` and ``cl_upspeed`` to 10000 as hardcoded into the code.
+    rm -f $HLP/qconsole.log
+    gamecfg.py 20 0 > $HLP/valve/game.cfg
+    runhl.sh -game tastools -condebug +host_framerate 0.0001 +load <savename>
 
+where ``$HLP`` should be defined somewhere in ``.bashrc`` to point to the Half-Life directory.  Having this variable defined can save a lot of keystrokes when typing in the terminal.  Note that modifications to core variables such as ``sv_maxspeed`` should be done by passing switches to ``runhl.sh`` as well.  After starting the game, we must *hold the bound key while the game is still loading*, then release the key *after* the script starts executing.  The purpose of doing this is to ensure the script gets executed as soon as the game engine does ``CL_SignonReply: 2``.  It would not work if we execute the script from ``game.cfg`` instead.
+
+After executing the script we should close the game and have ``qconsole.log`` opened in ``qconread`` for analysis.  We should check the beginning of the log to verify that the script has been executed correctly.
+
+Assuming that the simulation script is finalised.  The legitimate script must then be generated using ``genlegit.py`` by reading the log file from stdin and emits the final script to stdout.  However, it makes one important assumption while generating the legitimate script: at least one frame after the ``CL_SignonReply: 2`` string has zero for ``MSEC`` in the ``usercmd`` line.  It requires such frame to exist in order to know the initial pitch and yaw so that the correct ``cl_yawspeed`` values can be computed.  If such frame does not exist, the runner might have to insert a fake frame manually into the log file to fool the generator.  It also always set ``cl_forwardspeed``, ``cl_sidespeed`` and ``cl_upspeed`` to 10000 as hardcoded into the code.  ``genlegit.py`` also inserts a ``host_framerate 0.0001`` before the final ``wait`` by default, unless ``--noendhfr`` is specified.  This is needed for handling level transitions correctly and is harmless for traditional segmenting within the same map.
+
+
+.. _segmentation:
 
 Segmentation
 ------------
