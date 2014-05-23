@@ -249,6 +249,8 @@ If ``gensim.py`` encounters a line with this format: ``@U N1 N2`` where ``N1`` a
 
 This is immensely useful for object manoeuvring, instead of copying the same lines manually over and over again, resulting in an unmaintainable script.
 
+As noted earlier, the correct usage of ``tas_sba`` requires the ``exec waitscript.cfg`` statement to be present after at least one ``wait``.  Fortunately, we do not need to write the statement in simulation script as ``gensim.py`` is able to recognise the command and insert it automatically.  Nevertheless, we must avoid using aliases immediately after ``tas_sba`` that contain ``wait``, as ``gensim.py`` does not know the definition of the aliases and so it will not be able to insert the ``exec`` statement at the correct location.
+
 In general, very often ``r_norefresh 1`` can come in handy as it disables screen refreshing (though not rendering). This can dramatically increase the frame rate to skip over long sequences or parts that have been completed/finalised.
 
 
