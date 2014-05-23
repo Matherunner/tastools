@@ -68,6 +68,7 @@ static int tas_jb = 0;
 static int tas_db4c = 0;
 static int tas_db4l = 0;
 
+static float prevframe_unitvel[2];
 static std::string waitscript_filename;
 static FILE *waitscript_file = NULL;
 // tas_sba is active whenever this is nonzero.
@@ -700,6 +701,19 @@ void IN_StrafeByAng()
 {
 	tas_sba = fabs(atof(gEngfuncs.Cmd_Argv(1)));
 	tas_sba_acc = 0;
+	float speed = hypot(pmove->velocity[0], pmove->velocity[1]);
+	if (speed > 0.1)
+	{
+		prevframe_unitvel[0] = pmove->velocity[0] / speed;
+		prevframe_unitvel[1] = pmove->velocity[1] / speed;
+	}
+	else
+	{
+		float viewangles[3];
+		gEngfuncs.GetViewAngles(viewangles);
+		prevframe_unitvel[0] = cos(viewangles[YAW] * M_PI / 180);
+		prevframe_unitvel[1] = sin(viewangles[YAW] * M_PI / 180);
+	}
 }
 
 /*
@@ -1147,10 +1161,11 @@ void CL_NewOriginVelocity(float *viewangles, struct usercmd_s *cmd)
 	pmove->origin[2] += pmove->frametime * pmove->velocity[2];
 }
 
-void CL_DoStrafeByAng(const float old_unitvel[2])
+void CL_DoStrafeByAng()
 {
-	double dotprod = old_unitvel[0] * pmove->velocity[0] + old_unitvel[1] * pmove->velocity[1];
-	dotprod /= hypot(pmove->velocity[0], pmove->velocity[1]);
+	double dotprod = prevframe_unitvel[0] * pmove->velocity[0] + prevframe_unitvel[1] * pmove->velocity[1];
+	double speed = hypot(pmove->velocity[0], pmove->velocity[1]);
+	dotprod /= speed;
 	// prevent getting NaN from acos, just in case
 	if (dotprod > 1)
 		dotprod = 1;
@@ -1158,8 +1173,8 @@ void CL_DoStrafeByAng(const float old_unitvel[2])
 		dotprod = -1;
 
 	double angdiff = acos(dotprod) * 180 / M_PI;
-	// sign of the z component of the cross product old_unitvel x unitvel
-	angdiff = copysign(angdiff, old_unitvel[0] * pmove->velocity[1] - old_unitvel[1] * pmove->velocity[0]);
+	// sign of the z component of the cross product prevframe_unitvel x unitvel
+	angdiff = copysign(angdiff, prevframe_unitvel[0] * pmove->velocity[1] - prevframe_unitvel[1] * pmove->velocity[0]);
 	if (strafetype == Leftstrafe)
 		tas_sba_acc += angdiff;
 	else
@@ -1174,11 +1189,13 @@ void CL_DoStrafeByAng(const float old_unitvel[2])
 		tas_sba = 0;
 		CL_ModifyWaitscript(false);
 	}
+
+	prevframe_unitvel[0] = pmove->velocity[0] / speed;
+	prevframe_unitvel[1] = pmove->velocity[1] / speed;
 }
 
 void CL_AnglesAndMoves(float frametime, struct usercmd_s *cmd)
 {
-	float old_unitvel[2];
 	bool do_tas_sba = false;
 	if (tas_sba)
 	{
@@ -1190,23 +1207,6 @@ void CL_AnglesAndMoves(float frametime, struct usercmd_s *cmd)
 
 	vec3_t viewangles;
 	gEngfuncs.GetViewAngles(viewangles);
-
-	if (do_tas_sba)
-	{
-		// Friction doesn't matter here: it never changes the direction.
-		float speed = hypot(pmove->velocity[0], pmove->velocity[1]);
-		if (speed > 0.1)
-		{
-			old_unitvel[0] = pmove->velocity[0] / speed;
-			old_unitvel[1] = pmove->velocity[1] / speed;
-		}
-		else
-		{
-			old_unitvel[0] = cos(viewangles[YAW] * M_PI / 180);
-			old_unitvel[1] = sin(viewangles[YAW] * M_PI / 180);
-		}
-	}
-
 	CL_GetNewAngles(frametime, viewangles);
 	gEngfuncs.SetViewAngles(viewangles);
 
@@ -1214,7 +1214,7 @@ void CL_AnglesAndMoves(float frametime, struct usercmd_s *cmd)
 	CL_NewOriginVelocity(viewangles, cmd);
 
 	if (do_tas_sba)
-		CL_DoStrafeByAng(old_unitvel);
+		CL_DoStrafeByAng();
 }
 
 bool CL_IsGroundEntBelow(int usehull)
