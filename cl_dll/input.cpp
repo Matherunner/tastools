@@ -60,6 +60,7 @@ static double line_dir[2] = {0, 0};
 static tas_cmd_t do_setpitch = {0, false};
 static tas_cmd_t do_setyaw = {0, false};
 static tas_cmd_t do_olsshift = {0, false};
+static tas_cmd_t do_tas_s2y = {0, false};
 static int tas_cjmp = 0;
 static int tas_dtap = 0;
 static int tas_dwj = 0;
@@ -715,6 +716,11 @@ void IN_StrafeByAng()
 		prevframe_unitvel[1] = sin(viewangles[YAW] * M_PI / 180);
 	}
 }
+void IN_StrafeToYaw()
+{
+	do_tas_s2y.value = fmod(atof(gEngfuncs.Cmd_Argv(1)), 360);
+	do_tas_s2y.do_it = true;
+}
 
 /*
 ===============
@@ -1194,8 +1200,44 @@ void CL_DoStrafeByAng()
 	prevframe_unitvel[1] = pmove->velocity[1] / speed;
 }
 
+void CL_Convert_s2y_To_sba(float yaw)
+{
+	do_tas_s2y.do_it = false;
+	float src_ang;
+	float speed = hypot(pmove->velocity[0], pmove->velocity[1]);
+	if (speed > 0.1)
+	{
+		src_ang = atan2(pmove->velocity[1], pmove->velocity[0]) * 180 / M_PI;
+		prevframe_unitvel[0] = pmove->velocity[0] / speed;
+		prevframe_unitvel[1] = pmove->velocity[1] / speed;
+	}
+	else
+	{
+		src_ang = yaw;
+		prevframe_unitvel[0] = cos(yaw * M_PI / 180);
+		prevframe_unitvel[1] = sin(yaw * M_PI / 180);
+	}
+
+	if (strafetype == Leftstrafe)
+		tas_sba = do_tas_s2y.value - src_ang;
+	else if (strafetype == Rightstrafe)
+		tas_sba = src_ang - do_tas_s2y.value;
+	else
+		tas_sba = 0;
+
+	if (tas_sba < 0)
+		tas_sba += 360;
+	tas_sba_acc = 0;
+}
+
 void CL_AnglesAndMoves(float frametime, struct usercmd_s *cmd)
 {
+	vec3_t viewangles;
+	gEngfuncs.GetViewAngles(viewangles);
+
+	if (do_tas_s2y.do_it)
+		CL_Convert_s2y_To_sba(viewangles[YAW]);
+
 	bool do_tas_sba = false;
 	if (tas_sba)
 	{
@@ -1205,8 +1247,6 @@ void CL_AnglesAndMoves(float frametime, struct usercmd_s *cmd)
 			tas_sba = 0;
 	}
 
-	vec3_t viewangles;
-	gEngfuncs.GetViewAngles(viewangles);
 	CL_GetNewAngles(frametime, viewangles);
 	gEngfuncs.SetViewAngles(viewangles);
 
@@ -1780,6 +1820,7 @@ void InitInput (void)
 	gEngfuncs.pfnAddCommand("tas_db4c", IN_DuckB4Col);
 	gEngfuncs.pfnAddCommand("tas_db4l", IN_DuckB4Land);
 	gEngfuncs.pfnAddCommand("tas_sba", IN_StrafeByAng);
+	gEngfuncs.pfnAddCommand("tas_s2y", IN_StrafeToYaw);
 
 	gEngfuncs.pfnAddCommand ("+moveup",IN_UpDown);
 	gEngfuncs.pfnAddCommand ("-moveup",IN_UpUp);
