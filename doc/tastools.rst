@@ -41,6 +41,8 @@ TasTools mod added several new TAS-related commands and some cvars for testing p
   Shift the OLS perpendicularly to the right by ``DIST`` units.  If ``DIST`` is negative, then shift to the left instead.  This is mainly used to make the player line strafe with approximately ``DIST`` amplitude.
 ``tas_sba ANGLE``
   Perform left or right strafing automatically until the velocity polar angle has changed by ``ANGLE`` degrees.  Note that either ``+leftstrafe`` or ``+rightstrafe`` must be active for this to work, and it requires a ``wait`` followed by ``exec waitscript.cfg`` to work as intended.  It relies on the ability to create ``waitscript.cfg`` (called the *waitscript*) in the mod directory.  This is a rather special command as it prevents further execution of the script that invokes it until the condition is met, accomplished by writing ``wait; exec waitscript.cfg`` to waitscript so that the waitscript executes itself forever.  Once the condition is fulfilled, TasTools will stop the loop by clearing the content of waitscript, allowing the main script to resume execution.
+``tas_s2y YAW``
+  Similar to ``tas_sba``, except that the command stops when the velocity polar angle becomes ``YAW`` degrees.
 ``ch_health HEALTH``
   Change the health amount to ``HEALTH``.  This is a cheat and should be used for testing purposes only.
 ``ch_armor ARMOR``
@@ -249,7 +251,7 @@ If ``gensim.py`` encounters a line with this format: ``@U N1 N2`` where ``N1`` a
 
 This is immensely useful for object manoeuvring, instead of copying the same lines manually over and over again, resulting in an unmaintainable script.
 
-As noted earlier, the correct usage of ``tas_sba`` requires the ``exec waitscript.cfg`` statement to be present after at least one ``wait``.  Fortunately, we do not need to write the statement in simulation script as ``gensim.py`` is able to recognise the command and insert it automatically.  Nevertheless, we must avoid using aliases immediately after ``tas_sba`` that contain ``wait``, as ``gensim.py`` does not know the definition of the aliases and so it will not be able to insert the ``exec`` statement at the correct location.
+As noted earlier, the correct usage of ``tas_sba`` and ``tas_s2y`` requires the ``exec waitscript.cfg`` statement to be present after at least one ``wait``.  Fortunately, we do not need to write the statement by hand in simulation scripts as ``gensim.py`` is able to recognise those commands and insert it automatically.  Nevertheless, we must avoid using aliases that contain ``wait`` immediately after ``tas_sba`` or ``tas_s2y``, as ``gensim.py`` would not know the definition of these aliases, hence not able to insert the statement in the correct frame.
 
 In general, very often ``r_norefresh 1`` can come in handy as it disables screen refreshing (though not rendering). This can dramatically increase the frame rate to skip over long sequences or parts that have been completed/finalised.
 
