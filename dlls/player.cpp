@@ -195,7 +195,6 @@ int gmsgVelocity = 0;
 int gmsgEntHealth = 0;
 int gmsgPlaneNZ = 0;
 int gmsgDispVec = 0;
-int gmsgViewangles = 0;
 int gmsgEntClassname = 0;
 int gmsgSelfgauss = 0;
 
@@ -212,7 +211,6 @@ void LinkUserMessages( void )
 	gmsgEntHealth = REG_USER_MSG("EntHealth", 4);
 	gmsgPlaneNZ = REG_USER_MSG("PlaneNZ", 4);
 	gmsgDispVec = REG_USER_MSG("DispVec", 12);
-	gmsgViewangles = REG_USER_MSG("Viewangles", 8);
 	gmsgEntClassname = REG_USER_MSG("EntClassN", -1);
 	gmsgSelfgauss = REG_USER_MSG("Selfgauss", 4);
 
@@ -2669,11 +2667,6 @@ void CBasePlayer::SendInfoToClient()
 	WRITE_LONG(*(int *)&vecDisp[0]);
 	WRITE_LONG(*(int *)&vecDisp[1]);
 	WRITE_LONG(*(int *)&vecDisp[2]);
-	MESSAGE_END();
-
-	MESSAGE_BEGIN(MSG_ONE, gmsgViewangles, NULL, pev);
-	WRITE_LONG(*(int *)&pev->v_angle[0]);
-	WRITE_LONG(*(int *)&pev->v_angle[1]);
 	MESSAGE_END();
 
 	MESSAGE_BEGIN(MSG_ONE, gmsgEntClassname, NULL, pev);

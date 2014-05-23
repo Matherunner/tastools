@@ -7,7 +7,6 @@ DECLARE_MESSAGE(m_PlrInfo, Velocity)
 DECLARE_MESSAGE(m_PlrInfo, EntHealth)
 DECLARE_MESSAGE(m_PlrInfo, PlaneNZ)
 DECLARE_MESSAGE(m_PlrInfo, DispVec)
-DECLARE_MESSAGE(m_PlrInfo, Viewangles)
 DECLARE_MESSAGE(m_PlrInfo, EntClassN)
 DECLARE_MESSAGE(m_PlrInfo, Selfgauss)
 
@@ -30,7 +29,6 @@ int CHudPlrInfo::Init()
 	GetConsoleStringSize("M", &tmpwidth, &line_height);
 	memset(m_velocity, 0, sizeof(m_velocity));
 	memset(m_dispVec, 0, sizeof(m_dispVec));
-	memset(m_viewangles, 0, sizeof(m_viewangles));
 	m_entHealth = 0;
 	m_planeNZ = 0;
 	m_entClassname = "N/A";
@@ -40,7 +38,6 @@ int CHudPlrInfo::Init()
 	HOOK_MESSAGE(EntHealth);
 	HOOK_MESSAGE(PlaneNZ);
 	HOOK_MESSAGE(DispVec);
-	HOOK_MESSAGE(Viewangles);
 	HOOK_MESSAGE(EntClassN);
 	HOOK_MESSAGE(Selfgauss);
 
@@ -76,14 +73,6 @@ int CHudPlrInfo::MsgFunc_PlaneNZ(const char *name, int size, void *buf)
 {
 	BEGIN_READ(buf, size);
 	m_planeNZ = READ_FLOAT();
-	return 1;
-}
-
-int CHudPlrInfo::MsgFunc_Viewangles(const char *name, int size, void *buf)
-{
-	BEGIN_READ(buf, size);
-	m_viewangles[0] = READ_FLOAT();
-	m_viewangles[1] = READ_FLOAT();
 	return 1;
 }
 
@@ -139,9 +128,15 @@ void CHudPlrInfo::DrawDistances()
 void CHudPlrInfo::DrawViewangles()
 {
 	char numstr[30];
-	snprintf(numstr, sizeof(numstr), "Y: %.8g", m_viewangles[1]);
+	float viewangles[3];
+	gEngfuncs.GetViewAngles(viewangles);
+	if (viewangles[0] > 180)
+		viewangles[0] -= 360;
+	if (viewangles[1] > 180)
+		viewangles[1] -= 360;
+	snprintf(numstr, sizeof(numstr), "Y: %.8g", viewangles[1]);
 	DrawConsoleString(10, line_height * 7, numstr);
-	snprintf(numstr, sizeof(numstr), "P: %.8g", m_viewangles[0]);
+	snprintf(numstr, sizeof(numstr), "P: %.8g", viewangles[0]);
 	DrawConsoleString(10, line_height * 8, numstr);
 }
 
