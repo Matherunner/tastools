@@ -41,6 +41,8 @@ int CHudPlrInfo::Init()
 	HOOK_MESSAGE(EntClassN);
 	HOOK_MESSAGE(Selfgauss);
 
+	CVAR_CREATE("hud_blocked", "1", 0);
+
 	return 1;
 }
 
@@ -208,10 +210,32 @@ void CHudPlrInfo::DrawSelfgauss()
 		reset_color();
 }
 
+void CHudPlrInfo::DrawBlocked(float flTime)
+{
+	static float startTime = 0;
+
+	if (!pmove || !CVAR_GET_FLOAT("hud_blocked"))
+		return;
+
+	if (pmove->numtouch)
+		startTime = flTime;
+
+	float tdiff = flTime - startTime;
+	const float DURATION = 0.5;
+	if (tdiff > DURATION || tdiff < 0)
+		return;
+
+	const int BOX_LEN = 120;
+	int x = (ScreenWidth - BOX_LEN) / 2;
+	int y = (ScreenHeight - BOX_LEN) / 2;
+	FillRGBA(x, y, BOX_LEN, BOX_LEN, 255, 255, 0, 255 * (1 - tdiff / DURATION));
+}
+
 int CHudPlrInfo::Draw(float flTime)
 {
 	reset_color();
 
+	DrawBlocked(flTime);
 	DrawVelocity();
 	DrawEntHealth();
 	DrawPlaneZA();

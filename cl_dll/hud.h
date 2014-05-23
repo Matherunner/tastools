@@ -538,6 +538,7 @@ class CHudPlrInfo : CHudBase
 public:
 	int Init();
 	int Draw(float flTime);
+	void DrawBlocked(float flTime);
 	void DrawVelocity();
 	void DrawEntHealth();
 	void DrawPlaneZA();
