@@ -39,6 +39,8 @@ TasTools mod added several new TAS-related commands and some cvars for testing p
   Set the pitch angle to ``PITCH`` immediately.
 ``tas_olsshift DIST``
   Shift the OLS perpendicularly to the right by ``DIST`` units.  If ``DIST`` is negative, then shift to the left instead.  This is mainly used to make the player line strafe with approximately ``DIST`` amplitude.
+``tas_sba ANGLE``
+  Perform left or right strafing automatically until the velocity polar angle has changed by ``ANGLE`` degrees.  Note that either ``+leftstrafe`` or ``+rightstrafe`` must be active for this to work, and it requires a ``wait`` followed by ``exec waitscript.cfg`` to work as intended.  It relies on the ability to create ``waitscript.cfg`` (called the *waitscript*) in the mod directory.  This is a rather special command as it prevents further execution of the script that invokes it until the condition is met, accomplished by writing ``wait; exec waitscript.cfg`` to waitscript so that the waitscript executes itself forever.  Once the condition is fulfilled, TasTools will stop the loop by clearing the content of waitscript, allowing the main script to resume execution.
 ``ch_health HEALTH``
   Change the health amount to ``HEALTH``.  This is a cheat and should be used for testing purposes only.
 ``ch_armor ARMOR``
