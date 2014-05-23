@@ -21,8 +21,10 @@ extern "C"
 #include "in_defs.h"
 #include "view.h"
 #include "bench.h"
+#include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <string>
 #include "Exports.h"
 
 #include "vgui_TeamFortressViewport.h"
@@ -65,6 +67,13 @@ static int tas_lgagst = 0;
 static int tas_jb = 0;
 static int tas_db4c = 0;
 static int tas_db4l = 0;
+
+static std::string waitscript_filename;
+static FILE *waitscript_file = NULL;
+// tas_sba is active whenever this is nonzero.
+static double tas_sba = 0;
+// How much angle have we covered in tas_sba?
+static double tas_sba_acc = 0;
 
 extern playermove_t *pmove;
 
@@ -687,6 +696,11 @@ void IN_DuckB4Land()
 {
 	tas_db4l = atoi(gEngfuncs.Cmd_Argv(1));
 }
+void IN_StrafeByAng()
+{
+	tas_sba = fabs(atof(gEngfuncs.Cmd_Argv(1)));
+	tas_sba_acc = 0;
+}
 
 /*
 ===============
@@ -742,6 +756,27 @@ float CL_KeyState (kbutton_t *key)
 	// clear impulses
 	key->state &= 1;		
 	return val;
+}
+
+void CL_ModifyWaitscript(bool enable)
+{
+	static bool prev_enabled = false;
+	if (prev_enabled == enable || !waitscript_file)
+		return;
+
+	waitscript_file = freopen(waitscript_filename.c_str(), "w", waitscript_file);
+	if (!waitscript_file)
+	{
+		gEngfuncs.Con_Printf("WARNING: failed to reopen waitscript.cfg!\n");
+		return;
+	}
+
+	if (enable)
+	{
+		fprintf(waitscript_file, "wait; exec waitscript.cfg\n");
+		fflush(waitscript_file);
+	}
+	prev_enabled = enable;
 }
 
 void CL_GetLASpeeds(double &L, double &A, double &prevspeed, double &speed)
@@ -985,15 +1020,8 @@ void CL_NostrafeAvec(double avec[2], double F, double S, double U, double yaw)
 	avec[1] = (F * st - S * ct) / amag;
 }
 
-void CL_AnglesAndMoves(float frametime, struct usercmd_s *cmd)
+void CL_GetNewAngles(float frametime, float *viewangles)
 {
-	float	speed;
-	vec3_t viewangles;
-	static StrafeType old_strafetype = Nostrafe;
-	
-	gEngfuncs.GetViewAngles( (float *)viewangles );
-	speed = frametime;
-
 	if (do_setyaw.do_it)
 		viewangles[YAW] = do_setyaw.value;
 
@@ -1001,14 +1029,14 @@ void CL_AnglesAndMoves(float frametime, struct usercmd_s *cmd)
 	{
 		if (!do_setyaw.do_it)
 		{
-			viewangles[YAW] -= speed*cl_yawspeed->value*CL_KeyState (&in_right);
-			viewangles[YAW] += speed*cl_yawspeed->value*CL_KeyState (&in_left);
+			viewangles[YAW] -= frametime*cl_yawspeed->value*CL_KeyState (&in_right);
+			viewangles[YAW] += frametime*cl_yawspeed->value*CL_KeyState (&in_left);
 		}
 		float	up, down;
 		up = CL_KeyState (&in_lookup);
 		down = CL_KeyState(&in_lookdown);
-		viewangles[PITCH] -= speed*cl_pitchspeed->value * up;
-		viewangles[PITCH] += speed*cl_pitchspeed->value * down;
+		viewangles[PITCH] -= frametime*cl_pitchspeed->value * up;
+		viewangles[PITCH] += frametime*cl_pitchspeed->value * down;
 		if (up || down)
 			V_StopPitchDrift ();
 	}
@@ -1063,8 +1091,11 @@ void CL_AnglesAndMoves(float frametime, struct usercmd_s *cmd)
 		viewangles[ROLL] = 50;
 	if (viewangles[ROLL] < -50)
 		viewangles[ROLL] = -50;
+}
 
-	gEngfuncs.SetViewAngles( (float *)viewangles );
+void CL_NewButtonsFSU(struct usercmd_s *cmd)
+{
+	static StrafeType old_strafetype = Nostrafe;
 
 	if (strafetype == Nostrafe && old_strafetype != Nostrafe)
 	{
@@ -1086,7 +1117,10 @@ void CL_AnglesAndMoves(float frametime, struct usercmd_s *cmd)
 	cmd->forwardmove -= cl_backspeed->value * CL_KeyState (&in_back);
 	cmd->upmove += cl_upspeed->value * CL_KeyState (&in_up);
 	cmd->upmove -= cl_upspeed->value * CL_KeyState (&in_down);
+}
 
+void CL_NewOriginVelocity(float *viewangles, struct usercmd_s *cmd)
+{
 	if (strafetype == Nostrafe || strafetype == Backpedal)
 	{
 		double L, A, prevspeed, speed;
@@ -1111,6 +1145,76 @@ void CL_AnglesAndMoves(float frametime, struct usercmd_s *cmd)
 	pmove->origin[0] += pmove->frametime * (pmove->velocity[0] + pmove->basevelocity[0]);
 	pmove->origin[1] += pmove->frametime * (pmove->velocity[1] + pmove->basevelocity[1]);
 	pmove->origin[2] += pmove->frametime * pmove->velocity[2];
+}
+
+void CL_DoStrafeByAng(const float old_unitvel[2])
+{
+	double dotprod = old_unitvel[0] * pmove->velocity[0] + old_unitvel[1] * pmove->velocity[1];
+	dotprod /= hypot(pmove->velocity[0], pmove->velocity[1]);
+	// prevent getting NaN from acos, just in case
+	if (dotprod > 1)
+		dotprod = 1;
+	else if (dotprod < -1)
+		dotprod = -1;
+
+	double angdiff = acos(dotprod) * 180 / M_PI;
+	// sign of the z component of the cross product old_unitvel x unitvel
+	angdiff = copysign(angdiff, old_unitvel[0] * pmove->velocity[1] - old_unitvel[1] * pmove->velocity[0]);
+	if (strafetype == Leftstrafe)
+		tas_sba_acc += angdiff;
+	else
+		tas_sba_acc -= angdiff;
+
+	if (fabs(tas_sba_acc) < fabs(tas_sba))
+	{
+		CL_ModifyWaitscript(true);
+	}
+	else
+	{
+		tas_sba = 0;
+		CL_ModifyWaitscript(false);
+	}
+}
+
+void CL_AnglesAndMoves(float frametime, struct usercmd_s *cmd)
+{
+	float old_unitvel[2];
+	bool do_tas_sba = false;
+	if (tas_sba)
+	{
+		if (strafetype == Leftstrafe || strafetype == Rightstrafe)
+			do_tas_sba = true;
+		else
+			tas_sba = 0;
+	}
+
+	vec3_t viewangles;
+	gEngfuncs.GetViewAngles(viewangles);
+
+	if (do_tas_sba)
+	{
+		// Friction doesn't matter here: it never changes the direction.
+		float speed = hypot(pmove->velocity[0], pmove->velocity[1]);
+		if (speed > 0.1)
+		{
+			old_unitvel[0] = pmove->velocity[0] / speed;
+			old_unitvel[1] = pmove->velocity[1] / speed;
+		}
+		else
+		{
+			old_unitvel[0] = cos(viewangles[YAW] * M_PI / 180);
+			old_unitvel[1] = sin(viewangles[YAW] * M_PI / 180);
+		}
+	}
+
+	CL_GetNewAngles(frametime, viewangles);
+	gEngfuncs.SetViewAngles(viewangles);
+
+	CL_NewButtonsFSU(cmd);
+	CL_NewOriginVelocity(viewangles, cmd);
+
+	if (do_tas_sba)
+		CL_DoStrafeByAng(old_unitvel);
 }
 
 bool CL_IsGroundEntBelow(int usehull)
@@ -1412,7 +1516,6 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 {	
 //	RecClCL_CreateMove(frametime, cmd, active);
 
-	float spd;
 	vec3_t viewangles;
 	static vec3_t oldangles;
 
@@ -1651,6 +1754,12 @@ InitInput
 */
 void InitInput (void)
 {
+	waitscript_filename = gEngfuncs.pfnGetGameDirectory();
+	waitscript_filename += "/waitscript.cfg";
+	waitscript_file = fopen(waitscript_filename.c_str(), "w");
+	if (!waitscript_file)
+		gEngfuncs.Con_Printf("WARNING: fail to create '%s'!", waitscript_filename.c_str());
+
 	gEngfuncs.pfnHookUserMsg("TasPlrInfo", MsgFunc_TasPlrInfo);
 	gEngfuncs.pfnAddCommand("+linestrafe", IN_LinestrafeDown);
 	gEngfuncs.pfnAddCommand("-linestrafe", IN_LinestrafeUp);
@@ -1670,6 +1779,7 @@ void InitInput (void)
 	gEngfuncs.pfnAddCommand("tas_jb", IN_JumpBug);
 	gEngfuncs.pfnAddCommand("tas_db4c", IN_DuckB4Col);
 	gEngfuncs.pfnAddCommand("tas_db4l", IN_DuckB4Land);
+	gEngfuncs.pfnAddCommand("tas_sba", IN_StrafeByAng);
 
 	gEngfuncs.pfnAddCommand ("+moveup",IN_UpDown);
 	gEngfuncs.pfnAddCommand ("-moveup",IN_UpUp);
