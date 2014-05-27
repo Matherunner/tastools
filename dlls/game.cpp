@@ -456,6 +456,7 @@ cvar_t sv_sim_qws = {"sv_sim_qws", "0", FCVAR_SERVER};
 
 float g_cheatHealth = -1;
 float g_cheatArmor = -1;
+extern qboolean g_playerPaused;
 
 void cheatHealth()
 {
@@ -467,6 +468,11 @@ void cheatArmor()
 	g_cheatArmor = fmax(atof(g_engfuncs.pfnCmd_Argv(1)), 0);
 }
 
+void playerPause()
+{
+	g_playerPaused = !g_playerPaused;
+}
+
 // END Cvars for Skill Level settings
 
 // Register your console variables here
@@ -475,6 +481,7 @@ void GameDLLInit( void )
 {
 	g_engfuncs.pfnAddServerCommand("ch_health", cheatHealth);
 	g_engfuncs.pfnAddServerCommand("ch_armor", cheatArmor);
+	g_engfuncs.pfnAddServerCommand("plrpause", playerPause);
 
 	// Register cvars here:
 

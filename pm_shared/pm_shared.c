@@ -160,6 +160,7 @@ static char grgszTextureName[CTEXTURESMAX][CBTEXTURENAMEMAX];
 static char grgchTextureType[CTEXTURESMAX];
 
 int g_onladder = 0;
+qboolean g_playerPaused = false;
 
 void PM_TasLog(int num)
 {
@@ -2997,7 +2998,10 @@ void PM_PlayerMove ( qboolean server )
 	pmove->numtouch = 0;                    
 
 	// # of msec to apply movement
-	pmove->frametime = pmove->cmd.msec * 0.001;    
+	if (g_playerPaused)
+		pmove->frametime = 0;
+	else
+		pmove->frametime = pmove->cmd.msec * 0.001;
 
 	PM_ReduceTimers();
 
