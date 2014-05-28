@@ -1382,14 +1382,14 @@ bool CL_HitGround(float start[3], float end[3], int usehull)
 	pmove->usehull = usehull;
 	pmtrace_s tr = pmove->PM_PlayerTrace(start, end, PM_NORMAL, -1);
 	pmove->usehull = old_usehull;
-	return tr.fraction < 1 && tr.plane.normal[2] >= 0.7 || CL_IsGroundEntBelow(usehull);
+	return tr.fraction < 1 && tr.plane.normal[2] >= 0.7 || CL_IsGroundEntBelow(usehull) && pmove->velocity[2] <= 180;
 }
 
 bool CL_DuckB4Land(bool &updated, float frametime, struct usercmd_s *cmd, float old_origin[3], float old_vz)
 {
 	static int db4l_state = 0;
 
-	if (!tas_db4l || old_vz > 180)
+	if (!tas_db4l)
 		return false;
 
 	// These are old states.  Even if CL_JumpBug called CL_AnglesAndMoves which
@@ -1430,7 +1430,7 @@ bool CL_DuckB4Land(bool &updated, float frametime, struct usercmd_s *cmd, float 
 
 	if (CL_CanUnduck())
 	{
-		if (CL_IsGroundEntBelow(0))
+		if (CL_IsGroundEntBelow(0) && old_vz <= 180)
 		{
 			db4l_state = 1;
 			in_duck.state |= 8;
