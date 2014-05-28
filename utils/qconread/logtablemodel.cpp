@@ -397,15 +397,6 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
             readState = 6;
             continue;
         case 6:
-            if (!line.startsWith("ntl "))
-                break;
-            tokens = line.split(' ');
-            logTableData[HEAD_LADDER].append(tokens[2] != "0");
-            if (tokens[1] != "0")
-                numtouches.insert(frameNums.length() - 1);
-            readState = 7;
-            continue;
-        case 7:
             if (!line.startsWith("pmove 1 "))
                 break;
             tokens = line.split(' ');
@@ -414,6 +405,15 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
             basevel[2] = tokens[7].toFloat();
             if (basevel[2])
                 vbasevels[frameNums.length() - 1] = basevel[2];
+            readState = 7;
+            continue;
+        case 7:
+            if (!line.startsWith("ntl "))
+                break;
+            tokens = line.split(' ');
+            logTableData[HEAD_LADDER].append(tokens[2] != "0");
+            if (tokens[1] != "0")
+                numtouches.insert(frameNums.length() - 1);
             readState = 8;
             continue;
         case 8:
