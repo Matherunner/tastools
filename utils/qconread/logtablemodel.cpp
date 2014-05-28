@@ -232,7 +232,7 @@ QVariant LogTableModel::data(const QModelIndex &index, int role) const
             break;
         case HEAD_VSPD:
             if (vbasevels.contains(index.row()))
-                return QString("(with basevel) vspd = %1")
+                return QString("vertical basevel = %1")
                     .arg(vbasevels[index.row()]);
             break;
         case HEAD_PITCH:
@@ -307,7 +307,7 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
         return false;
 
     float velocity[3];
-    float basevel[3];
+    float basevel[3] = {0, 0, 0};
     float tmppangs[2];
     unsigned int flags;
     int readState = 0;
@@ -406,15 +406,26 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
             readState = 7;
             continue;
         case 7:
+            if (!line.startsWith("pmove 1 "))
+                break;
+            tokens = line.split(' ');
+            basevel[0] = tokens[5].toFloat();
+            basevel[1] = tokens[6].toFloat();
+            basevel[2] = tokens[7].toFloat();
+            if (basevel[2])
+                vbasevels[frameNums.length() - 1] = basevel[2];
+            readState = 8;
+            continue;
+        case 8:
             if (!line.startsWith("pos 2 "))
                 break;
             tokens = line.split(' ');
             logTableData[HEAD_POSX].append(tokens[2].toFloat());
             logTableData[HEAD_POSY].append(tokens[3].toFloat());
             logTableData[HEAD_POSZ].append(tokens[4].toFloat());
-            readState = 8;
+            readState = 9;
             continue;
-        case 8:
+        case 9:
             if (!line.startsWith("pmove 2 "))
                 break;
             tokens = line.split(' ');
@@ -433,9 +444,6 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
             else
                 logTableData[HEAD_DST].append(0);
             logTableData[HEAD_WLVL].append(tokens[11].toShort());
-            basevel[0] = tokens[5].toFloat();
-            basevel[1] = tokens[6].toFloat();
-            basevel[2] = tokens[7].toFloat();
             if (basevel[0] || basevel[1]) {
                 velocity[0] += basevel[0];
                 velocity[1] += basevel[1];
@@ -443,13 +451,11 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
                     hypotf(velocity[0], velocity[1]),
                     atan2f(velocity[1], velocity[0]) * M_RAD2DEG);
             }
-            if (basevel[2])
-                vbasevels[frameNums.length() - 1] = velocity[2] + basevel[2];
             readState = 0;
             continue;
         }
 
-        if (line.startsWith("pmove") || line.startsWith("pos"))
+        if (line.startsWith("pos"))
             continue;
 
         extralines[frameNums.length() - 1].append(line);
