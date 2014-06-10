@@ -1234,9 +1234,10 @@ void CL_AnglesAndMoves(float frametime, struct usercmd_s *cmd)
 {
 	vec3_t viewangles;
 	gEngfuncs.GetViewAngles(viewangles);
+	float yaw = viewangles[YAW];
 
 	if (do_tas_s2y.do_it)
-		CL_Convert_s2y_To_sba(viewangles[YAW]);
+		CL_Convert_s2y_To_sba(yaw);
 
 	bool do_tas_sba = false;
 	if (tas_sba)
@@ -1249,6 +1250,9 @@ void CL_AnglesAndMoves(float frametime, struct usercmd_s *cmd)
 
 	CL_GetNewAngles(frametime, viewangles);
 	gEngfuncs.SetViewAngles(viewangles);
+
+	float yawspeed = (viewangles[YAW] - yaw + 360.0 / 65536 / 2) / frametime;
+	gEngfuncs.Con_Printf("cl_yawspeed %.8g\n", yawspeed);
 
 	CL_NewButtonsFSU(cmd);
 	CL_NewOriginVelocity(viewangles, cmd);
