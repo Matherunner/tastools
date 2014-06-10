@@ -221,7 +221,7 @@ void CHudPlrInfo::DrawBlocked(float flTime)
 		startTime = flTime;
 
 	float tdiff = flTime - startTime;
-	const float DURATION = 0.5;
+	const float DURATION = 0.1;
 	if (tdiff > DURATION || tdiff < 0)
 		return;
 
