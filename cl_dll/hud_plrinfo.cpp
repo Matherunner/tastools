@@ -225,8 +225,8 @@ void CHudPlrInfo::DrawBlocked(float flTime)
 	if (tdiff > DURATION || tdiff < 0)
 		return;
 
-	const int BOX_LEN = 120;
-	int x = (ScreenWidth - BOX_LEN) / 2;
+	const int BOX_LEN = 50;
+	int x = ScreenWidth - BOX_LEN - 10;
 	int y = (ScreenHeight - BOX_LEN) / 2;
 	FillRGBA(x, y, BOX_LEN, BOX_LEN, 255, 255, 0, 255 * (1 - tdiff / DURATION));
 }
