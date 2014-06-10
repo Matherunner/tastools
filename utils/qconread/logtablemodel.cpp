@@ -455,7 +455,7 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
             continue;
         }
 
-        if (line.startsWith("pos"))
+        if (line.startsWith("pos") || line.startsWith("cl_yawspeed"))
             continue;
 
         extralines[frameNums.length() - 1].append(line);
