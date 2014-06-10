@@ -1251,8 +1251,11 @@ void CL_AnglesAndMoves(float frametime, struct usercmd_s *cmd)
 	CL_GetNewAngles(frametime, viewangles);
 	gEngfuncs.SetViewAngles(viewangles);
 
-	float yawspeed = (viewangles[YAW] - yaw + 360.0 / 65536 / 2) / frametime;
-	gEngfuncs.Con_Printf("cl_yawspeed %.8g\n", yawspeed);
+	if (CVAR_GET_FLOAT("sv_taslog"))
+	{
+		float yawspeed = (viewangles[YAW] - yaw + 360.0 / 65536 / 2) / frametime;
+		gEngfuncs.Con_Printf("cl_yawspeed %.8g\n", yawspeed);
+	}
 
 	CL_NewButtonsFSU(cmd);
 	CL_NewOriginVelocity(viewangles, cmd);
