@@ -222,7 +222,7 @@ It does not matter what :math:`F` and :math:`S` are.  If the duckstate is 2, the
 .. math:: \mathbf{v}' = \mathbf{u} - (\mathbf{u} \cdot \mathbf{\hat{n}}) \left( \mathbf{\hat{n}} + \mathbf{\hat{n}} \times
           \frac{\langle 0,0,1\rangle \times \mathbf{\hat{n}}}{\lVert \langle 0,0,1\rangle \times \mathbf{\hat{n}}\rVert} \right)
 
-where :math:`\mathbf{\hat{n}}` is the unit normal vector of the ladder's climbable plane.  The new velocity is invariant under the rotation of :math:`\mathbf{\hat{n}}` about the :math:`z` axis, therefore we can simplify the analysis by assuming :math:`\mathbf{\hat{n}} = \langle n_x, 0, n_z\rangle`.  Assume also that :math:`\mathbf{\hat{n}} \ne \langle 0,0,1\rangle`.  Now we have
+where :math:`\mathbf{\hat{n}}` is the unit normal vector of the ladder's climbable plane.  The new velocity is invariant under the rotation of :math:`\mathbf{\hat{n}}` about the :math:`z` axis, therefore we can simplify the analysis by assuming :math:`\mathbf{\hat{n}} = \langle n_x, 0, n_z\rangle`.  Assume also that :math:`\mathbf{\hat{n}} \ne \langle 0,0,\pm 1\rangle`.  Now we have
 
 .. math:: \mathbf{v}' = \mathbf{u} - \lVert\mathbf{u}\rVert \cos\alpha ( \langle n_x,0,n_z \rangle + \langle -n_z,0,n_x\rangle )
 
@@ -237,9 +237,9 @@ where :math:`\alpha` is the angle between :math:`\mathbf{u}` and :math:`\mathbf{
 
 We conclude that :math:`\alpha = 3\pi/4` maximises :math:`\lVert\mathbf{v}'\rVert`.  If :math:`\lvert\mathcal{F}\rvert = \lvert\mathcal{S}\rvert = 200`, we have :math:`\lVert\mathbf{v}'\rVert = 400`.
 
-If :math:`\mathbf{\hat{n}} = \langle 0,0,1\rangle`, then the second term in the bracket vanishes (since ``VectorNormalize`` in ``pm_shared/pm_math.c`` returns a zero vector if the input, which is :math:`\langle 0,0,1\rangle \times \mathbf{\hat{n}}`, is also a zero vector), leaving only
+If :math:`\mathbf{\hat{n}} = \langle 0,0,\pm 1\rangle`, then the second term in the bracket vanishes (since ``VectorNormalize`` in ``pm_shared/pm_math.c`` returns a zero vector if the input, which is :math:`\langle 0,0,1\rangle \times \mathbf{\hat{n}}`, is also a zero vector), leaving only
 
-.. math:: \mathbf{v}' = \mathbf{u} - \lVert\mathbf{u}\rVert \cos\alpha \langle 0,0,1\rangle
+.. math:: \mathbf{v}' = \mathbf{u} - \lVert\mathbf{u}\rVert \cos\alpha \langle 0,0,\pm 1\rangle
 
 thus
 
