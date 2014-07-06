@@ -217,12 +217,12 @@ It is widely known that the ladder climbing speed is optimisable.  We first defi
           0 & \text{otherwise}
           \end{cases}
 
-It does not matter what :math:`F` and :math:`S` are.  If the duckstate is 2, then :math:`\mathcal{F} \mapsto 0.333\mathcal{F}` and :math:`\mathcal{S} \mapsto 0.333\mathcal{S}` in the version of Half-Life at the time of writing.  Note that this is not true for earlier versions such as the NGHL.  If :math:`\mathbf{u} = \mathcal{F} \mathbf{\hat{f}} + \mathcal{S} \mathbf{\hat{s}}` then
+It does not matter what :math:`F` and :math:`S` are.  If the duckstate is 2, then :math:`\mathcal{F} \mapsto 0.333\mathcal{F}` and :math:`\mathcal{S} \mapsto 0.333\mathcal{S}` in the version of Half-Life at the time of writing.  Note that this is not true for earlier versions such as the NGHL.  If :math:`\mathbf{u} = \mathcal{F} \mathbf{\hat{f}} + \mathcal{S} \mathbf{\hat{s}}` and :math:`\mathbf{\hat{n}} \ne \langle 0,0,\pm 1\rangle` then
 
 .. math:: \mathbf{v}' = \mathbf{u} - (\mathbf{u} \cdot \mathbf{\hat{n}}) \left( \mathbf{\hat{n}} + \mathbf{\hat{n}} \times
           \frac{\langle 0,0,1\rangle \times \mathbf{\hat{n}}}{\lVert \langle 0,0,1\rangle \times \mathbf{\hat{n}}\rVert} \right)
 
-where :math:`\mathbf{\hat{n}}` is the unit normal vector of the ladder's climbable plane.  The new velocity is invariant under the rotation of :math:`\mathbf{\hat{n}}` about the :math:`z` axis, therefore we can simplify the analysis by assuming :math:`\mathbf{\hat{n}} = \langle n_x, 0, n_z\rangle`.  Assume also that :math:`\mathbf{\hat{n}} \ne \langle 0,0,\pm 1\rangle`.  Now we have
+where :math:`\mathbf{\hat{n}}` is the unit normal vector of the ladder's climbable plane.  To optimise the vertical climbing speed, we assume :math:`\mathbf{\hat{n}} = \langle n_x, 0, n_z\rangle`.  We further assume that :math:`\mathbf{u}` is directed into the ladder surface.  Now we have
 
 .. math:: \mathbf{v}' = \mathbf{u} - \lVert\mathbf{u}\rVert \cos\alpha ( \langle n_x,0,n_z \rangle + \langle -n_z,0,n_x\rangle )
 
@@ -237,7 +237,57 @@ where :math:`\alpha` is the angle between :math:`\mathbf{u}` and :math:`\mathbf{
 
 We conclude that :math:`\alpha = 3\pi/4` maximises :math:`\lVert\mathbf{v}'\rVert`.  If :math:`\lvert\mathcal{F}\rvert = \lvert\mathcal{S}\rvert = 200`, we have :math:`\lVert\mathbf{v}'\rVert = 400`.
 
-If :math:`\mathbf{\hat{n}} = \langle 0,0,\pm 1\rangle`, then the second term in the bracket vanishes (since ``VectorNormalize`` in ``pm_shared/pm_math.c`` returns a zero vector if the input, which is :math:`\langle 0,0,1\rangle \times \mathbf{\hat{n}}`, is also a zero vector), leaving only
+Knowing the optimal angle :math:`\alpha` is useful for theoretical understanding, but in practice we must be able to calculate the player's yaw and pitch angles that maximises vertical climbing speed.  For ladders that are perfectly vertical the optimal viewangles are trivial to find, but we need explicit formulae for slanted ladders.  We begin by parameterising :math:`\mathbf{\hat{n}}` in terms of :math:`\theta` and :math:`\phi` then assume that the vector is directed towards positive :math:`x` axis (i.e. :math:`\theta = 0`), giving
+
+.. math:: \mathbf{\hat{n}} = \langle \cos\phi, 0, -\sin\phi \rangle
+
+hence the rightmost bracket can be replaced by
+
+.. math:: \langle\cos\phi + \sin\phi, 0, \cos\phi - \sin\phi\rangle = \langle N_x, N_y, N_z \rangle
+
+We also note that, in :math:`\mathbb{R}^3` we have
+
+.. math:: \begin{align*}
+          \mathbf{\hat{f}} &= \langle \cos\vartheta\cos\varphi, \sin\vartheta\cos\varphi, -\sin\varphi \rangle \\
+          \mathbf{\hat{s}} &= \langle \sin\vartheta, -\cos\vartheta, 0 \rangle \\
+          \mathbf{u} &= \langle \mathcal{F} \cos\vartheta\cos\varphi + \mathcal{S} \sin\vartheta,
+          \mathcal{F} \sin\vartheta\cos\varphi - \mathcal{S} \cos\vartheta, -\mathcal{F} \sin\varphi \rangle
+          \end{align*}
+
+Therefore,
+
+.. math:: \mathbf{v}' = \langle u_x - N_x \mathbf{u}\cdot\mathbf{\hat{n}}, u_y, u_z - N_z \mathbf{u}\cdot\mathbf{\hat{n}} \rangle
+
+To maximise the vertical speed, we set
+
+.. math:: \frac{\partial v_z'}{\partial \varphi} = 0 \quad\text{and}\quad \frac{\partial v_z'}{\partial \vartheta} = 0
+
+giving
+
+.. math:: (1 - N_z n_z) \cos\varphi = N_z n_x \cos\vartheta \sin\varphi
+
+.. math:: \mathcal{S} \cos\vartheta = \mathcal{F} \cos\varphi \sin\vartheta
+
+If we assume :math:`\mathcal{F} = 200` and :math:`\mathcal{S} = \pm 200`, then if the ladder surface faces up the optimal viewangles are
+
+.. math:: \begin{align*}
+          \vartheta &= -\operatorname{sgn}(\mathcal{S}) \left( \pi - \arctan\frac{1}{\sqrt{\sin(-2\phi)}} \right) \\
+          \varphi &= -\arccos\sqrt{\sin(-2\phi)}
+          \end{align*}
+
+If the ladder surface faces down, then we simply have :math:`\vartheta = -\operatorname{sgn}(\mathcal{S}) \pi/2` and :math:`\varphi = -\pi/2`.  To calculate the final player yaw angle, add :math:`\theta` to the :math:`\vartheta` found above.
+
+Sometimes we want to maximise sideway climbing speed, which is moving along the :math:`y` axis under the assumptions made earlier.  To accomplish this we maximise :math:`v'_y`, giving the equations
+
+.. math:: \sin\vartheta \sin\varphi = 0
+
+.. math:: \cos\vartheta \cos\varphi + \operatorname{sgn}(\mathcal{S})\sin\vartheta = 0
+
+Notice how they are indenpendent of :math:`\mathbf{\hat{n}}`.  They can be solved to produce the optimal solution
+
+.. math:: \varphi = 0 \quad\quad \vartheta = -\operatorname{sgn}(\mathcal{S}) \frac{\pi}{4}
+
+Up to this point we have been assuming the normal vector not being vertical.  If :math:`\mathbf{\hat{n}} = \langle 0,0,\pm 1\rangle`, then the second term in the bracket vanishes (since ``VectorNormalize`` in ``pm_shared/pm_math.c`` returns a zero vector if the input, which is :math:`\langle 0,0,1\rangle \times \mathbf{\hat{n}}`, is also a zero vector) instead of being indeterminate, leaving only
 
 .. math:: \mathbf{v}' = \mathbf{u} - \lVert\mathbf{u}\rVert \cos\alpha \langle 0,0,\pm 1\rangle
 
@@ -245,6 +295,6 @@ thus
 
 .. math:: \lVert\mathbf{v}'\rVert = \sqrt{\mathcal{F}^2 + \mathcal{S}^2} \sqrt{1 - \cos^2 \alpha}
 
-which is maximised when :math:`\alpha = \pi/2`, giving :math:`\lVert\mathbf{v}'\rVert = 200\sqrt{2}` if :math:`\lvert\mathcal{F}\rvert = \lvert\mathcal{S}\rvert = 200`.
+which is maximised when :math:`\alpha = \pi/2`.  This can be achieved by setting :math:`\varphi = 0`.
 
 Lastly, regardless of viewangles, jumping off the ladder always sets :math:`\mathbf{v}' = 270\mathbf{\hat{n}}`.
