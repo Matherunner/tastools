@@ -201,28 +201,14 @@ Also observe that the player always experience geometric friction while in the w
 Ladder physics
 --------------
 
-It is widely known that the ladder climbing speed is optimisable.  We first define
+It is widely known that the ladder climbing speed is optimisable.  We first introduce :math:`\mathcal{F}` and :math:`\mathcal{S}`, which are analogues of :math:`F` and :math:`S` from the standard movement physics.  Issuing ``+forward`` adds 200 to :math:`\mathcal{F}`, and issuing ``+back`` subtracts 200 from it.  Thus, when both ``+forward`` and ``+back`` are issued we have :math:`\mathcal{F} = 0`.  Similarly, executing ``+moveright`` adds 200 to :math:`\mathcal{S}` and ``+moveleft`` subtracts 200 from it.  Note that the value of 200 cannot be modified without recompilation.  For ladder physics, it does not matter what :math:`F` and :math:`S` are.  If the duckstate is 2, then :math:`\mathcal{F} \mapsto 0.333\mathcal{F}` and :math:`\mathcal{S} \mapsto 0.333\mathcal{S}` in newer Half-Life versions.  This is not true for earlier versions such as NGHL.
 
-.. math:: \mathcal{F} =
-          \begin{cases}
-          200 & \text{if } \mathtt{+forward} \\
-          -200 & \text{if } \mathtt{+back} \\
-          0 & \text{otherwise}
-          \end{cases}
-          \quad\quad\quad
-          \mathcal{S} =
-          \begin{cases}
-          200 & \text{if } \mathtt{+moveright} \\
-          -200 & \text{if } \mathtt{+moveleft} \\
-          0 & \text{otherwise}
-          \end{cases}
-
-It does not matter what :math:`F` and :math:`S` are.  If the duckstate is 2, then :math:`\mathcal{F} \mapsto 0.333\mathcal{F}` and :math:`\mathcal{S} \mapsto 0.333\mathcal{S}` in the version of Half-Life at the time of writing.  Note that this is not true for earlier versions such as the NGHL.  If :math:`\mathbf{u} = \mathcal{F} \mathbf{\hat{f}} + \mathcal{S} \mathbf{\hat{s}}` and :math:`\mathbf{\hat{n}} \ne \langle 0,0,\pm 1\rangle` then
+If :math:`\mathbf{u} = \mathcal{F} \mathbf{\hat{f}} + \mathcal{S} \mathbf{\hat{s}}` and :math:`\mathbf{\hat{n}} \ne \langle 0,0,\pm 1\rangle` then
 
 .. math:: \mathbf{v}' = \mathbf{u} - (\mathbf{u} \cdot \mathbf{\hat{n}}) \left( \mathbf{\hat{n}} + \mathbf{\hat{n}} \times
           \frac{\langle 0,0,1\rangle \times \mathbf{\hat{n}}}{\lVert \langle 0,0,1\rangle \times \mathbf{\hat{n}}\rVert} \right)
 
-where :math:`\mathbf{\hat{n}}` is the unit normal vector of the ladder's climbable plane.  To optimise the vertical climbing speed, we assume :math:`\mathbf{\hat{n}} = \langle n_x, 0, n_z\rangle`.  We further assume that :math:`\mathbf{u}` is directed into the ladder surface.  Now we have
+where :math:`\mathbf{\hat{n}}` is the unit normal vector of the ladder's climbable plane.  To optimise the vertical climbing speed, we assume :math:`\mathbf{\hat{n}} = \langle n_x, 0, n_z\rangle`.  We further assume that :math:`u_y = 0`.  Now we have
 
 .. math:: \mathbf{v}' = \mathbf{u} - \lVert\mathbf{u}\rVert \cos\alpha ( \langle n_x,0,n_z \rangle + \langle -n_z,0,n_x\rangle )
 
