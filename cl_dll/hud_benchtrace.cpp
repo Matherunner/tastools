@@ -37,13 +37,15 @@ struct trace_options_s
 	unsigned char a[7];
 };
 
-typedef struct
+struct trace_return_s
 {
 	DWORD			dwAddress;
 	unsigned long	ulStatus, ulRoundTripTime;
 	unsigned char	a[8];
 	struct trace_options_s Options;
-} traceReturn;
+};
+
+trace_return_s traceReturn;
 
 /*
 ==============

@@ -29,6 +29,9 @@ extern "C"
 
 #include "vgui_TeamFortressViewport.h"
 
+#ifdef _MSC_VER
+#define M_PI 3.14159265358979323846
+#endif
 
 extern int g_iAlive;
 
@@ -77,7 +80,7 @@ static double tas_sba = 0;
 // How much angle have we covered in tas_sba?
 static double tas_sba_acc = 0;
 
-extern playermove_t *pmove;
+extern "C" playermove_t *pmove;
 
 void IN_Init (void);
 void IN_Move ( float frametime, usercmd_t *cmd);
@@ -91,7 +94,10 @@ extern cvar_t *in_joystick;
 
 int	in_impulse	= 0;
 int	in_cancel	= 0;
+extern "C"
+{
 int g_bcap = 1;
+}
 
 cvar_t	*m_pitch;
 cvar_t	*m_yaw;
