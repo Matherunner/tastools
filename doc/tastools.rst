@@ -63,7 +63,7 @@ for ``COUNT``.
 ``tas_sba ANGLE``
   Perform left or right strafing automatically until the velocity polar angle
   has changed by ``ANGLE`` degrees.  Note that either ``+leftstrafe``
-  or``+rightstrafe`` must be active for this to work, and it requires a
+  or ``+rightstrafe`` must be active for this to work, and it requires a
   ``wait`` followed by ``exec waitscript.cfg`` to work as intended.  It relies
   on the ability to create ``waitscript.cfg`` (called the *waitscript*) in the
   mod directory.  This is a rather special command as it prevents further
@@ -152,6 +152,7 @@ The log file is usually not read directly, but instead fed to the qconread
 program for easier reading, but we will describe the format here.  For each
 frame the following information will be printed::
 
+    [cl_yawspeed YAWSPEED]
     prethink FRAMENO FRAMETIME
     health HP AP
     usercmd MSEC BUTTONS PITCH YAW
@@ -171,8 +172,13 @@ The tokens in uppercase here are replaced by the actual value, while those in
 lowercase are literal.  The lines in square brackets may or may not appear in a
 particular frame.
 
+``cl_yawspeed``
+  ``YAWSPEED`` is the yaw speed needed to set the yaw angle to the current
+  value.  This line will only be displayed after ``CL_SignonReply: 2``.
+  ``genlegit.py`` relies on this line to generate the legitimate script (see
+  below).
 ``prethink``
-  The first line gives the frame number (``FRAMENO``) which is not necessarily
+  This line gives the frame number (``FRAMENO``) which is not necessarily
   unique and ``FRAMETIME`` is the duration of this frame, or the CFR.  The
   frame number is the value of ``g_ulFrameCount`` defined in
   ``dlls/globals.cpp``, which is incremented only when ``StartFrame`` in
@@ -451,18 +457,12 @@ to verify that the script has been executed correctly.
 
 Assuming that the simulation script has been finalised.  The legitimate script
 must then be generated using ``genlegit.py`` by reading the log file from stdin
-and emitting the final script to stdout.  However, it makes one important
-assumption while generating the legitimate script: at least one frame after the
-``CL_SignonReply: 2`` string has zero for ``MSEC`` in the ``usercmd`` line.  It
-requires such frame to exist in order to know the initial pitch and yaw so that
-the correct ``cl_yawspeed`` values can be computed.  If such frame does not
-exist, the runner might have to insert a fake frame manually into the log file
-to fool the generator.  It also always set ``cl_forwardspeed``,
-``cl_sidespeed`` and ``cl_upspeed`` to 10000 as hardcoded into the code.
-``genlegit.py`` also inserts a ``host_framerate 0.0001`` before the final
-``wait`` by default, unless ``--noendhfr`` is specified.  This is needed for
-handling level transitions correctly and is harmless for traditional segmenting
-within the same map.
+and emitting the final script to stdout.  It always sets ``cl_forwardspeed``,
+``cl_sidespeed`` and ``cl_upspeed`` to 10000 as hardcoded into the code.  It
+also inserts a ``host_framerate 0.0001`` before the final ``wait`` by default,
+unless ``--noendhfr`` or a different ``--hfrval`` is specified.  This is needed
+for handling level transitions correctly and is harmless for traditional
+segmenting within the same map.
 
 
 .. _segmentation:
