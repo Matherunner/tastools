@@ -175,7 +175,7 @@ particular frame.
 ``cl_yawspeed``
   ``YAWSPEED`` is the yaw speed needed to set the yaw angle to the current
   value.  This line will only be displayed after ``CL_SignonReply: 2``.
-  ``genlegit.py`` relies on this line to generate the legitimate script (see
+  ``genlegit.py`` relies on this line to generate legitimate scripts (see
   below).
 ``prethink``
   This line gives the frame number (``FRAMENO``) which is not necessarily
@@ -508,6 +508,125 @@ verify, after the script ended, that
 If "Can't save during transition" is found, then the wait number for waitpad 2
 must be increased.  Assuming the resulting savestate is correct, the method to
 execute the script for the next segment will be as normal.
+
+
+taslaunch tool
+--------------
+
+Up to this point we have been describing the manual way of executing scripts.
+In this section we will introduce a new tool called ``taslaunch.py`` which
+automates routine actions.  It reads a configuration file (``taslaunch.ini`` by
+default) and performs actions depending on the settings stored in it.  It makes
+use of the Python scripts mentioned above.  ``taslaunch`` is the standard tool
+in TAS creation, and there is no reason not to use it unless you need complete
+control.
+
+A configuration file contains many sections.  Each section defines a segment.
+Within each section contains keys with corresponding values.  Have a look at
+the following::
+
+  [c2a1_seg_2]
+  sim_waitpads = 20 0
+  legit_save = c2a1_seg_3
+
+  [c2a1_seg_3]
+  sim_waitpads = 15 0
+  load_from = %(seg_name)s_test
+
+In this example, ``[c2a1_seg_2]`` and ``[c2a1_seg_3]`` indicates the beginning
+of their respective sections.  The string within a square bracket defines the
+segment name.  For the first section, ``sim_waitpads`` and ``legit_save`` are
+the keys with ``20 0`` and ``c2a1_seg_3`` as the respective values.  Note that
+the value of ``load_from`` contains the substring ``%(seg_name)s``.  This is a
+predefined string which will be resolved to the segment name, or ``c2a1_seg_3``
+in this case.  As a result, the final value of ``load_from`` will be
+``c2a1_seg_3_test``.
+
+These are all the recognised settings:
+
+``load_from CMD``
+  Specifies the map or savestate to load.  To load a map, specify ``map
+  <mapname>`` for ``CMD``.  To load a savestate, specify ``load <savename>``.
+  This is mandatory.
+
+``host_framerate FRAMETIME``
+  Set the initial value of ``host_framerate`` to ``FRAMETIME``.  The default is
+  0.0001.
+
+``lines_per_file N``
+  Limit the number of lines per generated script file to ``N``.  The default is
+  700.
+
+``sim_dest_prefix PREFIX``
+  Set the prefix for generated script files to ``PREFIX``.  The default is
+  ``tscript``.
+
+``sim_waitpads N1 N2``
+  Generate ``game.cfg`` with wait numbers ``N1`` and ``N2`` for waitpad 1 and
+  waitpad 2 respectively.  This is mandatory.
+
+``sim_mod MOD``
+  Run ``MOD``.  The default is ``tastools``.
+
+``sim_src_script SCRIPT``
+  Use ``SCRIPT`` as the source simulation script.  The default is
+  ``%(seg_name)s_sim.cfg``.
+
+``sim_log LOGFILE``
+  Copy ``qconsole.log`` to ``LOGFILE`` after Half-Life exits.  The defaults is
+  ``%(seg_name)s_sim.log``.
+
+``sim_hl_args ARGS``
+  Specify ``ARGS`` as additional arguments to Half-Life.  The default is an
+  empty string.
+
+``dont_gen_legit``
+  This setting takes no arguments.  If specified, the legitimate script will
+  not be generated.  This can be useful if the user wishes to preserve manual
+  tweaks done to the legitimate script generated previously.
+
+``legit_waitpads N1 N2``
+  Same as ``sim_waitpads``, except this is for legitimate runs.
+
+``legit_lvl_waitpads N1 N2``
+  Generate ``game.cfg`` with wait numbers ``N1`` and ``N2`` for waitpad 1 and
+  waitpad 2 respectively after the run is started.  This setting is vital in
+  handling level transitions, and is useless without also specifying
+  ``legit_lvl_save``.
+
+``legit_save SAVE``
+  Save the game to ``SAVE`` at the end of script.  This is mostly used for
+  segmenting in the middle of a map.  Do not use this for saving at level
+  transition.
+
+``legit_lvl_save SAVE``
+  Save to ``SAVE`` upon level transition.  This is useless without specifying
+  ``legit_lvl_waitpads``.
+
+``legit_dest_prefix PREFIX``
+  Same as ``sim_dest_prefix``, except this is for legitimate runs.
+
+``legit_mod MOD``
+  Same as ``sim_mod``, except this is for legitimate runs.
+
+``legit_demo DEMO``
+  Record to ``DEMO`` throughout the script execution.
+
+``legit_hl_args ARGS``
+  Same as ``sim_hl_args``, except this is for legitimate runs.
+
+``legit_prepend CMDS``
+  Prepend ``CMDS`` to the legitimate script.
+
+``legit_append CMDS``
+  Append ``CMDS`` to the legitimate script.
+
+To execute ``taslaunch.py``, the user needs to specify two positional
+arguments.  The first argument can be either ``sim`` or ``legit``, which
+specifies whether to initiate a simulation or a legitimate run.  The second
+positional argument specifies the segment name.  For example::
+
+  taslaunch.py legit c1a1_seg_2
 
 
 qconread program
