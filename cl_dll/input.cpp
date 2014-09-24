@@ -879,18 +879,19 @@ double CL_CTConstSpeed(double prevspeed, double speed, double L, double A)
 
 bool CL_IsAirAccelGreater()
 {
-	double maxspeed = pmove->maxspeed;
+	double old_maxspeed = pmove->maxspeed;
 	if (pmove->flags & FL_DUCKING && !cl_lgagst_duck->value)
-		maxspeed = pmove->maxspeed / 0.333;
+		pmove->maxspeed /= 0.333;
 
 	double speed_air = hypot(pmove->velocity[0], pmove->velocity[1]);
 	double speed_grnd = speed_air;
 	if (speed_air >= 0.1)
 		speed_grnd *= fmax(1 - fmax(1, pmove->movevars->stopspeed / speed_air) * pmove->friction * pmove->movevars->friction * pmove->frametime, 0);
 	double ctheta_air = CL_CTOptimal(speed_air, 30, pmove->movevars->airaccelerate);
-	double ctheta_grnd = CL_CTOptimal(speed_grnd, maxspeed, pmove->movevars->accelerate);
-	double mu_air = fmin(pmove->frametime * maxspeed * pmove->movevars->airaccelerate, 30 - speed_air * ctheta_air);
-	double mu_grnd = fmin(pmove->frametime * maxspeed * pmove->movevars->accelerate, maxspeed - speed_grnd * ctheta_grnd);
+	double ctheta_grnd = CL_CTOptimal(speed_grnd, pmove->maxspeed, pmove->movevars->accelerate);
+	double mu_air = fmin(pmove->frametime * pmove->maxspeed * pmove->movevars->airaccelerate, 30 - speed_air * ctheta_air);
+	double mu_grnd = fmin(pmove->frametime * pmove->maxspeed * pmove->movevars->accelerate, pmove->maxspeed - speed_grnd * ctheta_grnd);
+	pmove->maxspeed = old_maxspeed;
 	// Square roots are unnecessary here
 	speed_air = speed_air * speed_air + mu_air * mu_air + 2 * speed_air * mu_air * ctheta_air;
 	speed_grnd = speed_grnd * speed_grnd + mu_grnd * mu_grnd + 2 * speed_grnd * mu_grnd * ctheta_grnd;
