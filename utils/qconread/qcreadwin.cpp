@@ -17,6 +17,8 @@ QCReadWin::QCReadWin()
     logTableView->setModel(new LogTableModel(logTableView));
     connect(logTableView->verticalHeader(), SIGNAL(sectionClicked(int)), this,
             SLOT(showExtraLines(int)));
+    connect(logTableView, SIGNAL(showNumFrames(int, float)), this,
+            SLOT(showNumFrames(int, float)));
     setCentralWidget(logTableView);
 
     extraLinesDock = new QDockWidget("Extra lines", this);
@@ -47,7 +49,8 @@ QCReadWin::QCReadWin()
     QMenu *menuHelp = menuBar()->addMenu("&Help");
     menuHelp->addAction("&About...", this, SLOT(showAbout()));
 
-    statusBar();
+    lblNumFrames = new QLabel(statusBar());
+    statusBar()->addPermanentWidget(lblNumFrames);
 }
 
 void QCReadWin::findNextDiff()
@@ -90,4 +93,13 @@ void QCReadWin::showExtraLines(int section)
     QString extraLines = logTableView->model()->headerData(
         section, Qt::Vertical, Qt::UserRole).toString();
     extraLinesEdit->setPlainText(extraLines);
+}
+
+void QCReadWin::showNumFrames(int numFrames, float duration)
+{
+    if (numFrames < 2)
+        lblNumFrames->setText("");
+    else
+        lblNumFrames->setText(QString("no. of frames: %1, duration: %2")
+                              .arg(numFrames).arg(duration));
 }

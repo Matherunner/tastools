@@ -513,3 +513,12 @@ QModelIndex LogTableModel::findDiff(const QModelIndex &curIndex,
 
     return QModelIndex();
 }
+
+float LogTableModel::sumDuration(int startRow, int endRow) const
+{
+    double duration = 0;
+    for (int i = startRow; i <= endRow; i++) {
+        duration += 1 / logTableData[HEAD_FRATE][i].toDouble();
+    }
+    return duration;
+}

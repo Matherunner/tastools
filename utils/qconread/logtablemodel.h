@@ -58,6 +58,7 @@ public:
     bool parseLogFile(const QString &logFileName);
     void clearAllRows();
     QModelIndex findDiff(const QModelIndex &curIndex, bool forward) const;
+    float sumDuration(int startRow, int endRow) const;
 
 private:
     // We will be assuming that every QVector in this array has equal length.

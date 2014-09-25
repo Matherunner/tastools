@@ -53,3 +53,26 @@ void LogTableView::setIndexToDiff(bool forward)
     if (newIndex.isValid())
         setCurrentIndex(newIndex);
 }
+
+void LogTableView::selectionChanged(const QItemSelection &selected,
+                                    const QItemSelection &deselected)
+{
+    QTableView::selectionChanged(selected, deselected);
+
+    QModelIndexList indexList = selectedIndexes();
+    if (indexList.empty()) {
+        emit(showNumFrames(0, 0));
+        return;
+    }
+
+    int min = indexList[0].row();
+    int max = indexList[0].row();
+    for (int i = 1; i < indexList.size(); i++) {
+        if (indexList[i].row() < min)
+            min = indexList[i].row();
+        else if (indexList[i].row() > max)
+            max = indexList[i].row();
+    }
+
+    emit(showNumFrames(max - min + 1, model()->sumDuration(min, max)));
+}
