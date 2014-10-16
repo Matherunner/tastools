@@ -1,0 +1,25 @@
+{%- extends "basic/layout.html" %}
+
+{%- block extrahead %}
+<link href="http://fonts.googleapis.com/css?family=Merriweather:400,400italic,700" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=Open+Sans:400,300,600" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="{{ pathto('_static/ie6.css', 1) }}" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+{% endblock %}
+
+{% block header %}
+{%- if logo %}
+<div class="header">
+  <div class="logo">
+    <a href="{{ pathto(master_doc) }}">
+      <img class="logo" src="{{ pathto('_static/' + logo, 1) }}" alt="Logo"/>
+    </a>
+  </div>
+</div>
+{%- endif %}
+{% endblock %}
+
+{%- block sidebarlogo %}{%- endblock %}
+{%- block sidebarsourcelink %}{%- endblock %}
