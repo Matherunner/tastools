@@ -544,39 +544,39 @@ in this case.  As a result, the final value of ``load_from`` will be
 
 These are all the recognised settings:
 
-``load_from CMD``
+``load_from = CMD``
   Specifies the map or savestate to load.  To load a map, specify ``map
   <mapname>`` for ``CMD``.  To load a savestate, specify ``load <savename>``.
   This is mandatory.
 
-``host_framerate FRAMETIME``
+``host_framerate = FRAMETIME``
   Set the initial value of ``host_framerate`` to ``FRAMETIME``.  The default is
   0.0001.
 
-``lines_per_file N``
+``lines_per_file = N``
   Limit the number of lines per generated script file to ``N``.  The default is
   700.
 
-``sim_dest_prefix PREFIX``
+``sim_dest_prefix = PREFIX``
   Set the prefix for generated script files to ``PREFIX``.  The default is
   ``tscript``.
 
-``sim_waitpads N1 N2``
+``sim_waitpads = N1 N2``
   Generate ``game.cfg`` with wait numbers ``N1`` and ``N2`` for waitpad 1 and
   waitpad 2 respectively.  This is mandatory.
 
-``sim_mod MOD``
+``sim_mod = MOD``
   Run ``MOD``.  The default is ``tastools``.
 
-``sim_src_script SCRIPT``
+``sim_src_script = SCRIPT``
   Use ``SCRIPT`` as the source simulation script.  The default is
   ``%(seg_name)s_sim.cfg``.
 
-``sim_log LOGFILE``
+``sim_log = LOGFILE``
   Copy ``qconsole.log`` to ``LOGFILE`` after Half-Life exits.  The defaults is
   ``%(seg_name)s_sim.log``.
 
-``sim_hl_args ARGS``
+``sim_hl_args = ARGS``
   Specify ``ARGS`` as additional arguments to Half-Life.  The default is an
   empty string.
 
@@ -585,40 +585,40 @@ These are all the recognised settings:
   not be generated.  This can be useful if the user wishes to preserve manual
   tweaks done to the legitimate script generated previously.
 
-``legit_waitpads N1 N2``
+``legit_waitpads = N1 N2``
   Same as ``sim_waitpads``, except this is for legitimate runs.
 
-``legit_lvl_waitpads N1 N2``
+``legit_lvl_waitpads = N1 N2``
   Generate ``game.cfg`` with wait numbers ``N1`` and ``N2`` for waitpad 1 and
   waitpad 2 respectively after the run is started.  This setting is vital in
   handling level transitions, and is useless without also specifying
   ``legit_lvl_save``.
 
-``legit_save SAVE``
+``legit_save = SAVE``
   Save the game to ``SAVE`` at the end of script.  This is mostly used for
   segmenting in the middle of a map.  Do not use this for saving at level
   transition.
 
-``legit_lvl_save SAVE``
+``legit_lvl_save = SAVE``
   Save to ``SAVE`` upon level transition.  This is useless without specifying
   ``legit_lvl_waitpads``.
 
-``legit_dest_prefix PREFIX``
+``legit_dest_prefix = PREFIX``
   Same as ``sim_dest_prefix``, except this is for legitimate runs.
 
-``legit_mod MOD``
+``legit_mod = MOD``
   Same as ``sim_mod``, except this is for legitimate runs.
 
-``legit_demo DEMO``
+``legit_demo = DEMO``
   Record to ``DEMO`` throughout the script execution.
 
-``legit_hl_args ARGS``
+``legit_hl_args = ARGS``
   Same as ``sim_hl_args``, except this is for legitimate runs.
 
-``legit_prepend CMDS``
+``legit_prepend = CMDS``
   Prepend ``CMDS`` to the legitimate script.
 
-``legit_append CMDS``
+``legit_append = CMDS``
   Append ``CMDS`` to the legitimate script.
 
 To execute ``taslaunch.py``, the user needs to specify two positional
