@@ -533,8 +533,8 @@ If the ladder surface faces down, then we simply have :math:`\vartheta =
 calculate the final player yaw angle, add :math:`\theta` to the
 :math:`\vartheta` found above.
 
-Sometimes we want to maximise sideway climbing speed, which is moving along the
-:math:`y` axis under the assumptions made earlier.  To accomplish this we
+Sometimes we want to maximise sideways climbing speed, which is moving along
+the :math:`y` axis under the assumptions made earlier.  To accomplish this we
 maximise :math:`v'_y`, giving the equations
 
 .. math:: \sin\vartheta \sin\varphi = 0
