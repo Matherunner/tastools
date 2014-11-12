@@ -281,6 +281,7 @@ Delicious recipes
 -----------------
 
 We will provide some implementations of basic strafing functions in Python.
+``import math`` is required.
 
 The following function returns speed after one frame of optimal strafing.
 
@@ -288,11 +289,60 @@ The following function returns speed after one frame of optimal strafing.
 
    def fme_spd_opt(spd, L, tauMA):
        tmp = L - tauMA
-       if tmp < 0.:
+       if tmp < 0:
            return math.sqrt(spd * spd + L * L)
        if tmp < spd:
            return math.sqrt(spd * spd + tauMA * (L + tmp))
        return spd + tauMA
+
+If computing the velocity vector is required, instead of just the speed, then
+one might use the following implementation, where ``d`` is the direction: ``1``
+for right and ``-1`` for left.
+
+.. code-block:: python
+
+   def fme_vel_opt(v, d, L, tauMA):
+       tmp = L - tauMA
+       spd = math.hypot(v[0], v[1])
+       ax = 0
+       ay = 0
+       if tmp < 0:
+           ax = L * v[1] * d / spd
+           ay = -L * v[0] * d / spd
+       elif tmp < spd:
+           ct = tmp / spd
+           st = d * math.sqrt(1 - ct * ct)
+           ax = tauMA * (v[0] * ct + v[1] * st) / spd
+           ay = tauMA * (-v[0] * st + v[1] * ct) / spd
+       else:
+           ax = tauMA * v[0] / spd
+           ay = tauMA * v[1] / spd
+       v[0] += ax
+       v[1] += ay
+
+On the other hand, if we want to compute the velocity as a result of an
+arbitrary :math:`\theta` then we would instead use
+
+.. code-block:: python
+
+   def fme_vel_gen(v, theta, L, tauMA):
+       spd = math.hypot(v[0], v[1])
+       ct = math.cos(theta)
+       mu = L - spd * ct
+       if mu < 0:
+           return
+       if tauMA < mu:
+           mu = tauMA
+       st = math.sin(theta)
+       ax = mu * (v[0] * ct + v[1] * st) / spd
+       ay = mu * (-v[0] * st + v[1] * ct) / spd
+       v[0] += ax
+       v[1] += ay
+
+Note that these two implementations will no work if the speed is zero.  This is
+a feature and not a bug: when the speed is zero the direction is undefined.  In
+other words, the meaning of "rightstrafe" or "leftstrafe" will be lost without
+specifying additional information.
 
 For backpedalling, we have
 
@@ -308,8 +358,8 @@ be called before calling the speed functions when groundstrafing.
 
    def apply_fric(spd, E, ktau):
        if spd > E:
-           return spd * (1. - ktau)
+           return spd * (1 - ktau)
        tmp = E * ktau
        if spd > tmp:
            return spd - tmp
-       return 0.
+       return 0
