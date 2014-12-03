@@ -173,6 +173,9 @@ static void IN_TasDuckB4Land()
 
 static float get_fric_coef(const double vel[3], const double pos[3])
 {
+    // Return 0 because this is roughly similar to what PM_Friction does.
+    if (std::fabs(vel[0]) < 0.1 && std::fabs(vel[1]) < 0.1)
+        return 0;
     float k = *(float *)(p_movevars + 0x1c); // sv_friction
     k *= *(float *)(*pp_sv_player + 0x80 + 0x120); // friction modifier
 
