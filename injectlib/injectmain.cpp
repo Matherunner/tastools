@@ -33,6 +33,7 @@ double *p_host_frametime = nullptr;
 uintptr_t *pp_sv_player = nullptr;
 const char *gamedir = nullptr;
 unsigned int *p_g_ulFrameCount = nullptr;
+uintptr_t *pp_gpGlobals = nullptr;
 
 static ServerActivate_func_t orig_ServerActivate = nullptr;
 static AddToFullPack_func_t orig_AddToFullPack = nullptr;
@@ -41,7 +42,6 @@ static SCR_UpdateScreen_func_t orig_SCR_UpdateScreen = nullptr;
 static PM_Move_func_t orig_hl_PM_Move = nullptr;
 static PM_Move_func_t orig_cl_PM_Move = nullptr;
 
-static uintptr_t *pp_gpGlobals = nullptr;
 static cvar_t *p_r_norefresh = nullptr;
 
 static const int EF_NODRAW = 128;
@@ -121,7 +121,7 @@ void ServerActivate(edict_s *pEdictList, int edictCount, int clientMax)
     if (!tas_hook_initialized) {
         // We only initialise the custom HUD here because it will fail to
         // initialise if we do it in InitInput instead.
-        initialize_customhud(clso_addr, clso_st);
+        initialize_customhud(clso_addr, clso_st, hwso_addr, hwso_st);
         load_hl_symbols();
         tas_hook_initialized = true; // finally, everything is initialised
     }
