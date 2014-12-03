@@ -92,6 +92,7 @@ static uintptr_t p_gEngfuncs = 0;
 static uintptr_t p_movevars = 0;
 static uintptr_t *pp_hwpmove = nullptr;
 static kbutton_t *p_in_duck = nullptr;
+static kbutton_t *p_in_jump = nullptr;
 static cvar_t **pp_cl_forwardspeed = nullptr;
 static cvar_t **pp_cl_backspeed = nullptr;
 static cvar_t **pp_cl_sidespeed = nullptr;
@@ -290,7 +291,7 @@ static void categorize_pos(playerinfo_t &plrinfo)
             plrinfo.pos[i] = trace.endpos[i];
 }
 
-static void load_player_info(playerinfo_t &plrinfo)
+static void load_player_state(playerinfo_t &plrinfo)
 {
     orig_GetViewAngles(plrinfo.viewangles);
     if (do_setyaw.do_it)
@@ -305,11 +306,10 @@ static void load_player_info(playerinfo_t &plrinfo)
     float *orig_vel = (float *)(*pp_sv_player + 0x80 + 0x20);
     for (int i = 0; i < 3; i++)
         plrinfo.vel[i] = orig_vel[i];
+}
 
-    // Calling this function here corresponds to the first
-    // PM_CatagorizePosition call in PM_PlayerMove
-    categorize_pos(plrinfo);
-
+static void load_player_movevars(playerinfo_t &plrinfo)
+{
     // FIXME: this is not correct when it is not a multiple of 0.001!
     plrinfo.tau = *p_host_frametime;
     plrinfo.M = *(float *)(p_movevars + 0x8);
@@ -363,13 +363,28 @@ static void do_autoactions(playerinfo_t &plrinfo)
         plrinfo.vel[2] <= 180;
 
     do_tasjump(plrinfo, unduckable_onto_ground);
+
+    // If we are going to unduck onto ground, set the position type correctly
+    // so that the strafing stuff later will be correct.
+    if (unduckable_onto_ground && plrinfo.postype == PositionAir &&
+        !(p_in_duck->state & 1) && duck_action != 1 && jump_action != 1)
+        plrinfo.postype = PositionGround;
+
+    // If we are going to jump
+    if ((jump_action == 1 || p_in_jump->state & 1) && plrinfo.postype == PositionGround)
+        plrinfo.postype = PositionAir;
 }
 
 static void do_tas_actions()
 {
     playerinfo_t plrinfo;
-    load_player_info(plrinfo);
+    load_player_state(plrinfo);
+
+    // Calling this function here corresponds to the first
+    // PM_CatagorizePosition call in PM_PlayerMove
+    categorize_pos(plrinfo);
     do_autoactions(plrinfo);
+    load_player_movevars(plrinfo);
 
     if (g_moveaction == StrafeNone) {
         if (g_old_moveaction != StrafeNone) {
@@ -477,6 +492,7 @@ void initialize_movement(uintptr_t clso_addr, const symtbl_t &clso_st,
     orig_IN_JumpUp = (Keyin_func_t)(clso_addr + clso_st.at("_Z9IN_JumpUpv"));
 
     p_in_duck = (kbutton_t *)(clso_addr + clso_st.at("in_duck"));
+    p_in_jump = (kbutton_t *)(clso_addr + clso_st.at("in_jump"));
     pp_cl_forwardspeed = (cvar_t **)(clso_addr + clso_st.at("cl_forwardspeed"));
     pp_cl_sidespeed = (cvar_t **)(clso_addr + clso_st.at("cl_sidespeed"));
     pp_cl_backspeed = (cvar_t **)(clso_addr + clso_st.at("cl_backspeed"));
