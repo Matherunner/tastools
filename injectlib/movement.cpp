@@ -39,6 +39,12 @@ struct pmtrace_t
     int hitgroup;
 };
 
+struct kbutton_t
+{
+    int down[2];
+    int state;
+};
+
 struct tascmd_t
 {
     double value;
@@ -79,15 +85,23 @@ static Keyin_func_t orig_IN_MoverightDown = nullptr;
 static Keyin_func_t orig_IN_MoverightUp = nullptr;
 static Keyin_func_t orig_IN_DuckDown = nullptr;
 static Keyin_func_t orig_IN_DuckUp = nullptr;
+static Keyin_func_t orig_IN_JumpDown = nullptr;
+static Keyin_func_t orig_IN_JumpUp = nullptr;
 
 static uintptr_t p_gEngfuncs = 0;
 static uintptr_t p_movevars = 0;
 static uintptr_t *pp_hwpmove = nullptr;
+static kbutton_t *p_in_duck = nullptr;
 static cvar_t **pp_cl_forwardspeed = nullptr;
 static cvar_t **pp_cl_backspeed = nullptr;
 static cvar_t **pp_cl_sidespeed = nullptr;
 static cvar_t **pp_cl_upspeed = nullptr;
 
+// 0 to do nothing, 1 to mean +jump or +duck, and 2 to mean -jump or -duck.
+static int jump_action = 0;
+static int duck_action = 0;
+
+static int tas_cjmp = 0;
 static tascmd_t do_setyaw = {0, false};
 static tascmd_t do_setpitch = {0, false};
 static tascmd_t do_olsshift = {0, false};
@@ -157,6 +171,7 @@ static void IN_BackpedalUp()
 
 static void IN_TasContJump()
 {
+    tas_cjmp = std::atoi(orig_Cmd_Argv(1));
 }
 
 static void IN_TasDuckTap()
@@ -169,6 +184,44 @@ static void IN_TasDuckB4Col()
 
 static void IN_TasDuckB4Land()
 {
+}
+
+static inline int get_duckstate()
+{
+    if (*(int *)(*pp_sv_player + 0x80 + 0x1a4) & FL_DUCKING)
+        return 2;
+    if (*(bool *)(*pp_sv_player + 0x80 + 0x220))
+        return 1;
+    return 0;
+}
+
+static bool is_unduckable(playerinfo_t &plrinfo)
+{
+    float target[3] = {(float)plrinfo.pos[0], (float)plrinfo.pos[1],
+                       (float)plrinfo.pos[2]};
+    if (plrinfo.postype == PositionGround)
+        target[2] += 18;
+    int *p_usehull = (int *)(*pp_hwpmove + 0xbc);
+    int old_usehull = *p_usehull;
+    *p_usehull = 0;
+    pmtrace_t trace = orig_PM_PlayerTrace(target, target, 0, -1);
+    *p_usehull = old_usehull;
+    return !trace.startsolid;
+}
+
+static void do_tasjump(playerinfo_t &plrinfo, bool unduckable_onto_ground)
+{
+    if (!tas_cjmp)
+        return;
+
+    // If user is holding duck even when we can unduck onto ground, then don't
+    // jump since we're not going to actually unduck.
+    if (plrinfo.postype != PositionGround &&
+        (p_in_duck->state & 1 || !unduckable_onto_ground))
+        return;
+
+    jump_action = 1;
+    tas_cjmp--;
 }
 
 static float get_fric_coef(const double vel[3], const double pos[3])
@@ -194,6 +247,28 @@ static float get_fric_coef(const double vel[3], const double pos[3])
     return k;
 }
 
+static bool is_ground_below(const double pos[3], int usehull,
+                            pmtrace_t *trace = nullptr)
+{
+    float start[3], end[3];
+    start[0] = end[0] = pos[0];
+    start[1] = end[1] = pos[1];
+    start[2] = pos[2];
+    end[2] = pos[2] - 2;
+
+    pmtrace_t mytrace;
+    pmtrace_t *p_trace = trace ? trace : &mytrace;
+
+    int *p_usehull = (int *)(*pp_hwpmove + 0xbc);
+    int old_usehull = *p_usehull;
+    *p_usehull = usehull;
+    *p_trace = orig_PM_PlayerTrace(start, end, 0, -1);
+    *p_usehull = old_usehull;
+    if (p_trace->plane.normal[2] < 0.7)
+        return false;
+    return true;
+}
+
 static void categorize_pos(playerinfo_t &plrinfo)
 {
     // FIXME: check water
@@ -203,14 +278,8 @@ static void categorize_pos(playerinfo_t &plrinfo)
         return;
     }
 
-    float start[3], end[3];
-    start[0] = end[0] = plrinfo.pos[0];
-    start[1] = end[1] = plrinfo.pos[1];
-    start[2] = plrinfo.pos[2];
-    end[2] = plrinfo.pos[2] - 2;
-    pmtrace_t trace = orig_PM_PlayerTrace(start, end, 0, -1);
-
-    if (trace.plane.normal[2] < 0.7) {
+    pmtrace_t trace;
+    if (!is_ground_below(plrinfo.pos, *(int *)(*pp_hwpmove + 0xbc), &trace)) {
         plrinfo.postype = PositionAir;
         return;
     }
@@ -260,6 +329,9 @@ static void load_player_info(playerinfo_t &plrinfo)
         plrinfo.A = *(float *)(p_movevars + 0x10);
     } else
         abort_with_err("Unkonwn postype encountered.");
+
+    if (get_duckstate() == 2)
+        plrinfo.M *= 0.333;
 }
 
 static void update_line(const playerinfo_t &plrinfo)
@@ -284,10 +356,20 @@ static void update_line(const playerinfo_t &plrinfo)
     }
 }
 
+static void do_autoactions(playerinfo_t &plrinfo)
+{
+    bool unduckable_onto_ground = get_duckstate() == 2 &&
+        is_unduckable(plrinfo) && is_ground_below(plrinfo.pos, 0) &&
+        plrinfo.vel[2] <= 180;
+
+    do_tasjump(plrinfo, unduckable_onto_ground);
+}
+
 static void do_tas_actions()
 {
     playerinfo_t plrinfo;
     load_player_info(plrinfo);
+    do_autoactions(plrinfo);
 
     if (g_moveaction == StrafeNone) {
         if (g_old_moveaction != StrafeNone) {
@@ -358,6 +440,14 @@ extern "C" void CL_CreateMove(float frametime, void *cmd, int active)
     do_setpitch.do_it = false;
     do_olsshift.do_it = false;
 
+    if (jump_action == 1) {
+        orig_IN_JumpDown();
+        jump_action = 2;
+    } else if (jump_action == 2) {
+        orig_IN_JumpUp();
+        jump_action = 0;
+    }
+
     orig_CL_CreateMove(frametime, cmd, active);
 }
 
@@ -383,7 +473,10 @@ void initialize_movement(uintptr_t clso_addr, const symtbl_t &clso_st,
     orig_IN_MoverightUp = (Keyin_func_t)(clso_addr + clso_st.at("_Z14IN_MoverightUpv"));
     orig_IN_DuckDown = (Keyin_func_t)(clso_addr + clso_st.at("_Z11IN_DuckDownv"));
     orig_IN_DuckUp = (Keyin_func_t)(clso_addr + clso_st.at("_Z9IN_DuckUpv"));
+    orig_IN_JumpDown = (Keyin_func_t)(clso_addr + clso_st.at("_Z11IN_JumpDownv"));
+    orig_IN_JumpUp = (Keyin_func_t)(clso_addr + clso_st.at("_Z9IN_JumpUpv"));
 
+    p_in_duck = (kbutton_t *)(clso_addr + clso_st.at("in_duck"));
     pp_cl_forwardspeed = (cvar_t **)(clso_addr + clso_st.at("cl_forwardspeed"));
     pp_cl_sidespeed = (cvar_t **)(clso_addr + clso_st.at("cl_sidespeed"));
     pp_cl_backspeed = (cvar_t **)(clso_addr + clso_st.at("cl_backspeed"));
