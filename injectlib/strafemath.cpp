@@ -57,7 +57,7 @@ void strafe_fric(double vel[2], double E, double ktau)
     }
 
     double tmp = E * ktau;
-    if (speed >= tmp) {
+    if (speed > tmp) {
         tmp /= speed;
         vel[0] -= tmp * vel[0];
         vel[1] -= tmp * vel[1];
