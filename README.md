@@ -10,6 +10,7 @@ Assuming Qt5 is installed, you can build qconread in Linux by typing `qmake` in
 `utils/qconread` to generate the Makefile. Once the Makefile is generated you
 only need `make` for subsequent builds.
 
-To build TasTools mod in Linux, you would do a `make` in the `linux`
-directory. Then `client.so` and `hl.so` will be created in `linux/release`. To
-build the mod in Windows instead, open `projects.sln` under `projects\vs2013`.
+Currently, only Linux is supported.  To build the mod, enter the `injectlib`
+folder and type `make`.  A shared library named `tasinjectlib.so` will be
+created.  To inject this library into Half-Life, set `LD_PRELOAD` to the path
+of this library before running the game.
