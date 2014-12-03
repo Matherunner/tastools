@@ -102,6 +102,7 @@ static cvar_t **pp_cl_upspeed = nullptr;
 static int jump_action = 0;
 static int duck_action = 0;
 
+static int tas_dtap = 0;
 static int tas_cjmp = 0;
 static tascmd_t do_setyaw = {0, false};
 static tascmd_t do_setpitch = {0, false};
@@ -177,6 +178,7 @@ static void IN_TasContJump()
 
 static void IN_TasDuckTap()
 {
+    tas_dtap = std::atoi(orig_Cmd_Argv(1));
 }
 
 static void IN_TasDuckB4Col()
@@ -201,7 +203,7 @@ static inline int get_duckstate()
     return 0;
 }
 
-static bool is_unduckable(playerinfo_t &plrinfo)
+static bool is_unduckable(const playerinfo_t &plrinfo)
 {
     float target[3] = {(float)plrinfo.pos[0], (float)plrinfo.pos[1],
                        (float)plrinfo.pos[2]};
@@ -215,19 +217,58 @@ static bool is_unduckable(playerinfo_t &plrinfo)
     return !trace.startsolid;
 }
 
-static void do_tasjump(playerinfo_t &plrinfo, bool unduckable_onto_ground)
+static bool do_tasducktap(playerinfo_t &plrinfo, bool unduckable_onto_ground)
+{
+    if (!tas_dtap)
+        return false;
+
+    if (plrinfo.postype != PositionGround) {
+        if (!(p_in_duck->state & 1) && unduckable_onto_ground) {
+            jump_action = 2;    // avoid unintentional jumpbug
+            return true;
+        }
+        return false;
+    }
+
+    if (get_duckstate() == 2) {
+        // See if we can unduck followed by a ducktap
+        plrinfo.pos[2] += 18;
+        if (!is_unduckable(plrinfo)) {
+            plrinfo.pos[2] -= 18;
+            return false;
+        }
+        duck_action = 2;
+        jump_action = 2;
+        return true;
+    }
+
+    if (!is_unduckable(plrinfo))
+        return false;
+
+    if (get_duckstate() == 1) {
+        tas_dtap--;
+        duck_action = 2;
+    } else {
+        duck_action = 1;
+        jump_action = 2;
+    }
+    return true;
+}
+
+static bool do_tasjump(playerinfo_t &plrinfo, bool unduckable_onto_ground)
 {
     if (!tas_cjmp)
-        return;
+        return false;
 
     // If user is holding duck even when we can unduck onto ground, then don't
     // jump since we're not going to actually unduck.
     if (plrinfo.postype != PositionGround &&
         (p_in_duck->state & 1 || !unduckable_onto_ground))
-        return;
+        return false;
 
     jump_action = 1;
     tas_cjmp--;
+    return true;
 }
 
 static float get_fric_coef(const double vel[3], const double pos[3])
@@ -367,13 +408,23 @@ static void do_autoactions(playerinfo_t &plrinfo)
         is_unduckable(plrinfo) && is_ground_below(plrinfo.pos, 0) &&
         plrinfo.vel[2] <= 180;
 
-    do_tasjump(plrinfo, unduckable_onto_ground);
+    if (do_tasducktap(plrinfo, unduckable_onto_ground))
+        goto final;
+    if (do_tasjump(plrinfo, unduckable_onto_ground))
+        goto final;
+
+final:
 
     // If we are going to unduck onto ground, set the position type correctly
     // so that the strafing stuff later will be correct.
     if (unduckable_onto_ground && plrinfo.postype == PositionAir &&
         !(p_in_duck->state & 1) && duck_action != 1 && jump_action != 1)
         plrinfo.postype = PositionGround;
+
+    // If we are going to ducktap
+    if (get_duckstate() == 1 && duck_action != 1 && !(p_in_duck->state & 1) &&
+        is_unduckable(plrinfo))
+        plrinfo.postype = PositionAir;
 
     // If we are going to jump
     if ((jump_action == 1 || p_in_jump->state & 1) &&
@@ -467,6 +518,14 @@ extern "C" void CL_CreateMove(float frametime, void *cmd, int active)
     } else if (jump_action == 2) {
         orig_IN_JumpUp();
         jump_action = 0;
+    }
+
+    if (duck_action == 1) {
+        orig_IN_DuckDown();
+        duck_action = 2;
+    } else if (duck_action == 2) {
+        orig_IN_DuckUp();
+        duck_action = 0;
     }
 
     orig_CL_CreateMove(frametime, cmd, active);
