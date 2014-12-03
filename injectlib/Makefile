@@ -1,0 +1,13 @@
+CXX = g++
+CXXFLAGS = -O3 -std=c++11 -m32 -march=native -mtune=native -Wall -Wextra -fPIC -flto
+OBJS = injectmain.o symutils.o customhud.o movement.o strafemath.o
+OUTPUT = tasinjectlib.so
+
+all: $(OUTPUT)
+
+$(OUTPUT): $(OBJS)
+	$(CXX) -flto -shared -s $(CXXFLAGS) $(OBJS) -o $(OUTPUT)
+
+clean:
+	rm -f $(OUTPUT)
+	rm -f *.o
