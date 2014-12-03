@@ -7,6 +7,9 @@
 #include "movement.hpp"
 #include "customhud.hpp"
 
+struct edict_s;
+struct entity_state_s;
+
 typedef void (*ServerActivate_func_t)(edict_s *, int, int);
 typedef int (*AddToFullPack_func_t)(entity_state_s *, int, edict_s *, edict_s *, int, int, unsigned char *);
 typedef void (*PM_Move_func_t)(void *, int);
