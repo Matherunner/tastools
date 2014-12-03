@@ -187,6 +187,11 @@ static void IN_TasDuckB4Land()
 {
 }
 
+static inline bool is_jump_in_oldbuttons()
+{
+    return *(int *)(*pp_sv_player + 0x80 + 0x23c) & (1 << 1);
+}
+
 static inline int get_duckstate()
 {
     if (*(int *)(*pp_sv_player + 0x80 + 0x1a4) & FL_DUCKING)
@@ -371,7 +376,8 @@ static void do_autoactions(playerinfo_t &plrinfo)
         plrinfo.postype = PositionGround;
 
     // If we are going to jump
-    if ((jump_action == 1 || p_in_jump->state & 1) && plrinfo.postype == PositionGround)
+    if ((jump_action == 1 || p_in_jump->state & 1) &&
+        !is_jump_in_oldbuttons() && plrinfo.postype == PositionGround)
         plrinfo.postype = PositionAir;
 }
 
