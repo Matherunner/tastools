@@ -407,59 +407,32 @@ static void update_line(const playerinfo_t &plrinfo)
     }
 }
 
-static void do_autoactions(playerinfo_t &plrinfo)
+static void add_correct_gravity(playerinfo_t &plrinfo)
 {
-    bool unduckable_onto_ground = get_duckstate() == 2 &&
-        is_unduckable(plrinfo) && is_ground_below(plrinfo.pos, 0) &&
-        plrinfo.vel[2] <= 180;
-
-    if (do_tasducktap(plrinfo, unduckable_onto_ground))
-        goto final;
-    if (do_tasjump(plrinfo, unduckable_onto_ground))
-        goto final;
-
-final:
-
-    // If we are going to unduck onto ground, set the position type correctly
-    // so that the strafing stuff later will be correct.
-    if (unduckable_onto_ground && plrinfo.postype == PositionAir &&
-        !(p_in_duck->state & 1) && duck_action != 1 && jump_action != 1)
-        plrinfo.postype = PositionGround;
-
-    // If we are going to ducktap
-    if (get_duckstate() == 1 && duck_action != 1 && !(p_in_duck->state & 1) &&
-        is_unduckable(plrinfo))
-        plrinfo.postype = PositionAir;
-
-    // If we are going to jump
-    if ((jump_action == 1 || p_in_jump->state & 1) &&
-        !is_jump_in_oldbuttons() && plrinfo.postype == PositionGround)
-        plrinfo.postype = PositionAir;
+    float ent_grav = *(float *)(*pp_sv_player + 0x80 + 0x11c);
+    if (!ent_grav)
+        ent_grav = 1;
+    float movevar_grav = *(float *)p_movevars;
+    plrinfo.vel[2] -= ent_grav * movevar_grav * 0.5 * plrinfo.tau;
+    plrinfo.vel[2] += plrinfo.basevel[2] * plrinfo.tau;
+    plrinfo.basevel[2] = 0;
 }
 
-static void do_tas_actions()
+static void do_strafe_none(playerinfo_t &plrinfo)
 {
-    playerinfo_t plrinfo;
-    load_player_state(plrinfo);
-
-    // Calling this function here corresponds to the first
-    // PM_CatagorizePosition call in PM_PlayerMove
-    categorize_pos(plrinfo);
-    do_autoactions(plrinfo);
-    load_player_movevars(plrinfo);
-
-    if (g_moveaction == StrafeNone) {
-        if (g_old_moveaction != StrafeNone) {
-            // We were strafing in the previous frame but not in this frame, so
-            // let's release the keys.
-            orig_IN_BackUp();
-            orig_IN_MoveleftUp();
-            orig_IN_MoverightUp();
-        }
-        orig_SetViewAngles(plrinfo.viewangles);
-        return;
+    if (g_old_moveaction != StrafeNone) {
+        // We were strafing in the previous frame but not in this frame, so
+        // let's release the keys.
+        orig_IN_BackUp();
+        orig_IN_MoveleftUp();
+        orig_IN_MoverightUp();
     }
 
+    // TODO: update velocity
+}
+
+static void do_strafe_tas(playerinfo_t &plrinfo)
+{
     double yaw = plrinfo.viewangles[1] * M_PI / 180;
     int Sdir, Fdir;
 
@@ -499,7 +472,66 @@ static void do_tas_actions()
     }
 
     plrinfo.viewangles[1] = yaw * 180 / M_PI;
+}
+
+static void update_position(playerinfo_t &plrinfo)
+{
+    plrinfo.pos[0] += (plrinfo.vel[0] + plrinfo.basevel[0]) * plrinfo.tau;
+    plrinfo.pos[1] += (plrinfo.vel[1] + plrinfo.basevel[1]) * plrinfo.tau;
+    plrinfo.pos[2] += plrinfo.vel[2] * plrinfo.tau;
+}
+
+static void do_movements(playerinfo_t &plrinfo)
+{
+    load_player_movevars(plrinfo);
+    add_correct_gravity(plrinfo);
+
+    if (g_moveaction == StrafeNone)
+        do_strafe_none(plrinfo);
+    else
+        do_strafe_tas(plrinfo);
+
     orig_SetViewAngles(plrinfo.viewangles);
+    update_position(plrinfo);
+}
+
+static void do_tas_actions()
+{
+    playerinfo_t plrinfo;
+    load_player_state(plrinfo);
+
+    // Calling this function here corresponds to the first
+    // PM_CatagorizePosition call in PM_PlayerMove
+    categorize_pos(plrinfo);
+
+    bool unduckable_onto_ground = get_duckstate() == 2 &&
+        is_unduckable(plrinfo) && is_ground_below(plrinfo.pos, 0) &&
+        plrinfo.vel[2] <= 180;
+
+    if (do_tasducktap(plrinfo, unduckable_onto_ground))
+        goto final;
+    if (do_tasjump(plrinfo, unduckable_onto_ground))
+        goto final;
+
+final:
+
+    // If we are going to unduck onto ground, set the position type correctly
+    // so that the strafing stuff later will be correct.
+    if (unduckable_onto_ground && plrinfo.postype == PositionAir &&
+        !(p_in_duck->state & 1) && duck_action != 1 && jump_action != 1)
+        plrinfo.postype = PositionGround;
+
+    // If we are going to ducktap
+    if (get_duckstate() == 1 && duck_action != 1 && !(p_in_duck->state & 1) &&
+        is_unduckable(plrinfo))
+        plrinfo.postype = PositionAir;
+
+    // If we are going to jump
+    if ((jump_action == 1 || p_in_jump->state & 1) &&
+        !is_jump_in_oldbuttons() && plrinfo.postype == PositionGround)
+        plrinfo.postype = PositionAir;
+
+    do_movements(plrinfo);
 }
 
 extern "C" void CL_CreateMove(float frametime, void *cmd, int active)
