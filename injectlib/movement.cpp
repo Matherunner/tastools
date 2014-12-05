@@ -59,6 +59,7 @@ struct playerinfo_t
     double A;
     double vel[3];
     double pos[3];
+    double basevel[3];
     float viewangles[3];
     position_t postype;
 };
@@ -352,6 +353,10 @@ static void load_player_state(playerinfo_t &plrinfo)
     float *orig_vel = (float *)(*pp_sv_player + 0x80 + 0x20);
     for (int i = 0; i < 3; i++)
         plrinfo.vel[i] = orig_vel[i];
+
+    float *orig_basevel = (float *)(*pp_sv_player + 0x80 + 0x2c);
+    for (int i = 0; i < 3; i++)
+        plrinfo.basevel[i] = orig_basevel[i];
 }
 
 static void load_player_movevars(playerinfo_t &plrinfo)
