@@ -257,7 +257,7 @@ static bool do_tasducktap(playerinfo_t &plrinfo, bool unduckable_onto_ground)
 
 static bool do_tasjump(playerinfo_t &plrinfo, bool unduckable_onto_ground)
 {
-    if (!tas_cjmp)
+    if (!tas_cjmp || is_jump_in_oldbuttons())
         return false;
 
     // If user is holding duck even when we can unduck onto ground, then don't
