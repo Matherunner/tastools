@@ -98,7 +98,8 @@ int CHudPlrInfo::Draw(float)
     snprintf(dispstr, sizeof(dispstr), "V: %.8g\n", vel[2]);
     orig_DrawConsoleString(10, 30, dispstr);
 
-    float *viewangles = (float *)(*pp_sv_player + 0x80 + 0x74);
+    float viewangles[3];
+    orig_GetViewAngles(viewangles);
     snprintf(dispstr, sizeof(dispstr), "Y: %.8g\n", viewangles[1]);
     orig_DrawConsoleString(10, 40, dispstr);
     snprintf(dispstr, sizeof(dispstr), "P: %.8g\n", viewangles[0]);

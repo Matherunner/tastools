@@ -66,7 +66,6 @@ struct playerinfo_t
 
 typedef void (*CL_CreateMove_func_t)(float, void *, int);
 typedef void (*Keyin_func_t)();
-typedef void (*GetSetViewAngles_func_t)(float *);
 typedef int (*AddCommand_func_t)(const char *, Keyin_func_t);
 typedef const char *(*Cmd_Argv_func_t)(int);
 typedef pmtrace_t (*PM_PlayerTrace_func_t)(float *, float *, int, int);
@@ -74,7 +73,7 @@ typedef cvar_t *(*RegisterVariable_func_t)(const char *, const char *, int);
 
 static CL_CreateMove_func_t orig_CL_CreateMove = nullptr;
 static GetSetViewAngles_func_t orig_SetViewAngles = nullptr;
-static GetSetViewAngles_func_t orig_GetViewAngles = nullptr;
+GetSetViewAngles_func_t orig_GetViewAngles = nullptr;
 static AddCommand_func_t orig_AddCommand = nullptr;
 static Cmd_Argv_func_t orig_Cmd_Argv = nullptr;
 static PM_PlayerTrace_func_t orig_PM_PlayerTrace = nullptr;
