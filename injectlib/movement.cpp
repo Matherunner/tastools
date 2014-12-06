@@ -70,6 +70,7 @@ typedef void (*GetSetViewAngles_func_t)(float *);
 typedef int (*AddCommand_func_t)(const char *, Keyin_func_t);
 typedef const char *(*Cmd_Argv_func_t)(int);
 typedef pmtrace_t (*PM_PlayerTrace_func_t)(float *, float *, int, int);
+typedef cvar_t *(*RegisterVariable_func_t)(const char *, const char *, int);
 
 static CL_CreateMove_func_t orig_CL_CreateMove = nullptr;
 static GetSetViewAngles_func_t orig_SetViewAngles = nullptr;
@@ -77,6 +78,7 @@ static GetSetViewAngles_func_t orig_GetViewAngles = nullptr;
 static AddCommand_func_t orig_AddCommand = nullptr;
 static Cmd_Argv_func_t orig_Cmd_Argv = nullptr;
 static PM_PlayerTrace_func_t orig_PM_PlayerTrace = nullptr;
+static RegisterVariable_func_t orig_RegisterVariable = nullptr;
 
 static Keyin_func_t orig_IN_BackDown = nullptr;
 static Keyin_func_t orig_IN_BackUp = nullptr;
@@ -652,6 +654,7 @@ void initialize_movement(uintptr_t clso_addr, const symtbl_t &clso_st,
     orig_PM_PlayerTrace = (PM_PlayerTrace_func_t)(hwso_addr + hwso_st.at("PM_PlayerTrace"));
     orig_CL_CreateMove = (CL_CreateMove_func_t)(clso_addr + clso_st.at("CL_CreateMove"));
     orig_AddCommand = *(AddCommand_func_t *)(p_gEngfuncs + 0x44);
+    orig_RegisterVariable = *(RegisterVariable_func_t *)(p_gEngfuncs + 0x38);
     orig_GetViewAngles = *(GetSetViewAngles_func_t *)(p_gEngfuncs + 0x88);
     orig_SetViewAngles = *(GetSetViewAngles_func_t *)(p_gEngfuncs + 0x8c);
     orig_Cmd_Argv = *(Cmd_Argv_func_t *)(p_gEngfuncs + 0x9c);
