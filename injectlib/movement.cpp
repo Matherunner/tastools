@@ -101,6 +101,8 @@ static cvar_t **pp_cl_backspeed = nullptr;
 static cvar_t **pp_cl_sidespeed = nullptr;
 static cvar_t **pp_cl_upspeed = nullptr;
 
+static cvar_t *cl_db4c_ceil = nullptr;
+
 // 0 to do nothing, 1 to mean +jump or +duck, and 2 to mean -jump or -duck.
 static int jump_action = 0;
 static int duck_action = 0;
@@ -564,7 +566,8 @@ static bool do_tasdb4c(playerinfo_t &plrinfo, const playerinfo_t &old_plrinfo,
                     (float)plrinfo.pos[2]};
 
     pmtrace_t tr = orig_PM_PlayerTrace(start, end, 0, -1);
-    if (tr.fraction == 1 || tr.plane.normal[2] >= 0.7)
+    if (tr.fraction == 1 || tr.plane.normal[2] >= 0.7 ||
+        (!cl_db4c_ceil->value && tr.plane.normal[2] == -1))
         return false;
 
     int *p_usehull = (int *)(*pp_hwpmove + 0xbc);
@@ -676,6 +679,8 @@ void initialize_movement(uintptr_t clso_addr, const symtbl_t &clso_st,
     pp_cl_sidespeed = (cvar_t **)(clso_addr + clso_st.at("cl_sidespeed"));
     pp_cl_backspeed = (cvar_t **)(clso_addr + clso_st.at("cl_backspeed"));
     pp_cl_upspeed = (cvar_t **)(clso_addr + clso_st.at("cl_upspeed"));
+
+    cl_db4c_ceil = orig_RegisterVariable("cl_db4c_ceil", 0, 0);
 
     orig_AddCommand("+linestrafe", IN_LinestrafeDown);
     orig_AddCommand("-linestrafe", IN_LinestrafeUp);
