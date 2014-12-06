@@ -106,6 +106,7 @@ static int duck_action = 0;
 static int tas_jb = 0;
 static int tas_dtap = 0;
 static int tas_cjmp = 0;
+static int tas_db4c = 0;
 static tascmd_t do_setyaw = {0, false};
 static tascmd_t do_setpitch = {0, false};
 static tascmd_t do_olsshift = {0, false};
@@ -190,6 +191,7 @@ static void IN_TasDuckTap()
 
 static void IN_TasDuckB4Col()
 {
+    tas_db4c = std::atoi(orig_Cmd_Argv(1));
 }
 
 static void IN_TasDuckB4Land()
@@ -543,6 +545,39 @@ static bool do_tasjumpbug(playerinfo_t &plrinfo, bool unduckable_onto_ground, bo
     return false;
 }
 
+static bool do_tasdb4c(playerinfo_t &plrinfo, const playerinfo_t &old_plrinfo,
+                       bool unduckable_onto_ground, bool &updated)
+{
+    if (!tas_db4c || duck_action == 1 || get_duckstate() == 2 ||
+        plrinfo.postype == PositionGround || p_in_duck->state & 1)
+        return false;
+
+    float start[3] = {(float)old_plrinfo.pos[0], (float)old_plrinfo.pos[1],
+                      (float)old_plrinfo.pos[2]};
+    if (!updated) {
+        do_movements(plrinfo, unduckable_onto_ground);
+        updated = true;
+    }
+    float end[3] = {(float)plrinfo.pos[0], (float)plrinfo.pos[1],
+                    (float)plrinfo.pos[2]};
+
+    pmtrace_t tr = orig_PM_PlayerTrace(start, end, 0, -1);
+    if (tr.fraction == 1 || tr.plane.normal[2] >= 0.7)
+        return false;
+
+    int *p_usehull = (int *)(*pp_hwpmove + 0xbc);
+    int old_usehull = *p_usehull;
+    *p_usehull = 1;
+    tr = orig_PM_PlayerTrace(start, end, 0, -1);
+    *p_usehull = old_usehull;
+    if (tr.fraction != 1)
+        return false;
+
+    tas_db4c--;
+    duck_action = 1;
+    return true;
+}
+
 static void do_tas_actions()
 {
     playerinfo_t plrinfo;
@@ -556,8 +591,11 @@ static void do_tas_actions()
         is_unduckable(plrinfo) && is_ground_below(plrinfo.pos, 0) &&
         plrinfo.vel[2] <= 180;
     bool updated = false;
+    playerinfo_t plrinfo_bak = plrinfo;
 
     if (do_tasjumpbug(plrinfo, unduckable_onto_ground, updated))
+        goto final;
+    if (do_tasdb4c(plrinfo, plrinfo_bak, unduckable_onto_ground, updated))
         goto final;
     if (do_tasducktap(plrinfo, unduckable_onto_ground))
         goto final;
