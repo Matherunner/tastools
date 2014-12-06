@@ -103,6 +103,7 @@ static cvar_t **pp_cl_upspeed = nullptr;
 static int jump_action = 0;
 static int duck_action = 0;
 
+static int tas_jb = 0;
 static int tas_dtap = 0;
 static int tas_cjmp = 0;
 static tascmd_t do_setyaw = {0, false};
@@ -170,6 +171,11 @@ static void IN_BackpedalDown()
 static void IN_BackpedalUp()
 {
     g_moveaction = StrafeNone;
+}
+
+static void IN_TasJumpBug()
+{
+    tas_jb = std::atoi(orig_Cmd_Argv(1));
 }
 
 static void IN_TasContJump()
@@ -511,6 +517,32 @@ static void do_movements(playerinfo_t &plrinfo, bool unduckable_onto_ground)
     update_position(plrinfo);
 }
 
+static bool do_tasjumpbug(playerinfo_t &plrinfo, bool unduckable_onto_ground, bool &updated)
+{
+    if (!tas_jb || plrinfo.postype == PositionGround || plrinfo.vel[2] > 180)
+        return false;
+
+    if (!is_jump_in_oldbuttons() && unduckable_onto_ground) {
+        tas_jb--;
+        duck_action = 2;
+        jump_action = 1;
+        return true;
+    }
+
+    do_movements(plrinfo, unduckable_onto_ground);
+    updated = true;
+
+    bool going_to_unduck = is_unduckable(plrinfo) && !(p_in_duck->state & 1);
+    if (is_ground_below(plrinfo.pos, 0) &&
+        (get_duckstate() == 0 || going_to_unduck)) {
+        duck_action = 1;
+        jump_action = 2;        // make sure IN_JUMP is unset in oldbuttons
+        return true;
+    }
+
+    return false;
+}
+
 static void do_tas_actions()
 {
     playerinfo_t plrinfo;
@@ -523,7 +555,10 @@ static void do_tas_actions()
     bool unduckable_onto_ground = get_duckstate() == 2 &&
         is_unduckable(plrinfo) && is_ground_below(plrinfo.pos, 0) &&
         plrinfo.vel[2] <= 180;
+    bool updated = false;
 
+    if (do_tasjumpbug(plrinfo, unduckable_onto_ground, updated))
+        goto final;
     if (do_tasducktap(plrinfo, unduckable_onto_ground))
         goto final;
     if (do_tasjump(plrinfo, unduckable_onto_ground))
@@ -531,7 +566,8 @@ static void do_tas_actions()
 
 final:
 
-    do_movements(plrinfo, unduckable_onto_ground);
+    if (!updated)
+        do_movements(plrinfo, unduckable_onto_ground);
 }
 
 extern "C" void CL_CreateMove(float frametime, void *cmd, int active)
@@ -616,4 +652,5 @@ void initialize_movement(uintptr_t clso_addr, const symtbl_t &clso_st,
     orig_AddCommand("tas_dtap", IN_TasDuckTap);
     orig_AddCommand("tas_db4c", IN_TasDuckB4Col);
     orig_AddCommand("tas_db4l", IN_TasDuckB4Land);
+    orig_AddCommand("tas_jb", IN_TasJumpBug);
 }
