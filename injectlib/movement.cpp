@@ -481,8 +481,24 @@ static void update_position(playerinfo_t &plrinfo)
     plrinfo.pos[2] += plrinfo.vel[2] * plrinfo.tau;
 }
 
-static void do_movements(playerinfo_t &plrinfo)
+static void do_movements(playerinfo_t &plrinfo, bool unduckable_onto_ground)
 {
+    // If we are going to unduck onto ground, set the position type correctly
+    // so that the strafing stuff later will be correct.
+    if (unduckable_onto_ground && plrinfo.postype == PositionAir &&
+        !(p_in_duck->state & 1) && duck_action != 1 && jump_action != 1)
+        plrinfo.postype = PositionGround;
+
+    // If we are going to ducktap
+    if (get_duckstate() == 1 && duck_action != 1 && !(p_in_duck->state & 1) &&
+        is_unduckable(plrinfo))
+        plrinfo.postype = PositionAir;
+
+    // If we are going to jump
+    if ((jump_action == 1 || p_in_jump->state & 1) &&
+        !is_jump_in_oldbuttons() && plrinfo.postype == PositionGround)
+        plrinfo.postype = PositionAir;
+
     load_player_movevars(plrinfo);
     add_correct_gravity(plrinfo);
 
@@ -515,23 +531,7 @@ static void do_tas_actions()
 
 final:
 
-    // If we are going to unduck onto ground, set the position type correctly
-    // so that the strafing stuff later will be correct.
-    if (unduckable_onto_ground && plrinfo.postype == PositionAir &&
-        !(p_in_duck->state & 1) && duck_action != 1 && jump_action != 1)
-        plrinfo.postype = PositionGround;
-
-    // If we are going to ducktap
-    if (get_duckstate() == 1 && duck_action != 1 && !(p_in_duck->state & 1) &&
-        is_unduckable(plrinfo))
-        plrinfo.postype = PositionAir;
-
-    // If we are going to jump
-    if ((jump_action == 1 || p_in_jump->state & 1) &&
-        !is_jump_in_oldbuttons() && plrinfo.postype == PositionGround)
-        plrinfo.postype = PositionAir;
-
-    do_movements(plrinfo);
+    do_movements(plrinfo, unduckable_onto_ground);
 }
 
 extern "C" void CL_CreateMove(float frametime, void *cmd, int active)
