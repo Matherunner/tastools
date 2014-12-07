@@ -15,6 +15,8 @@ typedef int (*AddToFullPack_func_t)(entity_state_s *, int, edict_s *, edict_s *,
 typedef void (*PM_Move_func_t)(void *, int);
 typedef void (*SCR_UpdateScreen_func_t)();
 typedef void (*InitInput_func_t)();
+typedef void (*SV_SendClientMessages_func_t)();
+typedef uintptr_t (*SZ_GetSpace_func_t)(uintptr_t, int);
 
 static uintptr_t hwso_addr = 0;
 static uintptr_t hlso_addr = 0;
@@ -41,6 +43,8 @@ static InitInput_func_t orig_InitInput = nullptr;
 static SCR_UpdateScreen_func_t orig_SCR_UpdateScreen = nullptr;
 static PM_Move_func_t orig_hl_PM_Move = nullptr;
 static PM_Move_func_t orig_cl_PM_Move = nullptr;
+static SV_SendClientMessages_func_t orig_SV_SendClientMessages = nullptr;
+static SZ_GetSpace_func_t orig_SZ_GetSpace = nullptr;
 
 static cvar_t *p_r_norefresh = nullptr;
 
@@ -99,6 +103,8 @@ static void load_hw_symbols()
     orig_Cvar_RegisterVariable = (Cvar_RegisterVariable_func_t)(hwso_addr + hwso_st["Cvar_RegisterVariable"]);
     orig_Cvar_SetValue = (Cvar_SetValue_func_t)(hwso_addr + hwso_st["Cvar_SetValue"]);
     orig_SCR_UpdateScreen = (SCR_UpdateScreen_func_t)(hwso_addr + hwso_st["SCR_UpdateScreen"]);
+    orig_SV_SendClientMessages = (SV_SendClientMessages_func_t)(hwso_addr + hwso_st["SV_SendClientMessages"]);
+    orig_SZ_GetSpace = (SZ_GetSpace_func_t)(hwso_addr + hwso_st["SZ_GetSpace"]);
 
     gamedir = (const char *)(hwso_addr + hwso_st["com_gamedir"]);
     p_host_frametime = (double *)(hwso_addr + hwso_st["host_frametime"]);
@@ -193,6 +199,21 @@ int AddToFullPack(entity_state_s *state, int e, edict_s *ent, edict_s *host,
     }
 
     return ret;
+}
+
+extern "C" void SV_SendClientMessages()
+{
+    if (p_r_norefresh->value <= 2)
+        orig_SV_SendClientMessages();
+}
+
+extern "C" uintptr_t SZ_GetSpace(uintptr_t buf, int len)
+{
+    if (p_r_norefresh->value > 2 &&
+        *(int *)(buf + 0x10) + len > *(int *)(buf + 0xc)) {
+        *(int *)(buf + 0x10) = 0;
+    }
+    return orig_SZ_GetSpace(buf, len);
 }
 
 extern "C" void SCR_UpdateScreen()
