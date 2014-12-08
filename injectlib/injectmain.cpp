@@ -3,6 +3,9 @@
 #include <cstring>
 #include <unistd.h>
 #include <cstdarg>
+#ifdef OPPOSINGFORCE
+#include <dlfcn.h>
+#endif
 #include "symutils.hpp"
 #include "common.hpp"
 #include "movement.hpp"
@@ -11,6 +14,9 @@
 struct edict_s;
 struct entity_state_s;
 
+#ifdef OPPOSINGFORCE
+typedef void *(*dlsym_func_t)(void *, const char *);
+#endif
 typedef void (*ServerActivate_func_t)(edict_s *, int, int);
 typedef int (*AddToFullPack_func_t)(entity_state_s *, int, edict_s *, edict_s *, int, int, unsigned char *);
 typedef void (*PM_Move_func_t)(void *, int);
@@ -38,6 +44,9 @@ const char *gamedir = nullptr;
 unsigned int *p_g_ulFrameCount = nullptr;
 uintptr_t *pp_gpGlobals = nullptr;
 
+#ifdef OPPOSINGFORCE
+static dlsym_func_t orig_dlsym = nullptr;
+#endif
 static ServerActivate_func_t orig_ServerActivate = nullptr;
 static AddToFullPack_func_t orig_AddToFullPack = nullptr;
 static InitInput_func_t orig_InitInput = nullptr;
@@ -70,12 +79,11 @@ static inline const char *hlname_to_string(unsigned int name)
 
 static void load_cl_symbols()
 {
-    clso_addr = get_loaded_lib_addr("client.so");
+    std::string clso_fullpath;
+    get_loaded_lib_info("client.so", clso_addr, clso_fullpath);
     if (!clso_addr)
         abort_with_err("Failed to get the base address of client.so.");
-    chdir(gamedir);
-    clso_st = get_symbols("cl_dlls/client.so");
-    chdir("..");
+    clso_st = get_symbols(clso_fullpath.c_str());
 
     orig_cl_PM_Move = (PM_Move_func_t)(clso_addr + clso_st["PM_Move"]);
     orig_InitInput = (InitInput_func_t)(clso_addr + clso_st["_Z9InitInputv"]);
@@ -89,12 +97,11 @@ static void load_hl_symbols()
 #define HLSO_NAME "hl.so"
 #endif
 
-    hlso_addr = get_loaded_lib_addr(HLSO_NAME);
+    std::string hlso_fullpath;
+    get_loaded_lib_info(HLSO_NAME, hlso_addr, hlso_fullpath);
     if (!hlso_addr)
         abort_with_err("Failed to get the base address of %s.", HLSO_NAME);
-    chdir(gamedir);
-    hlso_st = get_symbols("dlls/" HLSO_NAME);
-    chdir("..");
+    hlso_st = get_symbols(hlso_fullpath.c_str());
 
     orig_hl_PM_Move = (PM_Move_func_t)(hlso_addr + hlso_st["PM_Move"]);
     orig_ServerActivate = (ServerActivate_func_t)(hlso_addr + hlso_st["_Z14ServerActivateP7edict_sii"]);
@@ -106,10 +113,11 @@ static void load_hl_symbols()
 
 static void load_hw_symbols()
 {
-    hwso_addr = get_loaded_lib_addr("hw.so");
+    std::string hwso_fullpath;
+    get_loaded_lib_info("hw.so", hwso_addr, hwso_fullpath);
     if (!hwso_addr)
         abort_with_err("Failed to get the base address of hw.so.");
-    hwso_st = get_symbols("hw.so");
+    hwso_st = get_symbols(hwso_fullpath.c_str());
 
     orig_Cvar_RegisterVariable = (Cvar_RegisterVariable_func_t)(hwso_addr + hwso_st["Cvar_RegisterVariable"]);
     orig_Cvar_SetValue = (Cvar_SetValue_func_t)(hwso_addr + hwso_st["Cvar_SetValue"]);
@@ -252,3 +260,29 @@ extern "C" void PM_Move(void *ppmove, int server)
     if (server)
         fprintf(stderr, "%u %.8g %.8g\n", *p_g_ulFrameCount, *p_host_frametime, std::hypot(orig_vel[0], orig_vel[1]));
 }
+
+#ifdef OPPOSINGFORCE
+extern "C" void CL_CreateMove(float, void *, int);
+
+extern "C" void *dlsym(void *handle, const char *symbol)
+{
+    if (symbol && strcmp(symbol, "CL_CreateMove") == 0)
+        return (void *)CL_CreateMove;
+    return orig_dlsym(handle, symbol);
+}
+
+static __attribute__((constructor)) void Constructor()
+{
+    std::string libdl_fullpath;
+    uintptr_t libdl_addr;
+    symtbl_t libdl_symbols;
+    get_loaded_lib_info("libdl.so.2", libdl_addr, libdl_fullpath);
+    libdl_symbols = get_symbols(libdl_fullpath.c_str());
+    for (auto it = libdl_symbols.begin(); it != libdl_symbols.end(); ++it) {
+        if (std::strncmp(it->first.c_str(), "dlsym", 5) == 0) {
+            orig_dlsym = (dlsym_func_t)(libdl_addr + it->second);
+            break;
+        }
+    }
+}
+#endif
