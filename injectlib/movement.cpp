@@ -207,7 +207,7 @@ static void IN_TasDuckB4Land()
 
 static void IN_TasDuckWhenJump()
 {
-    tas_dwj = std::atof(orig_Cmd_Argv(1));
+    tas_dwj = std::atoi(orig_Cmd_Argv(1));
 }
 
 static inline bool is_jump_in_oldbuttons()
