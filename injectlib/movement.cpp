@@ -112,6 +112,7 @@ static int tas_cjmp = 0;
 static int tas_db4c = 0;
 static int tas_db4l = 0;
 static int db4l_state = 0;
+static int tas_dwj = 0;
 static tascmd_t do_setyaw = {0, false};
 static tascmd_t do_setpitch = {0, false};
 static tascmd_t do_olsshift = {0, false};
@@ -202,6 +203,11 @@ static void IN_TasDuckB4Col()
 static void IN_TasDuckB4Land()
 {
     tas_db4l = std::atoi(orig_Cmd_Argv(1));
+}
+
+static void IN_TasDuckWhenJump()
+{
+    tas_dwj = std::atof(orig_Cmd_Argv(1));
 }
 
 static inline bool is_jump_in_oldbuttons()
@@ -510,8 +516,13 @@ static void do_movements(playerinfo_t &plrinfo, bool unduckable_onto_ground)
 
     // If we are going to jump
     if ((jump_action == 1 || p_in_jump->state & 1) &&
-        !is_jump_in_oldbuttons() && plrinfo.postype == PositionGround)
+        !is_jump_in_oldbuttons() && plrinfo.postype == PositionGround) {
         plrinfo.postype = PositionAir;
+        if (tas_dwj) {
+            tas_dwj--;
+            duck_action = 1;
+        }
+    }
 
     load_player_movevars(plrinfo);
     add_correct_gravity(plrinfo);
@@ -778,4 +789,5 @@ void initialize_movement(uintptr_t clso_addr, const symtbl_t &clso_st,
     orig_AddCommand("tas_db4c", IN_TasDuckB4Col);
     orig_AddCommand("tas_db4l", IN_TasDuckB4Land);
     orig_AddCommand("tas_jb", IN_TasJumpBug);
+    orig_AddCommand("tas_dwj", IN_TasDuckWhenJump);
 }
