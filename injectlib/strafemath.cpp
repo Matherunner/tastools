@@ -68,6 +68,16 @@ void strafe_fric(double vel[2], double E, double ktau)
     vel[1] = 0;
 }
 
+double strafe_fric_spd(double spd, double E, double ktau)
+{
+    if (spd >= E)
+        return spd * (1 - ktau);
+    double tmp = E * ktau;
+    if (spd > tmp)
+        return spd - tmp;
+    return 0;
+}
+
 static void strafe_side(double &yaw, int &Sdir, int &Fdir, double vel[2],
                         double theta, double L, double tauMA, int dir)
 {
@@ -171,4 +181,14 @@ void strafe_back(double &yaw, int &Sdir, int &Fdir, double vel[2],
     double avec[2] = {std::cos(yaw), std::sin(yaw)};
     vel[0] -= tauMA * avec[0];
     vel[1] -= tauMA * avec[1];
+}
+
+double strafe_opt_spd(double spd, double L, double tauMA)
+{
+    double tmp = L - tauMA;
+    if (tmp < 0)
+        return std::sqrt(spd * spd + L * L);
+    if (tmp < spd)
+        return std::sqrt(spd * spd + tauMA * (L + tmp));
+    return spd + tauMA;
 }

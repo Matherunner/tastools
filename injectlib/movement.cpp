@@ -113,6 +113,7 @@ static int tas_db4c = 0;
 static int tas_db4l = 0;
 static int db4l_state = 0;
 static int tas_dwj = 0;
+static int tas_lgagst = 0;
 static tascmd_t do_setyaw = {0, false};
 static tascmd_t do_setpitch = {0, false};
 static tascmd_t do_olsshift = {0, false};
@@ -210,6 +211,11 @@ static void IN_TasDuckWhenJump()
     tas_dwj = std::atoi(orig_Cmd_Argv(1));
 }
 
+static void IN_TasLGAGST()
+{
+    tas_lgagst = std::atoi(orig_Cmd_Argv(1));
+}
+
 static inline bool is_jump_in_oldbuttons()
 {
     return *(int *)(*pp_sv_player + 0x80 + 0x23c) & (1 << 1);
@@ -222,6 +228,49 @@ static inline int get_duckstate()
     if (*(bool *)(*pp_sv_player + 0x80 + 0x220))
         return 1;
     return 0;
+}
+
+static float get_fric_coef(const double vel[3], const double pos[3])
+{
+    // Return 0 because this is roughly similar to what PM_Friction does.
+    if (std::fabs(vel[0]) < 0.1 && std::fabs(vel[1]) < 0.1)
+        return 0;
+    float k = *(float *)(p_movevars + 0x1c); // sv_friction
+    k *= *(float *)(*pp_sv_player + 0x80 + 0x120); // friction modifier
+
+    float (*player_mins)[3] = (float (*)[3])(*pp_hwpmove + 0x4f4f4);
+    float speed = std::hypot(vel[0], vel[1]);
+    float start[3], end[3];
+
+    start[0] = end[0] = pos[0] + vel[0] / speed * 16;
+    start[1] = end[1] = pos[1] + vel[1] / speed * 16;
+    start[2] = pos[2] + player_mins[*(int *)(*pp_hwpmove + 0xbc)][2];
+    end[2] = start[2] - 34;
+    pmtrace_t trace = orig_PM_PlayerTrace(start, end, 0, -1);
+    if (trace.fraction == 1)
+        k *= *(float *)(p_movevars + 0x20); // edgefriction
+
+    return k;
+}
+
+static bool lgagst_leave_ground(const playerinfo_t &plrinfo)
+{
+    if (!tas_lgagst)
+        return true;
+
+    double speed_air = std::hypot(plrinfo.vel[0], plrinfo.vel[1]);
+    double E = *(float *)(p_movevars + 0x4);
+    double k = get_fric_coef(plrinfo.vel, plrinfo.pos);
+    double Ag = *(float *)(p_movevars + 0x10);
+    double Aa = *(float *)(p_movevars + 0x14);
+    double speed_grnd = strafe_fric_spd(speed_air, E, k * plrinfo.tau);
+    if (strafe_opt_spd(speed_air, 30, plrinfo.tau * plrinfo.M * Aa) >=
+        strafe_opt_spd(speed_grnd, plrinfo.M, plrinfo.tau * plrinfo.M * Ag)) {
+        tas_lgagst--;
+        return true;
+    }
+
+    return false;
 }
 
 static bool is_unduckable(const playerinfo_t &plrinfo)
@@ -240,7 +289,7 @@ static bool is_unduckable(const playerinfo_t &plrinfo)
 
 static bool do_tasducktap(playerinfo_t &plrinfo, bool unduckable_onto_ground)
 {
-    if (!tas_dtap)
+    if (!tas_dtap || !lgagst_leave_ground(plrinfo))
         return false;
 
     if (plrinfo.postype != PositionGround) {
@@ -278,7 +327,7 @@ static bool do_tasducktap(playerinfo_t &plrinfo, bool unduckable_onto_ground)
 
 static bool do_tasjump(playerinfo_t &plrinfo, bool unduckable_onto_ground)
 {
-    if (!tas_cjmp || is_jump_in_oldbuttons())
+    if (!tas_cjmp || is_jump_in_oldbuttons() || !lgagst_leave_ground(plrinfo))
         return false;
 
     // If user is holding duck even when we can unduck onto ground, then don't
@@ -290,29 +339,6 @@ static bool do_tasjump(playerinfo_t &plrinfo, bool unduckable_onto_ground)
     jump_action = 1;
     tas_cjmp--;
     return true;
-}
-
-static float get_fric_coef(const double vel[3], const double pos[3])
-{
-    // Return 0 because this is roughly similar to what PM_Friction does.
-    if (std::fabs(vel[0]) < 0.1 && std::fabs(vel[1]) < 0.1)
-        return 0;
-    float k = *(float *)(p_movevars + 0x1c); // sv_friction
-    k *= *(float *)(*pp_sv_player + 0x80 + 0x120); // friction modifier
-
-    float (*player_mins)[3] = (float (*)[3])(*pp_hwpmove + 0x4f4f4);
-    float speed = std::hypot(vel[0], vel[1]);
-    float start[3], end[3];
-
-    start[0] = end[0] = pos[0] + vel[0] / speed * 16;
-    start[1] = end[1] = pos[1] + vel[1] / speed * 16;
-    start[2] = pos[2] + player_mins[*(int *)(*pp_hwpmove + 0xbc)][2];
-    end[2] = start[2] - 34;
-    pmtrace_t trace = orig_PM_PlayerTrace(start, end, 0, -1);
-    if (trace.fraction == 1)
-        k *= *(float *)(p_movevars + 0x20); // edgefriction
-
-    return k;
 }
 
 static bool is_ground_below(const double pos[3], int usehull,
@@ -360,6 +386,12 @@ static void categorize_pos(playerinfo_t &plrinfo)
 
 static void load_player_state(playerinfo_t &plrinfo)
 {
+    // FIXME: this is not correct when it is not a multiple of 0.001!
+    plrinfo.tau = *p_host_frametime;
+    plrinfo.M = *(float *)(p_movevars + 0x8);
+    if (get_duckstate() == 2)
+        plrinfo.M *= 0.333;
+
     orig_GetViewAngles(plrinfo.viewangles);
     if (do_setyaw.do_it)
         plrinfo.viewangles[1] = anglemod_deg(do_setyaw.value);
@@ -381,9 +413,6 @@ static void load_player_state(playerinfo_t &plrinfo)
 
 static void load_player_movevars(playerinfo_t &plrinfo)
 {
-    // FIXME: this is not correct when it is not a multiple of 0.001!
-    plrinfo.tau = *p_host_frametime;
-    plrinfo.M = *(float *)(p_movevars + 0x8);
     if (plrinfo.postype == PositionGround) {
         double E = *(float *)(p_movevars + 0x4);
         double k = get_fric_coef(plrinfo.vel, plrinfo.pos);
@@ -400,9 +429,6 @@ static void load_player_movevars(playerinfo_t &plrinfo)
         plrinfo.A = *(float *)(p_movevars + 0x10);
     } else
         abort_with_err("Unkonwn postype encountered.");
-
-    if (get_duckstate() == 2)
-        plrinfo.M *= 0.333;
 }
 
 static void update_line(const playerinfo_t &plrinfo)
@@ -790,4 +816,5 @@ void initialize_movement(uintptr_t clso_addr, const symtbl_t &clso_st,
     orig_AddCommand("tas_db4l", IN_TasDuckB4Land);
     orig_AddCommand("tas_jb", IN_TasJumpBug);
     orig_AddCommand("tas_dwj", IN_TasDuckWhenJump);
+    orig_AddCommand("tas_lgagst", IN_TasLGAGST);
 }

@@ -13,6 +13,10 @@ void strafe_back(double &yaw, int &Sdir, int &Fdir, double vel[2],
 
 void strafe_fric(double vel[2], double E, double ktau);
 
+double strafe_fric_spd(double spd, double E, double ktau);
+
+double strafe_opt_spd(double spd, double L, double tauMA);
+
 double anglemod_deg(double a);
 double anglemod_rad(double a);
 
