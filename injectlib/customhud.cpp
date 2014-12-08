@@ -100,25 +100,38 @@ int CHudPlrInfo::Draw(float)
     snprintf(dispstr, sizeof(dispstr), "V: %.8g\n", vel[2]);
     orig_DrawConsoleString(10, 30, dispstr);
 
+    static float prev_origin[3] = {0, 0, 0};
+    float *origin = (float *)(*pp_sv_player + 0x80 + 0x8);
+    float dvel[3];
+    for (int i = 0; i < 3; i++) {
+        dvel[i] = (origin[i] - prev_origin[i]) / *p_host_frametime;
+        prev_origin[i] = origin[i];
+    }
+    snprintf(dispstr, sizeof(dispstr), "AH: %.8g\n",
+             std::hypot(dvel[0], dvel[1]));
+    orig_DrawConsoleString(10, 40, dispstr);
+    snprintf(dispstr, sizeof(dispstr), "AV: %.8g\n", dvel[2]);
+    orig_DrawConsoleString(10, 50, dispstr);
+
     float viewangles[3];
     orig_GetViewAngles(viewangles);
     snprintf(dispstr, sizeof(dispstr), "Y: %.8g\n", viewangles[1]);
-    orig_DrawConsoleString(10, 40, dispstr);
+    orig_DrawConsoleString(10, 60, dispstr);
     snprintf(dispstr, sizeof(dispstr), "P: %.8g\n", viewangles[0]);
-    orig_DrawConsoleString(10, 50, dispstr);
+    orig_DrawConsoleString(10, 70, dispstr);
 
     float health = *(float *)(*pp_sv_player + 0x80 + 0x160);
     snprintf(dispstr, sizeof(dispstr), "HP: %.8g\n", health);
-    orig_DrawConsoleString(10, 60, dispstr);
+    orig_DrawConsoleString(10, 80, dispstr);
 
     float ent_hp = get_entity_health();
     snprintf(dispstr, sizeof(dispstr), "EHP: %.8g\n", ent_hp);
-    orig_DrawConsoleString(10, 70, dispstr);
+    orig_DrawConsoleString(10, 90, dispstr);
 
     int ducked = *(int *)(*pp_sv_player + 0x80 + 0x1a4) & FL_DUCKING;
     if (ducked)
         orig_DrawSetTextColor(1, 0, 1);
-    orig_DrawConsoleString(10, 80, ducked ? "ducked" : "standing");
+    orig_DrawConsoleString(10, 100, ducked ? "ducked" : "standing");
     if (ducked)
         orig_DrawSetTextColor(default_color[0], default_color[1],
                               default_color[2]);
