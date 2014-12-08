@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstring>
 #include <unistd.h>
+#include <cstdarg>
 #include "symutils.hpp"
 #include "common.hpp"
 #include "movement.hpp"
@@ -52,9 +53,13 @@ static const int EF_NODRAW = 128;
 static const int kRenderTransColor = 1;
 static const int kRenderFxPulseFastWide = 4;
 
-void abort_with_err(const char *errstr)
+void abort_with_err(const char *errstr, ...)
 {
-    std::fprintf(stderr, "TAS ERROR: %s\n", errstr);
+    va_list args;
+    va_start(args, errstr);
+    std::fprintf(stderr, "TAS ERROR: ");
+    std::vfprintf(stderr, errstr, args);
+    va_end(args);
     std::abort();
 }
 
@@ -78,11 +83,17 @@ static void load_cl_symbols()
 
 static void load_hl_symbols()
 {
-    hlso_addr = get_loaded_lib_addr("hl.so");
+#ifdef OPPOSINGFORCE
+    const char *HLSO_NAME = "opfor.so";
+#else
+    const char *HLSO_NAME = "hl.so";
+#endif
+
+    hlso_addr = get_loaded_lib_addr(HLSO_NAME);
     if (!hlso_addr)
-        abort_with_err("Failed to get the base address of hl.so.");
+        abort_with_err("Failed to get the base address of %s.", HLSO_NAME);
     chdir(gamedir);
-    hlso_st = get_symbols("dlls/hl.so");
+    hlso_st = get_symbols(("dlls/" + std::string(HLSO_NAME)).c_str());
     chdir("..");
 
     orig_hl_PM_Move = (PM_Move_func_t)(hlso_addr + hlso_st["PM_Move"]);

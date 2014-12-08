@@ -27,7 +27,9 @@ public:
     POSITION m_pos;
     int m_type;
     int m_iFlags;
+#ifndef OPPOSINGFORCE
     virtual ~CHudBase() {}
+#endif
     virtual int Init(void) { return 0; }
     virtual int VidInit(void) { return 0; }
     virtual int Draw(float) { return 0; }
