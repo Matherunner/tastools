@@ -101,6 +101,7 @@ static cvar_t **pp_cl_sidespeed = nullptr;
 static cvar_t **pp_cl_upspeed = nullptr;
 
 static cvar_t *cl_db4c_ceil = nullptr;
+static cvar_t *cl_lgagst_origM = nullptr;
 
 // 0 to do nothing, 1 to mean +jump or +duck, and 2 to mean -jump or -duck.
 static int jump_action = 0;
@@ -258,14 +259,18 @@ static bool lgagst_leave_ground(const playerinfo_t &plrinfo)
     if (!tas_lgagst)
         return true;
 
+    double M = plrinfo.M;
+    if (cl_lgagst_origM->value && get_duckstate() == 2)
+        M /= 0.333;
+
     double speed_air = std::hypot(plrinfo.vel[0], plrinfo.vel[1]);
     double E = *(float *)(p_movevars + 0x4);
     double k = get_fric_coef(plrinfo.vel, plrinfo.pos);
     double Ag = *(float *)(p_movevars + 0x10);
     double Aa = *(float *)(p_movevars + 0x14);
     double speed_grnd = strafe_fric_spd(speed_air, E, k * plrinfo.tau);
-    if (strafe_opt_spd(speed_air, 30, plrinfo.tau * plrinfo.M * Aa) >=
-        strafe_opt_spd(speed_grnd, plrinfo.M, plrinfo.tau * plrinfo.M * Ag)) {
+    if (strafe_opt_spd(speed_air, 30, plrinfo.tau * M * Aa) >=
+        strafe_opt_spd(speed_grnd, M, plrinfo.tau * M * Ag)) {
         tas_lgagst--;
         return true;
     }
@@ -797,6 +802,7 @@ void initialize_movement(uintptr_t clso_addr, const symtbl_t &clso_st,
     pp_cl_upspeed = (cvar_t **)(clso_addr + clso_st.at("cl_upspeed"));
 
     cl_db4c_ceil = orig_RegisterVariable("cl_db4c_ceil", 0, 0);
+    cl_lgagst_origM = orig_RegisterVariable("cl_lgagst_origM", 0, 0);
 
     orig_AddCommand("+linestrafe", IN_LinestrafeDown);
     orig_AddCommand("-linestrafe", IN_LinestrafeUp);
