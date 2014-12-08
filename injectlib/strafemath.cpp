@@ -192,3 +192,14 @@ double strafe_opt_spd(double spd, double L, double tauMA)
         return std::sqrt(spd * spd + tauMA * (L + tmp));
     return spd + tauMA;
 }
+
+void strafe_general(double v[2], const double a[2], double L, double tauMA)
+{
+    double tmp = L - v[0] * a[0] - v[1] * a[1];
+    if (tmp < 0)
+        return;
+    if (tauMA < tmp)
+        tmp = tauMA;
+    v[0] += tmp * a[0];
+    v[1] += tmp * a[1];
+}

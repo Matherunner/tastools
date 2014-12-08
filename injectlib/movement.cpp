@@ -95,6 +95,12 @@ static uintptr_t p_movevars = 0;
 static uintptr_t *pp_hwpmove = nullptr;
 static kbutton_t *p_in_duck = nullptr;
 static kbutton_t *p_in_jump = nullptr;
+static kbutton_t *p_in_forward = nullptr;
+static kbutton_t *p_in_back = nullptr;
+static kbutton_t *p_in_moveright = nullptr;
+static kbutton_t *p_in_moveleft = nullptr;
+static kbutton_t *p_in_up = nullptr;
+static kbutton_t *p_in_down = nullptr;
 static cvar_t **pp_cl_forwardspeed = nullptr;
 static cvar_t **pp_cl_backspeed = nullptr;
 static cvar_t **pp_cl_sidespeed = nullptr;
@@ -123,6 +129,8 @@ static moveaction_t g_old_moveaction = StrafeNone;
 static moveaction_t g_moveaction = StrafeNone;
 static double line_origin[2];
 static double line_dir[2];
+
+static const double TAS_FSU_MAG = 10000;
 
 static void IN_TasSetYaw()
 {
@@ -479,7 +487,24 @@ static void do_strafe_none(playerinfo_t &plrinfo)
         orig_IN_MoverightUp();
     }
 
-    // TODO: update velocity
+    double avec[2];
+    double F, S, U;
+    F = (p_in_forward->state & 1) - (p_in_back->state & 1);
+    S = (p_in_moveright->state & 1) - (p_in_moveleft->state & 1);
+    if (!F && !S)
+        return;
+    U = (p_in_up->state & 1) - (p_in_back->state & 1);
+    double invmag = 1 / (std::sqrt(F + S + U) * TAS_FSU_MAG);
+    F *= TAS_FSU_MAG * plrinfo.M * invmag;
+    S *= TAS_FSU_MAG * plrinfo.M * invmag;
+    U *= TAS_FSU_MAG * plrinfo.M * invmag;
+    invmag = 1 / std::hypot(F, S);
+    double ct = std::cos(plrinfo.viewangles[1] * M_PI / 180);
+    double st = std::sin(plrinfo.viewangles[1] * M_PI / 180);
+    avec[0] = (F * ct + S * st) * invmag;
+    avec[1] = (F * st - S * ct) * invmag;
+    strafe_general(plrinfo.vel, avec, plrinfo.L,
+                   plrinfo.tau * plrinfo.M * plrinfo.A);
 }
 
 static void do_strafe_tas(playerinfo_t &plrinfo)
@@ -738,10 +763,10 @@ extern "C" void CL_CreateMove(float frametime, void *cmd, int active)
 {
     // We don't really need Cvar_SetValue as these are only meant to trick
     // orig_CL_CreateMove.
-    (*pp_cl_forwardspeed)->value = 10000;
-    (*pp_cl_backspeed)->value = 10000;
-    (*pp_cl_sidespeed)->value = 10000;
-    (*pp_cl_upspeed)->value = 10000;
+    (*pp_cl_forwardspeed)->value = TAS_FSU_MAG;
+    (*pp_cl_backspeed)->value = TAS_FSU_MAG;
+    (*pp_cl_sidespeed)->value = TAS_FSU_MAG;
+    (*pp_cl_upspeed)->value = TAS_FSU_MAG;
 
     do_tas_actions();
     g_old_moveaction = g_moveaction;
@@ -796,6 +821,12 @@ void initialize_movement(uintptr_t clso_addr, const symtbl_t &clso_st,
 
     p_in_duck = (kbutton_t *)(clso_addr + clso_st.at("in_duck"));
     p_in_jump = (kbutton_t *)(clso_addr + clso_st.at("in_jump"));
+    p_in_forward = (kbutton_t *)(clso_addr + clso_st.at("in_forward"));
+    p_in_back = (kbutton_t *)(clso_addr + clso_st.at("in_back"));
+    p_in_moveright = (kbutton_t *)(clso_addr + clso_st.at("in_moveright"));
+    p_in_moveleft = (kbutton_t *)(clso_addr + clso_st.at("in_moveleft"));
+    p_in_up = (kbutton_t *)(clso_addr + clso_st.at("in_up"));
+    p_in_down = (kbutton_t *)(clso_addr + clso_st.at("in_down"));
     pp_cl_forwardspeed = (cvar_t **)(clso_addr + clso_st.at("cl_forwardspeed"));
     pp_cl_sidespeed = (cvar_t **)(clso_addr + clso_st.at("cl_sidespeed"));
     pp_cl_backspeed = (cvar_t **)(clso_addr + clso_st.at("cl_backspeed"));
