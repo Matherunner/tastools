@@ -84,16 +84,16 @@ static void load_cl_symbols()
 static void load_hl_symbols()
 {
 #ifdef OPPOSINGFORCE
-    const char *HLSO_NAME = "opfor.so";
+#define HLSO_NAME "opfor.so"
 #else
-    const char *HLSO_NAME = "hl.so";
+#define HLSO_NAME "hl.so"
 #endif
 
     hlso_addr = get_loaded_lib_addr(HLSO_NAME);
     if (!hlso_addr)
         abort_with_err("Failed to get the base address of %s.", HLSO_NAME);
     chdir(gamedir);
-    hlso_st = get_symbols(("dlls/" + std::string(HLSO_NAME)).c_str());
+    hlso_st = get_symbols("dlls/" HLSO_NAME);
     chdir("..");
 
     orig_hl_PM_Move = (PM_Move_func_t)(hlso_addr + hlso_st["PM_Move"]);
