@@ -110,6 +110,8 @@ static int tas_jb = 0;
 static int tas_dtap = 0;
 static int tas_cjmp = 0;
 static int tas_db4c = 0;
+static int tas_db4l = 0;
+static int db4l_state = 0;
 static tascmd_t do_setyaw = {0, false};
 static tascmd_t do_setpitch = {0, false};
 static tascmd_t do_olsshift = {0, false};
@@ -199,6 +201,7 @@ static void IN_TasDuckB4Col()
 
 static void IN_TasDuckB4Land()
 {
+    tas_db4l = std::atoi(orig_Cmd_Argv(1));
 }
 
 static inline bool is_jump_in_oldbuttons()
@@ -548,6 +551,81 @@ static bool do_tasjumpbug(playerinfo_t &plrinfo, bool unduckable_onto_ground, bo
     return false;
 }
 
+static bool hit_ground(const double start[3], const double end[3], int usehull)
+{
+    float startf[3], endf[3];
+    for (int i = 0; i < 3; i++) {
+        startf[i] = start[i];
+        endf[i] = end[i];
+    }
+    int *p_usehull = (int *)(*pp_hwpmove + 0xbc);
+    int old_usehull = *p_usehull;
+    *p_usehull = usehull;
+    pmtrace_t tr = orig_PM_PlayerTrace(startf, endf, 0, -1);
+    *p_usehull = old_usehull;
+    return (tr.fraction < 1 && tr.plane.normal[2] >= 0.7) ||
+        is_ground_below(end, usehull);
+}
+
+static bool do_tasdb4l(playerinfo_t &plrinfo, const playerinfo_t &old_plrinfo,
+                       bool unduckable_onto_ground, bool &updated)
+{
+    if (!tas_db4l)
+        return false;
+
+    if (plrinfo.postype == PositionGround) {
+        if (get_duckstate() == 2 && db4l_state == 1) {
+            db4l_state = 0;
+            tas_db4l--;
+            return true;
+        }
+        return false;
+    }
+
+    if (get_duckstate() != 2) {
+        if (!updated) {
+            do_movements(plrinfo, unduckable_onto_ground);
+            updated = true;
+        }
+
+        if (hit_ground(old_plrinfo.pos, plrinfo.pos, 0)) {
+            db4l_state = 1;
+            duck_action = 1;
+            return true;
+        }
+
+        return false;
+    }
+
+    if (is_unduckable(old_plrinfo)) {
+        if (is_ground_below(old_plrinfo.pos, 0) && old_plrinfo.vel[2] <= 180) {
+            db4l_state = 1;
+            duck_action = 1;
+            jump_action = 2;
+            return true;
+        }
+
+        if (!updated) {
+            do_movements(plrinfo, unduckable_onto_ground);
+            updated = true;
+        }
+
+        if (hit_ground(old_plrinfo.pos, plrinfo.pos, 0)) {
+            db4l_state = 1;
+            duck_action = 1;
+            return true;
+        }
+    }
+
+    if (db4l_state == 1) {
+        db4l_state = 0;
+        tas_db4l--;
+        return true;
+    }
+
+    return false;
+}
+
 static bool do_tasdb4c(playerinfo_t &plrinfo, const playerinfo_t &old_plrinfo,
                        bool unduckable_onto_ground, bool &updated)
 {
@@ -598,6 +676,8 @@ static void do_tas_actions()
     playerinfo_t plrinfo_bak = plrinfo;
 
     if (do_tasjumpbug(plrinfo, unduckable_onto_ground, updated))
+        goto final;
+    if (do_tasdb4l(plrinfo, plrinfo_bak, unduckable_onto_ground, updated))
         goto final;
     if (do_tasdb4c(plrinfo, plrinfo_bak, unduckable_onto_ground, updated))
         goto final;
