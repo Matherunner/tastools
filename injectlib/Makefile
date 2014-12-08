@@ -6,7 +6,7 @@ OUTPUT = tasinjectlib.so
 all: $(OUTPUT)
 
 $(OUTPUT): $(OBJS)
-	$(CXX) -flto -shared -s $(CXXFLAGS) $(OBJS) -o $(OUTPUT)
+	$(CXX) -shared -s $(CXXFLAGS) $(OBJS) -o $(OUTPUT)
 
 clean:
 	rm -f $(OUTPUT)
