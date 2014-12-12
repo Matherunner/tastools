@@ -510,7 +510,7 @@ static void do_strafe_none(playerinfo_t &plrinfo)
 static void do_strafe_tas(playerinfo_t &plrinfo)
 {
     double yaw = plrinfo.viewangles[1] * M_PI / 180;
-    int Sdir, Fdir;
+    int Sdir = 0, Fdir = 0;
 
     // Do the strafing!
     if (g_moveaction == StrafeLine) {
