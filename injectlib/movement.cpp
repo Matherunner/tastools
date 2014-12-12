@@ -762,7 +762,8 @@ final:
 extern "C" void CL_CreateMove(float frametime, void *cmd, int active)
 {
     float viewangles[3];
-    orig_GetViewAngles(viewangles);
+    if (sv_taslog.value)
+        orig_GetViewAngles(viewangles);
 
     // We don't really need Cvar_SetValue as these are only meant to trick
     // orig_CL_CreateMove.
@@ -795,11 +796,13 @@ extern "C" void CL_CreateMove(float frametime, void *cmd, int active)
 
     orig_CL_CreateMove(frametime, cmd, active);
 
-    float new_viewangles[3];
-    orig_GetViewAngles(new_viewangles);
-    orig_Con_Printf("cl_yawspeed %.8g\n",
-                    (new_viewangles[1] - viewangles[1] + M_U_DEG / 2) /
-                    frametime);
+    if (sv_taslog.value) {
+        float new_viewangles[3];
+        orig_GetViewAngles(new_viewangles);
+        orig_Con_Printf("cl_yawspeed %.8g\n",
+                        (new_viewangles[1] - viewangles[1] + M_U_DEG / 2) /
+                        frametime);
+    }
 }
 
 void initialize_movement(uintptr_t clso_addr, const symtbl_t &clso_st,

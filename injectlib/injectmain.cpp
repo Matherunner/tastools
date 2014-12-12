@@ -34,6 +34,7 @@ static symtbl_t hlso_st;
 static symtbl_t clso_st;
 static cvar_t sv_show_triggers;
 
+cvar_t sv_taslog;
 bool tas_hook_initialized = false;
 
 Cvar_RegisterVariable_func_t orig_Cvar_RegisterVariable = nullptr;
@@ -227,10 +228,13 @@ int AddToFullPack(entity_state_s *state, int e, edict_s *ent, edict_s *host,
 
 void PlayerPreThink(edict_s *ent)
 {
-    orig_Con_Printf("prethink %u %.8g\n", *p_g_ulFrameCount, *p_host_frametime);
-    orig_Con_Printf("health %.8g %.8g\n",
-                    *(float *)((uintptr_t)ent + 0x80 + 0x160),
-                    *(float *)((uintptr_t)ent + 0x80 + 0x1bc));
+    if (sv_taslog.value) {
+        orig_Con_Printf("prethink %u %.8g\n", *p_g_ulFrameCount,
+                        *p_host_frametime);
+        orig_Con_Printf("health %.8g %.8g\n",
+                        *(float *)((uintptr_t)ent + 0x80 + 0x160),
+                        *(float *)((uintptr_t)ent + 0x80 + 0x1bc));
+    }
     orig_PlayerPreThink(ent);
 }
 
@@ -265,11 +269,15 @@ extern "C" void Cvar_Init()
     sv_show_triggers.name = "sv_show_triggers";
     sv_show_triggers.string = "0";
     orig_Cvar_RegisterVariable(&sv_show_triggers);
+
+    sv_taslog.name = "sv_taslog";
+    sv_taslog.string = "0";
+    orig_Cvar_RegisterVariable(&sv_taslog);
 }
 
 static void print_tasinfo(uintptr_t pmove, int server, int num)
 {
-    if (!server)
+    if (!server || !sv_taslog.value)
         return;
 
     if (num == 1) {
