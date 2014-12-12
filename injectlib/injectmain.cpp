@@ -25,6 +25,7 @@ typedef void (*InitInput_func_t)();
 typedef void (*SV_SendClientMessages_func_t)();
 typedef uintptr_t (*SZ_GetSpace_func_t)(uintptr_t, int);
 typedef void (*Con_Printf_func_t)(const char *, ...);
+typedef void (*PlayerPreThink_func_t)(edict_s *);
 
 static uintptr_t hwso_addr = 0;
 static uintptr_t hlso_addr = 0;
@@ -57,6 +58,7 @@ static PM_Move_func_t orig_cl_PM_Move = nullptr;
 static SV_SendClientMessages_func_t orig_SV_SendClientMessages = nullptr;
 static SZ_GetSpace_func_t orig_SZ_GetSpace = nullptr;
 static Con_Printf_func_t orig_Con_Printf = nullptr;
+static PlayerPreThink_func_t orig_PlayerPreThink = nullptr;
 
 static cvar_t *p_r_norefresh = nullptr;
 
@@ -108,6 +110,7 @@ static void load_hl_symbols()
     orig_hl_PM_Move = (PM_Move_func_t)(hlso_addr + hlso_st["PM_Move"]);
     orig_ServerActivate = (ServerActivate_func_t)(hlso_addr + hlso_st["_Z14ServerActivateP7edict_sii"]);
     orig_AddToFullPack = (AddToFullPack_func_t)(hlso_addr + hlso_st["_Z13AddToFullPackP14entity_state_siP7edict_sS2_iiPh"]);
+    orig_PlayerPreThink = (PlayerPreThink_func_t)(hlso_addr + hlso_st["_Z14PlayerPreThinkP7edict_s"]);
 
     pp_gpGlobals = (uintptr_t *)(hlso_addr + hlso_st["gpGlobals"]);
     p_g_ulFrameCount = (unsigned int *)(hlso_addr + hlso_st["g_ulFrameCount"]);
@@ -221,6 +224,15 @@ int AddToFullPack(entity_state_s *state, int e, edict_s *ent, edict_s *host,
     }
 
     return ret;
+}
+
+void PlayerPreThink(edict_s *ent)
+{
+    orig_Con_Printf("prethink %u %.8g\n", *p_g_ulFrameCount, *p_host_frametime);
+    orig_Con_Printf("health %.8g %.8g\n",
+                    *(float *)((uintptr_t)ent + 0x80 + 0x160),
+                    *(float *)((uintptr_t)ent + 0x80 + 0x1bc));
+    orig_PlayerPreThink(ent);
 }
 
 extern "C" void SV_SendClientMessages()
