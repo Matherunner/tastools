@@ -24,7 +24,6 @@ typedef void (*SCR_UpdateScreen_func_t)();
 typedef void (*InitInput_func_t)();
 typedef void (*SV_SendClientMessages_func_t)();
 typedef uintptr_t (*SZ_GetSpace_func_t)(uintptr_t, int);
-typedef void (*Con_Printf_func_t)(const char *, ...);
 typedef void (*PlayerPreThink_func_t)(edict_s *);
 
 static uintptr_t hwso_addr = 0;
@@ -39,6 +38,7 @@ bool tas_hook_initialized = false;
 
 Cvar_RegisterVariable_func_t orig_Cvar_RegisterVariable = nullptr;
 Cvar_SetValue_func_t orig_Cvar_SetValue = nullptr;
+Con_Printf_func_t orig_Con_Printf = nullptr;
 
 double *p_host_frametime = nullptr;
 uintptr_t *pp_sv_player = nullptr;
@@ -57,7 +57,6 @@ static PM_Move_func_t orig_hl_PM_Move = nullptr;
 static PM_Move_func_t orig_cl_PM_Move = nullptr;
 static SV_SendClientMessages_func_t orig_SV_SendClientMessages = nullptr;
 static SZ_GetSpace_func_t orig_SZ_GetSpace = nullptr;
-static Con_Printf_func_t orig_Con_Printf = nullptr;
 static PlayerPreThink_func_t orig_PlayerPreThink = nullptr;
 
 static cvar_t *p_r_norefresh = nullptr;

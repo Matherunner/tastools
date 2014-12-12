@@ -1,6 +1,9 @@
 #ifndef STRAFEMATH_H
 #define STRAFEMATH_H
 
+const double M_U_DEG = 360.0 / 65536;
+const double M_U_RAD = M_PI / 32768;
+
 void strafe_general(double v[2], const double a[2], double L, double tauMA);
 
 void strafe_side_opt(double &yaw, int &Sdir, int &Fdir, double vel[2],

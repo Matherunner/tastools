@@ -1,9 +1,6 @@
 #include <cmath>
 #include "strafemath.hpp"
 
-static const double M_U_DEG = 360.0 / 65536;
-static const double M_U_RAD = M_PI / 32768;
-
 double anglemod_deg(double a)
 {
     return M_U_DEG * ((int)(a / M_U_DEG) & 0xffff);

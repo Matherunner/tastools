@@ -17,10 +17,12 @@ const int FL_DUCKING = 1 << 14;
 typedef void (*Cvar_RegisterVariable_func_t)(cvar_t *);
 typedef void (*Cvar_SetValue_func_t)(const char *, float);
 typedef void (*GetSetViewAngles_func_t)(float *);
+typedef void (*Con_Printf_func_t)(const char *, ...);
 
 extern Cvar_SetValue_func_t orig_Cvar_SetValue;
 extern Cvar_RegisterVariable_func_t orig_Cvar_RegisterVariable;
 extern GetSetViewAngles_func_t orig_GetViewAngles;
+extern Con_Printf_func_t orig_Con_Printf;
 
 extern double *p_host_frametime;
 extern uintptr_t *pp_sv_player;
