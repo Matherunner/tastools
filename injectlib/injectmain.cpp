@@ -19,11 +19,12 @@ typedef void *(*dlsym_func_t)(void *, const char *);
 #endif
 typedef void (*ServerActivate_func_t)(edict_s *, int, int);
 typedef int (*AddToFullPack_func_t)(entity_state_s *, int, edict_s *, edict_s *, int, int, unsigned char *);
-typedef void (*PM_Move_func_t)(void *, int);
+typedef void (*PM_Move_func_t)(uintptr_t, int);
 typedef void (*SCR_UpdateScreen_func_t)();
 typedef void (*InitInput_func_t)();
 typedef void (*SV_SendClientMessages_func_t)();
 typedef uintptr_t (*SZ_GetSpace_func_t)(uintptr_t, int);
+typedef void (*Con_Printf_func_t)(const char *, ...);
 
 static uintptr_t hwso_addr = 0;
 static uintptr_t hlso_addr = 0;
@@ -55,6 +56,7 @@ static PM_Move_func_t orig_hl_PM_Move = nullptr;
 static PM_Move_func_t orig_cl_PM_Move = nullptr;
 static SV_SendClientMessages_func_t orig_SV_SendClientMessages = nullptr;
 static SZ_GetSpace_func_t orig_SZ_GetSpace = nullptr;
+static Con_Printf_func_t orig_Con_Printf = nullptr;
 
 static cvar_t *p_r_norefresh = nullptr;
 
@@ -124,6 +126,7 @@ static void load_hw_symbols()
     orig_SCR_UpdateScreen = (SCR_UpdateScreen_func_t)(hwso_addr + hwso_st["SCR_UpdateScreen"]);
     orig_SV_SendClientMessages = (SV_SendClientMessages_func_t)(hwso_addr + hwso_st["SV_SendClientMessages"]);
     orig_SZ_GetSpace = (SZ_GetSpace_func_t)(hwso_addr + hwso_st["SZ_GetSpace"]);
+    orig_Con_Printf = (Con_Printf_func_t)(hwso_addr + hwso_st["Con_Printf"]);
 
     gamedir = (const char *)(hwso_addr + hwso_st["com_gamedir"]);
     p_host_frametime = (double *)(hwso_addr + hwso_st["host_frametime"]);
@@ -253,12 +256,42 @@ extern "C" void Cvar_Init()
     orig_Cvar_RegisterVariable(&sv_show_triggers);
 }
 
-extern "C" void PM_Move(void *ppmove, int server)
+static void print_tasinfo(uintptr_t pmove, int server, int num)
 {
+    if (!server)
+        return;
+
+    if (num == 1) {
+        uintptr_t cmd = pmove + 0x45458;
+        orig_Con_Printf("usercmd %d %u %.8g %.8g\n",
+                        *(char *)(cmd + 0x2), *(unsigned short *)(cmd + 0x1e),
+                        *(float *)(cmd + 0x4), *(float *)(cmd + 0x8));
+        orig_Con_Printf("fsu %.8g %.8g %.8g\n",
+                        *(float *)(cmd + 0x10), *(float *)(cmd + 0x14),
+                        *(float *)(cmd + 0x18));
+        orig_Con_Printf("fg %.8g %.8g\n", *(float *)(pmove + 0xc4),
+                        *(float *)(pmove + 0xc0));
+        orig_Con_Printf("pa %.8g %.8g\n", *(float *)(pmove + 0xa0),
+                        *(float *)(pmove + 0xa4));
+    }
+
+    float *pos = (float *)(pmove + 0x38);
+    orig_Con_Printf("pos %d %.8g %.8g %.8g\n", num, pos[0], pos[1], pos[2]);
+
+    float *vel = (float *)(pmove + 0x5c);
+    float *basevel = (float *)(pmove + 0x74);
+    orig_Con_Printf("pmove %d %.8g %.8g %.8g %.8g %.8g %.8g %d %u %d %d\n",
+                    num, vel[0], vel[1], vel[2],
+                    basevel[0], basevel[1], basevel[2],
+                    *(int *)(pmove + 0x90), *(unsigned int *)(pmove + 0xb8),
+                    *(int *)(pmove + 0xe0), *(int *)(pmove + 0xe4));
+}
+
+extern "C" void PM_Move(uintptr_t ppmove, int server)
+{
+    print_tasinfo(ppmove, server, 1);
     (server ? orig_hl_PM_Move : orig_cl_PM_Move)(ppmove, server);
-    float *orig_vel = (float *)(*pp_sv_player + 0x80 + 0x20);
-    if (server)
-        fprintf(stderr, "%u %.8g %.8g\n", *p_g_ulFrameCount, *p_host_frametime, std::hypot(orig_vel[0], orig_vel[1]));
+    print_tasinfo(ppmove, server, 2);
 }
 
 #ifdef OPPOSINGFORCE
