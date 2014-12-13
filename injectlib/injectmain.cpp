@@ -17,7 +17,7 @@ struct entity_state_s;
 #ifdef OPPOSINGFORCE
 typedef void *(*dlsym_func_t)(void *, const char *);
 #endif
-typedef void (*ServerActivate_func_t)(edict_s *, int, int);
+typedef void (*GameDLLInit_func_t)();
 typedef int (*AddToFullPack_func_t)(entity_state_s *, int, edict_s *, edict_s *, int, int, unsigned char *);
 typedef void (*PM_Move_func_t)(uintptr_t, int);
 typedef void (*SCR_UpdateScreen_func_t)();
@@ -50,7 +50,7 @@ uintptr_t *pp_gpGlobals = nullptr;
 #ifdef OPPOSINGFORCE
 static dlsym_func_t orig_dlsym = nullptr;
 #endif
-static ServerActivate_func_t orig_ServerActivate = nullptr;
+static GameDLLInit_func_t orig_GameDLLInit = nullptr;
 static AddToFullPack_func_t orig_AddToFullPack = nullptr;
 static InitInput_func_t orig_InitInput = nullptr;
 static SCR_UpdateScreen_func_t orig_SCR_UpdateScreen = nullptr;
@@ -108,7 +108,7 @@ static void load_hl_symbols()
     hlso_st = get_symbols(hlso_fullpath.c_str());
 
     orig_hl_PM_Move = (PM_Move_func_t)(hlso_addr + hlso_st["PM_Move"]);
-    orig_ServerActivate = (ServerActivate_func_t)(hlso_addr + hlso_st["_Z14ServerActivateP7edict_sii"]);
+    orig_GameDLLInit = (GameDLLInit_func_t)(hlso_addr + hlso_st["_Z11GameDLLInitv"]);
     orig_AddToFullPack = (AddToFullPack_func_t)(hlso_addr + hlso_st["_Z13AddToFullPackP14entity_state_siP7edict_sS2_iiPh"]);
     orig_PlayerPreThink = (PlayerPreThink_func_t)(hlso_addr + hlso_st["_Z14PlayerPreThinkP7edict_s"]);
 
@@ -137,7 +137,7 @@ static void load_hw_symbols()
     p_r_norefresh = (cvar_t *)(hwso_addr + hwso_st["r_norefresh"]);
 }
 
-// Note that this function is called before ServerActivate.
+// Note that this function is called before GameDLLInit.
 void InitInput()
 {
     if (!tas_hook_initialized) {
@@ -147,7 +147,7 @@ void InitInput()
     orig_InitInput();
 }
 
-void ServerActivate(edict_s *pEdictList, int edictCount, int clientMax)
+void GameDLLInit()
 {
     if (!tas_hook_initialized) {
         // We only initialise the custom HUD here because it will fail to
@@ -156,7 +156,7 @@ void ServerActivate(edict_s *pEdictList, int edictCount, int clientMax)
         load_hl_symbols();
         tas_hook_initialized = true; // finally, everything is initialised
     }
-    orig_ServerActivate(pEdictList, edictCount, clientMax);
+    orig_GameDLLInit();
 }
 
 static void get_trigger_amt_colors(const char *type, int *amt, char colors[3])
