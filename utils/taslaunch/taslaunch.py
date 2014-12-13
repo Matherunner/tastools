@@ -119,7 +119,8 @@ if args.action == 'sim':
     try:
         ret = subprocess.call(['runhl.sh', '-game', sim_mod, '-condebug',
                                '+host_framerate', str(host_framerate),
-                               load_cmd, load_from] + sim_hl_args)
+                               '+sv_taslog 1', load_cmd, load_from] +
+                              sim_hl_args)
         if ret:
             print('Half-Life returned nonzero (ignored)', file=sys.stderr)
     except OSError as e:
