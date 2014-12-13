@@ -449,7 +449,8 @@ value of 200 cannot be modified without recompilation.  For ladder physics, it
 does not matter what :math:`F` and :math:`S` are.  If the duckstate is 2, then
 :math:`\mathcal{F} \mapsto 0.333\mathcal{F}` and :math:`\mathcal{S} \mapsto
 0.333\mathcal{S}` in newer Half-Life versions.  This is not true for earlier
-versions such as NGHL.
+versions such as NGHL.  Regardless of viewangles, jumping off the ladder always
+sets :math:`\mathbf{v}' = 270\mathbf{\hat{n}}`.
 
 If :math:`\mathbf{u} = \mathcal{F} \mathbf{\hat{f}} + \mathcal{S}
 \mathbf{\hat{s}}` and :math:`\mathbf{\hat{n}} \ne \langle 0,0,\pm 1\rangle`
@@ -459,9 +460,14 @@ then
           \frac{\langle 0,0,1\rangle \times \mathbf{\hat{n}}}{\lVert \langle 0,0,1\rangle \times \mathbf{\hat{n}}\rVert} \right)
 
 where :math:`\mathbf{\hat{n}}` is the unit normal vector of the ladder's
-climbable plane.  To optimise the vertical climbing speed, we assume
-:math:`\mathbf{\hat{n}} = \langle n_x, 0, n_z\rangle`.  We further assume that
-:math:`u_y = 0`.  Now we have
+climbable plane.
+
+Optimal angle between :math:`\mathbf{u}` and :math:`\mathbf{\hat{n}}`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To optimise the vertical climbing speed, we assume :math:`\mathbf{\hat{n}} =
+\langle n_x, 0, n_z\rangle`.  We further assume that :math:`u_y = 0`.  Now we
+have
 
 .. math:: \mathbf{v}' = \mathbf{u} - \lVert\mathbf{u}\rVert \cos\alpha ( \langle n_x,0,n_z \rangle + \langle -n_z,0,n_x\rangle )
 
@@ -486,65 +492,151 @@ Knowing the optimal angle :math:`\alpha` is useful for theoretical
 understanding, but in practice we must be able to calculate the player's yaw
 and pitch angles that maximises vertical climbing speed.  For ladders that are
 perfectly vertical the optimal viewangles are trivial to find, but we need
-explicit formulae for slanted ladders.  We begin by parameterising
-:math:`\mathbf{\hat{n}}` in terms of :math:`\theta` and :math:`\phi` then
-assume that the vector is directed towards positive :math:`x` axis
-(i.e. :math:`\theta = 0`), giving
+explicit formulae for slanted ladders.
 
-.. math:: \mathbf{\hat{n}} = \langle \cos\phi, 0, -\sin\phi \rangle
+Formulae for optimal yaw and pitch
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-hence the rightmost bracket can be replaced by
+Let :math:`\mathbf{\hat{n}} = \langle n_x, n_y, n_z\rangle` with the constraint
+:math:`n_x^2 + n_y^2 + n_z^2 = 1`, so that
 
-.. math:: \langle\cos\phi + \sin\phi, 0, \cos\phi - \sin\phi\rangle = \langle N_x, N_y, N_z \rangle
+.. math:: \mathbf{\hat{n}} + \mathbf{\hat{n}} \times
+          \frac{\langle 0,0,1\rangle \times \mathbf{\hat{n}}}
+          {\lVert\langle 0,0,1\rangle \times \mathbf{\hat{n}}\rVert} =
+          \langle N_x, N_y, N_z\rangle
 
-We also note that, in :math:`\mathbb{R}^3` we have
+We are concerned with the vertical velocity, :math:`v'_z`.  Written in full and
+simplifying,
 
-.. math:: \begin{align*}
-          \mathbf{\hat{f}} &= \langle \cos\vartheta\cos\varphi, \sin\vartheta\cos\varphi, -\sin\varphi \rangle \\
-          \mathbf{\hat{s}} &= \langle \sin\vartheta, -\cos\vartheta, 0 \rangle \\
-          \mathbf{u} &= \langle \mathcal{F} \cos\vartheta\cos\varphi + \mathcal{S} \sin\vartheta,
-          \mathcal{F} \sin\vartheta\cos\varphi - \mathcal{S} \cos\vartheta, -\mathcal{F} \sin\varphi \rangle
-          \end{align*}
+.. math:: v'_z = -\mathcal{F} \sin\varphi (1 - N_z n_z) - N_z \left(
+          \mathcal{F} \cos\varphi \cos(\vartheta - \theta) + \mathcal{S}
+          \sin(\vartheta - \theta) \right) \sqrt{n_x^2 + n_y^2}
+   :label: laddervz
 
-Therefore,
+where :math:`\theta = \operatorname{atan2}(n_y,n_x)`.  To maximise this
+quantity, we compute
 
-.. math:: \mathbf{v}' = \langle u_x - N_x \mathbf{u}\cdot\mathbf{\hat{n}}, u_y, u_z - N_z \mathbf{u}\cdot\mathbf{\hat{n}} \rangle
+.. math:: \frac{\partial v'_z}{\partial\varphi} = -\mathcal{F} \cos\varphi (1 -
+          N_z n_z) + \mathcal{F} N_z \sin\varphi \cos(\vartheta - \theta)
+          \sqrt{n_x^2 + n_y^2}
 
-To maximise the vertical speed, we set
+.. math:: \frac{\partial v'_z}{\partial\vartheta} = -N_z (
+          -\mathcal{F} \cos\varphi \sin(\vartheta - \theta) +
+          \mathcal{S} \cos(\vartheta - \theta) ) \sqrt{n_x^2 + n_y^2}
 
-.. math:: \frac{\partial v_z'}{\partial \varphi} = 0 \quad\text{and}\quad \frac{\partial v_z'}{\partial \vartheta} = 0
+Setting them to zero and simplifying, we obtain the following equations
+respectively
 
-giving
+.. math:: (1 - N_z n_z) \cos\varphi =
+          N_z \sin\varphi \cos(\vartheta - \theta)
+          \sqrt{n_x^2 + n_y^2}
+   :label: ladder-eq1
 
-.. math:: (1 - N_z n_z) \cos\varphi = N_z n_x \cos\vartheta \sin\varphi
+.. math:: \mathcal{F} \cos\varphi \sin(\vartheta - \theta) =
+          \mathcal{S} \cos(\vartheta - \theta)
+   :label: ladder-eq2
 
-.. math:: \mathcal{S} \cos\vartheta = \mathcal{F} \cos\varphi \sin\vartheta
+To solve these equations, we begin by assuming :math:`\lvert\mathcal{F}\rvert =
+\lvert\mathcal{S}\rvert \ne 0` and rewriting equation :eq:`ladder-eq2` as
 
-If we assume :math:`\mathcal{F} = 200` and :math:`\mathcal{S} = \pm 200`, then
-if the ladder surface faces up the optimal viewangles are
+.. math:: \tan\varphi = \pm\frac{\sqrt{1 - 2\cos^2 (\vartheta - \theta)}}
+          {\cos(\vartheta - \theta)}
 
-.. math:: \begin{align*}
-          \vartheta &= -\operatorname{sgn}(\mathcal{S}) \left( \pi - \arctan\frac{1}{\sqrt{\sin(-2\phi)}} \right) \\
-          \varphi &= -\arccos\sqrt{\sin(-2\phi)}
-          \end{align*}
+Eliminating :math:`\varphi` from equation :eq:`ladder-eq1`, we get
 
-If the ladder surface faces down, then we simply have :math:`\vartheta =
--\operatorname{sgn}(\mathcal{S}) \pi/2` and :math:`\varphi = -\pi/2`.  To
-calculate the final player yaw angle, add :math:`\theta` to the
-:math:`\vartheta` found above.
+.. math:: \frac{1 - N_z n_x}{N_z \sqrt{n_x^2 + n_y^2}} =
+          \pm \sqrt{1 - 2\cos^2 (\vartheta - \theta)}
 
-Sometimes we want to maximise sideways climbing speed, which is moving along
-the :math:`y` axis under the assumptions made earlier.  To accomplish this we
-maximise :math:`v'_y`, giving the equations
+Squaring both sides and simplifying gives
 
-.. math:: \sin\vartheta \sin\varphi = 0
+.. math:: \tan^2 (\vartheta - \theta) = \frac{1}{2 n_z \sqrt{n_x^2 + n_y^2}}
 
-.. math:: \cos\vartheta \cos\varphi + \operatorname{sgn}(\mathcal{S})\sin\vartheta = 0
+Immediately we observe that :math:`n_z \ge 0` is required for this equation
+to have real solutions.  We will deal with this later.
 
-Notice how they are indenpendent of :math:`\mathbf{\hat{n}}`.  They can be
-solved to produce the optimal solution
+At this point we are required to take square roots.  This is a critical step
+and we must be careful when choosing the signs of the roots for the numerator
+and the denominator, as they will determine the quadrant in which
+:math:`(\vartheta - \theta)` resides.  It can be helpful to define three freely
+chosen variables: the signs of :math:`\mathcal{S}`, :math:`\mathcal{F}` and
+:math:`v'_z` so that we can formulate the final viewangles in terms of them.
+For instance, if one chooses :math:`\mathcal{S} > 0`, :math:`\mathcal{F} < 0`
+and :math:`v'_z > 0`, the resulting :math:`(\vartheta - \theta)` should lie in
+the correct quadrant so as to produce a vertical velocity with the maximum
+magnitude and the chosen direction (downward in this example).  To begin we
+should examine equation :eq:`laddervz` more closely.  We make three observations:
 
-.. math:: \varphi = 0 \quad\quad \vartheta = -\operatorname{sgn}(\mathcal{S}) \frac{\pi}{4}
+#. The :math:`(1 - N_z n_z)` factor is positive when :math:`n_z` is in the
+   range of :math:`[0, 1/\sqrt{2}]` and negative when it lies in
+   :math:`[1/\sqrt{2}, 1]`.
+
+#. :math:`N_z` is positive for all :math:`n_z` in :math:`[0, 1]`.
+
+#. :math:`\cos\varphi` is always positive as :math:`\varphi` is confined within
+   :math:`[-\pi/2, \pi/2]`.
+
+Now we should be able to deduce the required sign of :math:`\sin\varphi` (and
+hence :math:`\varphi`) given the signs of :math:`v'_z` and :math:`\mathcal{F}`
+solely by inspection.  For example, if :math:`v'_z < 0` and :math:`\mathcal{F}
+> 0` are required, then to maximise the magnitude of :math:`v'_z` we must have
+:math:`-\mathcal{F} \sin\varphi < 0` which implies :math:`\varphi > 0`.  We are
+also able to determine the quadrant of :math:`(\vartheta - \theta)` by checking
+the required signs of :math:`\sin(\vartheta - \theta)` and
+:math:`\cos(\vartheta - \theta)` by the same technique.  By checking the signs
+and quadrants for all possible combinations of signs of :math:`\mathcal{S}`,
+:math:`\mathcal{F}`, :math:`(1/\sqrt{2} - n_z)` and :math:`v'_z` we can encode
+the optimal yaw and pitch angles as follows:
+
+.. math:: \vartheta = \operatorname{atan2}(n_y, n_x) +
+          \operatorname{atan2}\left( -\operatorname{sgn}(\mathcal{S} v'_z),\;
+          -\operatorname{sgn}(\mathcal{F} v'_z) \sqrt{2 n_z \sqrt{n_x^2 +
+          n_y^2}} \right)
+
+.. math:: \varphi = -\operatorname{sgn}(\mathcal{F} v'_z (1/\sqrt{2} - n_z))
+          \arccos\sqrt{2 n_z \sqrt{n_x^2 + n_y^2}}
+
+Note that the positive square root is taken inside the :math:`\arccos` as we
+want :math:`-\pi/2 \le \varphi \le \pi/2`.  These formulae should give the
+correct angles given any combination of free variables
+:math:`\operatorname{sgn}(\mathcal{S})`,
+:math:`\operatorname{sgn}(\mathcal{F})` and :math:`\operatorname{sgn}(v'_z)`.
+
+Optimal yaw and pitch when :math:`n_z < 0`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When :math:`n_z < 0`, the derivatives will never be zero.  However, we can
+observe that :math:`\lvert\varphi\rvert` increases when :math:`n_z` decreases.
+We also note we constrain the range of :math:`\varphi` to :math:`[-\pi/2,
+\pi/2]` while the value of :math:`\vartheta` is unrestricted.  Hence we can
+substitute the maximum value :math:`\lvert\varphi\rvert = \pi/2` into
+:math:`\partial v'_z/\partial\varphi = 0` and solve for :math:`\vartheta`.  It
+is found to be
+
+.. math:: \vartheta = \theta \pm \frac{\pi}{2}
+
+We need to determine what the sign of :math:`\pi/2` means.  Substituting
+:math:`\varphi = \pm\pi/2` and :math:`\vartheta - \theta = \pm\pi/2` into the
+original vertical velocity equation gives
+
+.. math:: v'_z = -\mathcal{F} \operatorname{sgn}(\varphi) (1 - N_z n_z) - N_z
+          \mathcal{S} \operatorname{sgn}(\vartheta - \theta) \sqrt{n_x^2 +
+          n_y^2}
+
+Note that :math:`N_z < 0` when :math:`n_z < -1/\sqrt{2}`.  Now we can use the
+similar technique to deduce the required signs of :math:`\varphi` and
+:math:`(\vartheta - \theta)`, which results in
+
+.. math:: \vartheta = \operatorname{atan2}(n_y,n_x) +
+          \operatorname{sgn}(\mathcal{S} v_z' (n_z + 1/\sqrt{2})) \frac{\pi}{2}
+
+.. math:: \varphi = -\operatorname{sgn}(\mathcal{F} v'_z) \frac{\pi}{2}
+
+Again, we wrote these formulae so that they give the correct angles given the
+freely chosen signs of :math:`\mathcal{S}`, :math:`\mathcal{F}` and
+:math:`v'_z`.
+
+Optimal yaw and pitch when :math:`n_z = 1`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Up to this point we have been assuming the normal vector not being vertical.
 If :math:`\mathbf{\hat{n}} = \langle 0,0,\pm 1\rangle`, then the second term in
@@ -560,7 +652,6 @@ thus
 .. math:: \lVert\mathbf{v}'\rVert = \sqrt{\mathcal{F}^2 + \mathcal{S}^2} \sqrt{1 - \cos^2 \alpha}
 
 which is maximised when :math:`\alpha = \pi/2`.  This can be achieved by
-setting :math:`\varphi = 0`.
-
-Lastly, regardless of viewangles, jumping off the ladder always sets
-:math:`\mathbf{v}' = 270\mathbf{\hat{n}}`.
+setting :math:`\varphi = 0`.  If :math:`\lvert\mathcal{F}\rvert =
+\lvert\mathcal{S}\rvert \ne 0` then the yaw should be 45 or 135 degrees away
+from the intended direction, depending on the signs.
