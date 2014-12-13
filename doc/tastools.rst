@@ -259,11 +259,11 @@ Half-Life execution script
 
 In Linux it is not possible to execute ``hl_linux`` directly, as it depends on
 the values of certain environment variables usually set by the Steam process.
-We are therefore forced to use the Steam GUI to specify additional switches to
-the executable, a process requiring several mouse clicks.  To eliminate this
-inconvenience we must be able to set up the environment correctly before
-executing ``hl_linux``, and to do this we first run Half-Life via Steam then
-grab the values of relevant environment variables by issuing ::
+We could use the Steam GUI to specify additional switches to the executable,
+but this requires several mouse clicks.  To eliminate this inconvenience we
+must be able to set up the environment correctly before executing ``hl_linux``.
+To determine the values of these environment variables we run Half-Life via
+Steam then grab the values by issuing::
 
   ps ex | grep '[h]l_linux'
 
@@ -302,7 +302,8 @@ This process has been done for you, and the resulting script, named
     exec ./hl_linux -steam "$@"
 
 Nevertheless, we do not guarantee that this script will run successfully in
-your system.
+your system.  For example, it has been reported that on some systems the
+``SteamApps`` folder is in lowercase.
 
 
 Scripting
