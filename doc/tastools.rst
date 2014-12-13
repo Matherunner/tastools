@@ -567,7 +567,7 @@ These are all the recognised settings:
   waitpad 2 respectively.  This is mandatory.
 
 ``sim_mod = MOD``
-  Run ``MOD``.  The default is ``tastools``.
+  Run ``MOD``.  The default is ``valve``.
 
 ``sim_src_script = SCRIPT``
   Use ``SCRIPT`` as the source simulation script.  The default is

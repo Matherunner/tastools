@@ -91,7 +91,7 @@ if ret:
 
 if args.action == 'sim':
     sim_src = config_section.get('sim_src_script', args.segment + '_sim.cfg')
-    sim_mod = config_section.get('sim_mod', 'tastools')
+    sim_mod = config_section.get('sim_mod', 'valve')
     dest_path = os.path.join(hl_path, sim_mod, dest_prefix)
 
     print('Generating simulation script...')
