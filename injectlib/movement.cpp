@@ -429,8 +429,6 @@ static void load_player_movevars(playerinfo_t &plrinfo)
     if (plrinfo.postype == PositionGround) {
         double E = *(float *)(p_movevars + 0x4);
         double k = get_fric_coef(plrinfo.vel, plrinfo.pos);
-        // FIXME: this friction may not be applied if unducking, as unducking
-        // may change onground state
         strafe_fric(plrinfo.vel, E, k * plrinfo.tau);
         plrinfo.L = plrinfo.M;
         plrinfo.A = *(float *)(p_movevars + 0x10);
