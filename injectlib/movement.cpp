@@ -442,7 +442,7 @@ static void load_player_movevars(playerinfo_t &plrinfo)
         plrinfo.L = plrinfo.M;
         plrinfo.A = *(float *)(p_movevars + 0x10);
     } else
-        abort_with_err("Unkonwn postype encountered.");
+        abort_with_err("Unknown postype encountered.");
 }
 
 static void update_line(const playerinfo_t &plrinfo)
