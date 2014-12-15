@@ -62,6 +62,7 @@ struct playerinfo_t
     double basevel[3];
     float viewangles[3];
     position_t postype;
+    double nofricspd;
 };
 
 typedef void (*CL_CreateMove_func_t)(float, void *, int);
@@ -108,6 +109,7 @@ static cvar_t **pp_cl_upspeed = nullptr;
 
 static cvar_t *cl_db4c_ceil = nullptr;
 static cvar_t *cl_lgagst_origM = nullptr;
+static cvar_t *cl_mtype = nullptr;
 
 // 0 to do nothing, 1 to mean +jump or +duck, and 2 to mean -jump or -duck.
 static int jump_action = 0;
@@ -426,6 +428,7 @@ static void load_player_state(playerinfo_t &plrinfo)
 
 static void load_player_movevars(playerinfo_t &plrinfo)
 {
+    plrinfo.nofricspd = std::hypot(plrinfo.vel[0], plrinfo.vel[1]);
     if (plrinfo.postype == PositionGround) {
         double E = *(float *)(p_movevars + 0x4);
         double k = get_fric_coef(plrinfo.vel, plrinfo.pos);
@@ -508,21 +511,25 @@ static void do_strafe_none(playerinfo_t &plrinfo)
 static void do_strafe_tas(playerinfo_t &plrinfo)
 {
     double yaw = plrinfo.viewangles[1] * M_PI / 180;
+    double tauMA = plrinfo.tau * plrinfo.M * plrinfo.A;
     int Sdir = 0, Fdir = 0;
 
     // Do the strafing!
     if (g_moveaction == StrafeLine) {
         update_line(plrinfo);
         strafe_line_opt(yaw, Sdir, Fdir, plrinfo.vel, plrinfo.pos, plrinfo.L,
-                        plrinfo.tau, plrinfo.M * plrinfo.A, line_origin,
-                        line_dir);
+                        plrinfo.tau, plrinfo.M * plrinfo.A,
+                        line_origin, line_dir);
     } else if (g_moveaction == StrafeLeft || g_moveaction == StrafeRight) {
-        strafe_side_opt(yaw, Sdir, Fdir, plrinfo.vel, plrinfo.L,
-                        plrinfo.tau * plrinfo.M * plrinfo.A,
-                        g_moveaction == StrafeRight ? 1 : -1);
+        int dir = g_moveaction == StrafeRight ? 1 : -1;
+        if (cl_mtype->value == 1)
+            strafe_side_opt(yaw, Sdir, Fdir, plrinfo.vel, plrinfo.L,
+                            tauMA, dir);
+        else
+            strafe_side_const(yaw, Sdir, Fdir, plrinfo.vel, plrinfo.nofricspd,
+                              plrinfo.L, tauMA, dir);
     } else if (g_moveaction == StrafeBack) {
-        strafe_back(yaw, Sdir, Fdir, plrinfo.vel,
-                    plrinfo.tau * plrinfo.M * plrinfo.A);
+        strafe_back(yaw, Sdir, Fdir, plrinfo.vel, tauMA);
     }
 
     if (Sdir > 0) {
@@ -842,8 +849,9 @@ void initialize_movement(uintptr_t clso_addr, const symtbl_t &clso_st,
     pp_cl_backspeed = (cvar_t **)(clso_addr + clso_st.at("cl_backspeed"));
     pp_cl_upspeed = (cvar_t **)(clso_addr + clso_st.at("cl_upspeed"));
 
-    cl_db4c_ceil = orig_RegisterVariable("cl_db4c_ceil", 0, 0);
-    cl_lgagst_origM = orig_RegisterVariable("cl_lgagst_origM", 0, 0);
+    cl_db4c_ceil = orig_RegisterVariable("cl_db4c_ceil", "0", 0);
+    cl_lgagst_origM = orig_RegisterVariable("cl_lgagst_origM", "0", 0);
+    cl_mtype = orig_RegisterVariable("cl_mtype", "1", 0);
 
     orig_AddCommand("+linestrafe", IN_LinestrafeDown);
     orig_AddCommand("-linestrafe", IN_LinestrafeUp);
