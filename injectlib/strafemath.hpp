@@ -13,6 +13,9 @@ void strafe_line_opt(double &yaw, int &Sdir, int &Fdir, double vel[2],
                      const double pos[2], double L, double tau, double MA,
                      const double line_origin[2], const double line_dir[2]);
 
+void strafe_side_const(double &yaw, int &Sdir, int &Fdir, double vel[2],
+                       double nofricspd, double L, double tauMA, int dir);
+
 void strafe_back(double &yaw, int &Sdir, int &Fdir, double vel[2],
                  double tauMA);
 

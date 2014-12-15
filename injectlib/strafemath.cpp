@@ -32,6 +32,19 @@ static double strafe_theta_opt(double speed, double L, double tauMA)
     return 0;
 }
 
+static double strafe_theta_const(double speed, double nofric_speed, double L,
+                                 double tauMA)
+{
+    double sqdiff = nofric_speed * nofric_speed - speed * speed;
+    double tmp = sqdiff / tauMA;
+    if (tmp + tauMA < 2 * L && 2 * speed >= std::fabs(tmp - tauMA))
+        return std::acos((tmp - tauMA) / (2 * speed));
+    tmp = std::sqrt(L * L - sqdiff);
+    if (tauMA - L > tmp && speed >= tmp)
+        return std::acos(-tmp / speed);
+    return strafe_theta_opt(speed, L, tauMA);
+}
+
 static void strafe_fme_vec(double vel[2], const double avec[2], double L,
                            double tauMA)
 {
@@ -121,6 +134,14 @@ void strafe_side_opt(double &yaw, int &Sdir, int &Fdir, double vel[2],
 {
     double speed = std::hypot(vel[0], vel[1]);
     double theta = strafe_theta_opt(speed, L, tauMA);
+    strafe_side(yaw, Sdir, Fdir, vel, theta, L, tauMA, dir);
+}
+
+void strafe_side_const(double &yaw, int &Sdir, int &Fdir, double vel[2],
+                       double nofricspd, double L, double tauMA, int dir)
+{
+    double speed = std::hypot(vel[0], vel[1]);
+    double theta = strafe_theta_const(speed, nofricspd, L, tauMA);
     strafe_side(yaw, Sdir, Fdir, vel, theta, L, tauMA, dir);
 }
 
