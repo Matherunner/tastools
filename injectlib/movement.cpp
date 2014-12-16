@@ -127,6 +127,7 @@ static int tas_dwj = 0;
 static int tas_lgagst = 0;
 static double tas_sba_acc = 0;
 static tascmd_t do_tas_sba = {0, false};
+static tascmd_t do_tas_s2y = {0, false};
 static tascmd_t do_setyaw = {0, false};
 static tascmd_t do_setpitch = {0, false};
 static tascmd_t do_olsshift = {0, false};
@@ -237,6 +238,12 @@ static void IN_TasStrafeByAng()
     do_tas_sba.value = std::fabs(std::atof(orig_Cmd_Argv(1))) * M_PI / 180;
     do_tas_sba.do_it = true;
     tas_sba_acc = 0;
+}
+
+static void IN_TasStrafeToYaw()
+{
+    do_tas_s2y.value = std::fmod(std::atof(orig_Cmd_Argv(1)), 360) * M_PI / 180;
+    do_tas_s2y.do_it = true;
 }
 
 static inline bool is_jump_in_oldbuttons()
@@ -608,6 +615,28 @@ static void do_tassba(const playerinfo_t &plrinfo)
     prev_unitvel[1] = plrinfo.vel[1] / speed;
 }
 
+static void convert_s2y_to_sba(const playerinfo_t &plrinfo)
+{
+    if (g_moveaction != StrafeLeft && g_moveaction != StrafeRight)
+        return;
+
+    double speed = std::hypot(plrinfo.vel[0], plrinfo.vel[1]);
+    float start_ang;
+    if (speed < 0.1)
+        start_ang = plrinfo.viewangles[1];
+    else
+        start_ang = std::atan2(plrinfo.vel[1], plrinfo.vel[0]);
+
+    do_tas_sba.value = start_ang - do_tas_s2y.value;
+    if (g_moveaction == StrafeLeft)
+        do_tas_sba.value = -do_tas_sba.value;
+
+    if (do_tas_sba.value < 0)
+        do_tas_sba.value += 2 * M_PI;
+
+    tas_sba_acc = 0;
+}
+
 static void do_movements(playerinfo_t &plrinfo, bool unduckable_onto_ground)
 {
     // If we are going to unduck onto ground, set the position type correctly
@@ -631,8 +660,14 @@ static void do_movements(playerinfo_t &plrinfo, bool unduckable_onto_ground)
         }
     }
 
+    if (do_tas_s2y.do_it) {
+        convert_s2y_to_sba(plrinfo);
+        do_tas_s2y.do_it = false;
+        do_tas_sba.do_it = true;
+    }
+
     if (do_tas_sba.do_it) {
-        double speed = hypot(plrinfo.vel[0], plrinfo.vel[1]);
+        double speed = std::hypot(plrinfo.vel[0], plrinfo.vel[1]);
         if (speed < 0.1) {
             prev_unitvel[0] = std::cos(plrinfo.viewangles[1] * M_PI / 180);
             prev_unitvel[1] = std::sin(plrinfo.viewangles[1] * M_PI / 180);
@@ -937,4 +972,5 @@ void initialize_movement(uintptr_t clso_addr, const symtbl_t &clso_st,
     orig_AddCommand("tas_dwj", IN_TasDuckWhenJump);
     orig_AddCommand("tas_lgagst", IN_TasLGAGST);
     orig_AddCommand("tas_sba", IN_TasStrafeByAng);
+    orig_AddCommand("tas_s2y", IN_TasStrafeToYaw);
 }
