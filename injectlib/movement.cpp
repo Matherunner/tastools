@@ -126,7 +126,7 @@ static int db4l_state = 0;
 static int tas_dwj = 0;
 static int tas_lgagst = 0;
 static double tas_sba_acc = 0;
-static tascmd_t tas_sba = {0, false};
+static tascmd_t do_tas_sba = {0, false};
 static tascmd_t do_setyaw = {0, false};
 static tascmd_t do_setpitch = {0, false};
 static tascmd_t do_olsshift = {0, false};
@@ -234,8 +234,8 @@ static void IN_TasLGAGST()
 
 static void IN_TasStrafeByAng()
 {
-    tas_sba.value = std::fabs(std::atof(orig_Cmd_Argv(1))) * M_PI / 180;
-    tas_sba.do_it = true;
+    do_tas_sba.value = std::fabs(std::atof(orig_Cmd_Argv(1))) * M_PI / 180;
+    do_tas_sba.do_it = true;
     tas_sba_acc = 0;
 }
 
@@ -576,8 +576,8 @@ static void update_position(playerinfo_t &plrinfo)
 
 static void do_tassba(const playerinfo_t &plrinfo)
 {
-    if (!tas_sba.value || (g_moveaction != StrafeLeft &&
-                           g_moveaction != StrafeRight))
+    if (!do_tas_sba.value || (g_moveaction != StrafeLeft &&
+                              g_moveaction != StrafeRight))
         return;
 
     double dp = prev_unitvel[0] * plrinfo.vel[0] +
@@ -599,10 +599,10 @@ static void do_tassba(const playerinfo_t &plrinfo)
     else
         tas_sba_acc += angdiff;
 
-    if (std::fabs(tas_sba_acc) < std::fabs(tas_sba.value))
+    if (std::fabs(tas_sba_acc) < std::fabs(do_tas_sba.value))
         orig_Cbuf_InsertTextLines("wait\n");
     else
-        tas_sba.value = 0;
+        do_tas_sba.value = 0;
 
     prev_unitvel[0] = plrinfo.vel[0] / speed;
     prev_unitvel[1] = plrinfo.vel[1] / speed;
@@ -631,7 +631,7 @@ static void do_movements(playerinfo_t &plrinfo, bool unduckable_onto_ground)
         }
     }
 
-    if (tas_sba.do_it) {
+    if (do_tas_sba.do_it) {
         double speed = hypot(plrinfo.vel[0], plrinfo.vel[1]);
         if (speed < 0.1) {
             prev_unitvel[0] = std::cos(plrinfo.viewangles[1] * M_PI / 180);
@@ -644,7 +644,7 @@ static void do_movements(playerinfo_t &plrinfo, bool unduckable_onto_ground)
         // The strafe by angle functionality remains active.  Setting do_it to
         // false simply means we will not update prev_unitvel here for the
         // subsequent frames.
-        tas_sba.do_it = false;
+        do_tas_sba.do_it = false;
     }
 
     load_player_movevars(plrinfo);
