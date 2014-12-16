@@ -2,8 +2,6 @@
 
 import sys
 
-strafe_ang_func = False
-
 for line in sys.stdin:
     line = line.strip()
     if line.startswith('//') or line.startswith('#') or not line:
@@ -30,11 +28,6 @@ for line in sys.stdin:
             sys.exit(1)
         continue
 
-    if tokens[0] == 'tas_sba' or tokens[0] == 'tas_s2y':
-        strafe_ang_func = True
-        print(line)
-        continue
-
     try:
         evalstack = []
         for token in tokens:
@@ -46,9 +39,6 @@ for line in sys.stdin:
                 evalstack.append(int(token))
     except (ValueError, IndexError):
         print(line)
-        if strafe_ang_func and line == 'wait':
-            strafe_ang_func = False
-            print('exec waitscript.cfg')
         continue
 
     if len(evalstack) != 1:
@@ -59,9 +49,4 @@ for line in sys.stdin:
         print('Expression evaluates to < 1:', line, file=sys.stderr)
         sys.exit(1)
 
-    if strafe_ang_func:
-        strafe_ang_func = False
-        evalstack[0] -= 1
-        print('wait')
-        print('exec waitscript.cfg')
     print('wait\n' * evalstack[0], end='')
