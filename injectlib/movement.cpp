@@ -71,6 +71,7 @@ typedef int (*AddCommand_func_t)(const char *, Keyin_func_t);
 typedef const char *(*Cmd_Argv_func_t)(int);
 typedef pmtrace_t (*PM_PlayerTrace_func_t)(float *, float *, int, int);
 typedef cvar_t *(*RegisterVariable_func_t)(const char *, const char *, int);
+typedef void (*Cbuf_InsertTextLines_func_t)(const char *);
 
 static CL_CreateMove_func_t orig_CL_CreateMove = nullptr;
 static GetSetViewAngles_func_t orig_SetViewAngles = nullptr;
@@ -79,6 +80,7 @@ static AddCommand_func_t orig_AddCommand = nullptr;
 static Cmd_Argv_func_t orig_Cmd_Argv = nullptr;
 static PM_PlayerTrace_func_t orig_PM_PlayerTrace = nullptr;
 static RegisterVariable_func_t orig_RegisterVariable = nullptr;
+static Cbuf_InsertTextLines_func_t orig_Cbuf_InsertTextLines = nullptr;
 
 static Keyin_func_t orig_IN_BackDown = nullptr;
 static Keyin_func_t orig_IN_BackUp = nullptr;
@@ -123,6 +125,8 @@ static int tas_db4l = 0;
 static int db4l_state = 0;
 static int tas_dwj = 0;
 static int tas_lgagst = 0;
+static double tas_sba_acc = 0;
+static tascmd_t tas_sba = {0, false};
 static tascmd_t do_setyaw = {0, false};
 static tascmd_t do_setpitch = {0, false};
 static tascmd_t do_olsshift = {0, false};
@@ -131,6 +135,7 @@ static moveaction_t g_old_moveaction = StrafeNone;
 static moveaction_t g_moveaction = StrafeNone;
 static double line_origin[2];
 static double line_dir[2];
+static float prev_unitvel[2];
 
 static const double TAS_FSU_MAG = 10000;
 
@@ -225,6 +230,13 @@ static void IN_TasDuckWhenJump()
 static void IN_TasLGAGST()
 {
     tas_lgagst = std::atoi(orig_Cmd_Argv(1));
+}
+
+static void IN_TasStrafeByAng()
+{
+    tas_sba.value = std::fabs(std::atof(orig_Cmd_Argv(1))) * M_PI / 180;
+    tas_sba.do_it = true;
+    tas_sba_acc = 0;
 }
 
 static inline bool is_jump_in_oldbuttons()
@@ -562,6 +574,40 @@ static void update_position(playerinfo_t &plrinfo)
     plrinfo.pos[2] += plrinfo.vel[2] * plrinfo.tau;
 }
 
+static void do_tassba(const playerinfo_t &plrinfo)
+{
+    if (!tas_sba.value || (g_moveaction != StrafeLeft &&
+                           g_moveaction != StrafeRight))
+        return;
+
+    double dp = prev_unitvel[0] * plrinfo.vel[0] +
+        prev_unitvel[1] * plrinfo.vel[1];
+    double speed = std::hypot(plrinfo.vel[0], plrinfo.vel[1]);
+    double cosine = dp / speed;
+    // make sure we don't get NaN later when taking acos due to FP errors
+    if (cosine > 1)
+        cosine = 1;
+    else if (cosine < -1)
+        cosine = -1;
+    double angdiff = std::acos(cosine);
+    // copy the sign of the z component of the cross product prev_unitvel x
+    // plrinfo.vel
+    angdiff = std::copysign(angdiff, prev_unitvel[0] * plrinfo.vel[1] -
+                            prev_unitvel[1] * plrinfo.vel[0]);
+    if (g_moveaction == StrafeRight)
+        tas_sba_acc -= angdiff;
+    else
+        tas_sba_acc += angdiff;
+
+    if (std::fabs(tas_sba_acc) < std::fabs(tas_sba.value))
+        orig_Cbuf_InsertTextLines("wait\n");
+    else
+        tas_sba.value = 0;
+
+    prev_unitvel[0] = plrinfo.vel[0] / speed;
+    prev_unitvel[1] = plrinfo.vel[1] / speed;
+}
+
 static void do_movements(playerinfo_t &plrinfo, bool unduckable_onto_ground)
 {
     // If we are going to unduck onto ground, set the position type correctly
@@ -585,6 +631,22 @@ static void do_movements(playerinfo_t &plrinfo, bool unduckable_onto_ground)
         }
     }
 
+    if (tas_sba.do_it) {
+        double speed = hypot(plrinfo.vel[0], plrinfo.vel[1]);
+        if (speed < 0.1) {
+            prev_unitvel[0] = std::cos(plrinfo.viewangles[1] * M_PI / 180);
+            prev_unitvel[1] = std::sin(plrinfo.viewangles[1] * M_PI / 180);
+        } else {
+            prev_unitvel[0] = plrinfo.vel[0] / speed;
+            prev_unitvel[1] = plrinfo.vel[1] / speed;
+        }
+
+        // The strafe by angle functionality remains active.  Setting do_it to
+        // false simply means we will not update prev_unitvel here for the
+        // subsequent frames.
+        tas_sba.do_it = false;
+    }
+
     load_player_movevars(plrinfo);
     add_correct_gravity(plrinfo);
 
@@ -595,6 +657,7 @@ static void do_movements(playerinfo_t &plrinfo, bool unduckable_onto_ground)
 
     orig_SetViewAngles(plrinfo.viewangles);
     update_position(plrinfo);
+    do_tassba(plrinfo);
 }
 
 static bool do_tasjumpbug(playerinfo_t &plrinfo, bool unduckable_onto_ground, bool &updated)
@@ -817,6 +880,7 @@ void initialize_movement(uintptr_t clso_addr, const symtbl_t &clso_st,
     p_movevars = (uintptr_t)(hwso_addr + hwso_st.at("movevars"));
     pp_hwpmove = (uintptr_t *)(hwso_addr + hwso_st.at("pmove"));
 
+    orig_Cbuf_InsertTextLines = (Cbuf_InsertTextLines_func_t)(hwso_addr + hwso_st.at("Cbuf_InsertTextLines"));
     orig_PM_PlayerTrace = (PM_PlayerTrace_func_t)(hwso_addr + hwso_st.at("PM_PlayerTrace"));
     orig_CL_CreateMove = (CL_CreateMove_func_t)(clso_addr + clso_st.at("CL_CreateMove"));
     orig_AddCommand = *(AddCommand_func_t *)(p_gEngfuncs + 0x44);
@@ -872,4 +936,5 @@ void initialize_movement(uintptr_t clso_addr, const symtbl_t &clso_st,
     orig_AddCommand("tas_jb", IN_TasJumpBug);
     orig_AddCommand("tas_dwj", IN_TasDuckWhenJump);
     orig_AddCommand("tas_lgagst", IN_TasLGAGST);
+    orig_AddCommand("tas_sba", IN_TasStrafeByAng);
 }
