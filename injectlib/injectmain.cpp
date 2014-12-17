@@ -11,6 +11,12 @@
 #include "movement.hpp"
 #include "customhud.hpp"
 
+#ifdef OPPOSINGFORCE
+#define HLSO_NAME "opfor.so"
+#else
+#define HLSO_NAME "hl.so"
+#endif
+
 struct edict_s;
 struct entity_state_s;
 struct KeyValueData_s;
@@ -103,12 +109,6 @@ static void load_cl_symbols()
 
 static void load_hl_symbols()
 {
-#ifdef OPPOSINGFORCE
-#define HLSO_NAME "opfor.so"
-#else
-#define HLSO_NAME "hl.so"
-#endif
-
     std::string hlso_fullpath;
     get_loaded_lib_info(HLSO_NAME, hlso_addr, hlso_fullpath);
     if (!hlso_addr)
