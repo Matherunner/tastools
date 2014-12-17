@@ -45,8 +45,8 @@ static double strafe_theta_const(double speed, double nofric_speed, double L,
     return strafe_theta_opt(speed, L, tauMA);
 }
 
-static void strafe_fme_vec(double vel[2], const double avec[2], double L,
-                           double tauMA)
+void strafe_fme_vec(double vel[2], const double avec[2], double L,
+                    double tauMA)
 {
     double tmp = L - vel[0] * avec[0] - vel[1] * avec[1];
     if (tmp < 0)
@@ -209,15 +209,4 @@ double strafe_opt_spd(double spd, double L, double tauMA)
     if (tmp < spd)
         return std::sqrt(spd * spd + tauMA * (L + tmp));
     return spd + tauMA;
-}
-
-void strafe_general(double v[2], const double a[2], double L, double tauMA)
-{
-    double tmp = L - v[0] * a[0] - v[1] * a[1];
-    if (tmp < 0)
-        return;
-    if (tauMA < tmp)
-        tmp = tauMA;
-    v[0] += tmp * a[0];
-    v[1] += tmp * a[1];
 }

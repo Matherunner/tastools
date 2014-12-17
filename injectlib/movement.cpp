@@ -523,7 +523,7 @@ static void do_strafe_none(playerinfo_t &plrinfo)
     double st = std::sin(plrinfo.viewangles[1] * M_PI / 180);
     avec[0] = (F * ct + S * st) * invmag;
     avec[1] = (F * st - S * ct) * invmag;
-    strafe_general(plrinfo.vel, avec, plrinfo.L,
+    strafe_fme_vec(plrinfo.vel, avec, plrinfo.L,
                    plrinfo.tau * plrinfo.M * plrinfo.A);
 }
 
