@@ -32,6 +32,8 @@ typedef void *(*dlsym_func_t)(void *, const char *);
 typedef void (*GameDLLInit_func_t)();
 typedef int (*AddToFullPack_func_t)(entity_state_s *, int, edict_s *, edict_s *, int, int, unsigned char *);
 typedef void (*PM_Move_func_t)(uintptr_t, int);
+typedef int (*PM_FlyMove_func_t)();
+typedef void (*PM_WalkMove_func_t)();
 typedef void (*SCR_UpdateScreen_func_t)();
 typedef void (*InitInput_func_t)();
 typedef void (*SV_SendClientMessages_func_t)();
@@ -46,6 +48,11 @@ static symtbl_t hwso_st;
 static symtbl_t hlso_st;
 static symtbl_t clso_st;
 static cvar_t sv_show_triggers;
+static int in_walkmove = 0;
+static int flymove_numtouches[2];
+static float flymove_vel1[3];
+static float flymove_pos1[3];
+static bool mvmt_clipped = false;
 
 cvar_t sv_taslog;
 bool tas_hook_initialized = false;
@@ -69,12 +76,18 @@ static InitInput_func_t orig_InitInput = nullptr;
 static SCR_UpdateScreen_func_t orig_SCR_UpdateScreen = nullptr;
 static PM_Move_func_t orig_hl_PM_Move = nullptr;
 static PM_Move_func_t orig_cl_PM_Move = nullptr;
+static PM_FlyMove_func_t orig_hl_PM_FlyMove = nullptr;
+static PM_FlyMove_func_t orig_cl_PM_FlyMove = nullptr;
+static PM_WalkMove_func_t orig_hl_PM_WalkMove = nullptr;
+static PM_WalkMove_func_t orig_cl_PM_WalkMove = nullptr;
 static SV_SendClientMessages_func_t orig_SV_SendClientMessages = nullptr;
 static SZ_GetSpace_func_t orig_SZ_GetSpace = nullptr;
 static PlayerPreThink_func_t orig_PlayerPreThink = nullptr;
 static CWorld_KeyValue_func_t orig_CWorld_KeyValue = nullptr;
 
 static cvar_t *p_r_norefresh = nullptr;
+static uintptr_t p_pmove = 0;
+static int *p_g_onladder = nullptr;
 
 static const int EF_NODRAW = 128;
 static const int kRenderTransColor = 1;
@@ -104,6 +117,8 @@ static void load_cl_symbols()
     clso_st = get_symbols(clso_fullpath.c_str());
 
     orig_cl_PM_Move = (PM_Move_func_t)(clso_addr + clso_st["PM_Move"]);
+    orig_cl_PM_FlyMove = (PM_FlyMove_func_t)(clso_addr + clso_st["PM_FlyMove"]);
+    orig_cl_PM_WalkMove = (PM_WalkMove_func_t)(clso_addr + clso_st["PM_WalkMove"]);
     orig_InitInput = (InitInput_func_t)(clso_addr + clso_st["_Z9InitInputv"]);
 }
 
@@ -116,6 +131,8 @@ static void load_hl_symbols()
     hlso_st = get_symbols(hlso_fullpath.c_str());
 
     orig_hl_PM_Move = (PM_Move_func_t)(hlso_addr + hlso_st["PM_Move"]);
+    orig_hl_PM_FlyMove = (PM_FlyMove_func_t)(hlso_addr + hlso_st["PM_FlyMove"]);
+    orig_hl_PM_WalkMove = (PM_WalkMove_func_t)(hlso_addr + hlso_st["PM_WalkMove"]);
     orig_GameDLLInit = (GameDLLInit_func_t)(hlso_addr + hlso_st["_Z11GameDLLInitv"]);
     orig_AddToFullPack = (AddToFullPack_func_t)(hlso_addr + hlso_st["_Z13AddToFullPackP14entity_state_siP7edict_sS2_iiPh"]);
     orig_PlayerPreThink = (PlayerPreThink_func_t)(hlso_addr + hlso_st["_Z14PlayerPreThinkP7edict_s"]);
@@ -123,6 +140,7 @@ static void load_hl_symbols()
 
     pp_gpGlobals = (uintptr_t *)(hlso_addr + hlso_st["gpGlobals"]);
     p_g_ulFrameCount = (unsigned int *)(hlso_addr + hlso_st["g_ulFrameCount"]);
+    p_g_onladder = (int *)(hlso_addr + hlso_st["g_onladder"]);
 }
 
 static void load_hw_symbols()
@@ -301,7 +319,8 @@ static void print_tasinfo(uintptr_t pmove, int server, int num)
                         *(float *)(pmove + 0xc0));
         orig_Con_Printf("pa %.8g %.8g\n", *(float *)(pmove + 0xa0),
                         *(float *)(pmove + 0xa4));
-    }
+    } else if (num == 2)
+        orig_Con_Printf("ntl %d %d\n", mvmt_clipped, *p_g_onladder);
 
     float *pos = (float *)(pmove + 0x38);
     orig_Con_Printf("pos %d %.8g %.8g %.8g\n", num, pos[0], pos[1], pos[2]);
@@ -317,9 +336,66 @@ static void print_tasinfo(uintptr_t pmove, int server, int num)
 
 extern "C" void PM_Move(uintptr_t ppmove, int server)
 {
+    p_pmove = ppmove;
+    mvmt_clipped = false;
     print_tasinfo(ppmove, server, 1);
     (server ? orig_hl_PM_Move : orig_cl_PM_Move)(ppmove, server);
     print_tasinfo(ppmove, server, 2);
+}
+
+extern "C" int PM_FlyMove()
+{
+    if (!*(int *)(p_pmove + 0x4))
+        return orig_cl_PM_FlyMove();
+
+    int *p_numtouch = (int *)(p_pmove + 0x4548c);
+    int old_numtouch = *p_numtouch;
+    *p_numtouch = 0;
+    int ret = orig_hl_PM_FlyMove();
+    if (!in_walkmove) {
+        mvmt_clipped = *p_numtouch;
+        *p_numtouch += old_numtouch;
+        return ret;
+    }
+
+    flymove_numtouches[in_walkmove - 1] = *p_numtouch;
+    *p_numtouch += old_numtouch;
+    if (in_walkmove == 1) {
+        for (int i = 0; i < 3; i++) {
+            flymove_vel1[i] = ((float *)(p_pmove + 0x5c))[i];
+            flymove_pos1[i] =((float *)(p_pmove + 0x38))[i];
+        }
+    }
+
+    in_walkmove++;
+    return ret;
+}
+
+extern "C" void PM_WalkMove()
+{
+    if (!*(int *)(p_pmove + 0x4)) {
+        orig_cl_PM_WalkMove();
+        return;
+    }
+
+    in_walkmove = 1;
+    orig_hl_PM_WalkMove();
+    if (in_walkmove == 1) {     // if PM_FlyMove wasn't called
+        mvmt_clipped = 0;
+        in_walkmove = 0;
+        return;
+    }
+    in_walkmove = 0;
+
+    float *vel = (float *)(p_pmove + 0x5c);
+    float *origin = (float *)(p_pmove + 0x38);
+
+    if (vel[0] == flymove_vel1[0] && vel[1] == flymove_vel1[1] &&
+        vel[2] == flymove_vel1[2] && origin[0] == flymove_pos1[0] &&
+        origin[1] == flymove_pos1[1] && origin[2] == flymove_pos1[2])
+        mvmt_clipped = flymove_numtouches[0];
+    else
+        mvmt_clipped = flymove_numtouches[1];
 }
 
 void CWorld::KeyValue(KeyValueData_s *keydat)
