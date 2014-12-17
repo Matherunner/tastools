@@ -30,6 +30,7 @@ extern const char *game_dir;
 extern unsigned int *p_g_ulFrameCount;
 extern uintptr_t *pp_gpGlobals;
 extern cvar_t sv_taslog;
+extern bool mvmt_clipped;
 
 void abort_with_err(const char *errstr, ...);
 

@@ -3,6 +3,9 @@
 #include "customhud.hpp"
 #include "common.hpp"
 
+#define ScreenWidth (*(int *)(p_gHUD + 0x1f98 + 0x4))
+#define ScreenHeight (*(int *)(p_gHUD + 0x1f98 + 0x8))
+
 struct TraceResult
 {
     int fAllSolid;
@@ -50,6 +53,7 @@ typedef void (*PF_traceline_DLL_func_t)(const float *, const float *, int, uintp
 typedef int (*DrawConsoleString_func_t)(int, int, const char *);
 typedef void (*DrawSetTextColor_func_t)(float, float, float);
 typedef void (*AddHudElem_func_t)(uintptr_t, void *);
+typedef void (*Draw_FillRGBA_func_t)(int, int, int, int, int, int, int, int);
 
 static uintptr_t p_gHUD = 0;
 static uintptr_t p_gEngfuncs = 0;
@@ -61,6 +65,7 @@ static PF_traceline_DLL_func_t orig_PF_traceline_DLL = nullptr;
 static AddHudElem_func_t orig_AddHudElem = nullptr;
 static DrawConsoleString_func_t orig_DrawConsoleString = nullptr;
 static DrawSetTextColor_func_t orig_DrawSetTextColor = nullptr;
+static Draw_FillRGBA_func_t orig_Draw_FillRGBA = nullptr;
 
 static float get_entity_health()
 {
@@ -79,6 +84,25 @@ static float get_entity_health()
     return *(float *)(trace.pHit + 0x80 + 0x160);
 }
 
+static void draw_blocked(float flTime)
+{
+    const int BOX_WIDTH = 50;
+    const float BOX_DURATION = 0.1;
+    static float prev_time = 0;
+
+    if (mvmt_clipped)
+        prev_time = flTime;
+
+    float timediff = flTime - prev_time;
+    if (timediff < 0 || timediff >= BOX_DURATION)
+        return;
+
+    orig_Draw_FillRGBA((ScreenWidth - BOX_WIDTH) / 2,
+                       (ScreenHeight - BOX_WIDTH - 10),
+                       BOX_WIDTH, BOX_WIDTH, 255, 255, 0,
+                       255 * (1 - timediff / BOX_DURATION));
+}
+
 int CHudPlrInfo::Init()
 {
     m_iFlags |= 1;
@@ -86,7 +110,7 @@ int CHudPlrInfo::Init()
     return 1;
 }
 
-int CHudPlrInfo::Draw(float)
+int CHudPlrInfo::Draw(float flTime)
 {
     orig_DrawSetTextColor(default_color[0], default_color[1],
                           default_color[2]);
@@ -136,6 +160,8 @@ int CHudPlrInfo::Draw(float)
         orig_DrawSetTextColor(default_color[0], default_color[1],
                               default_color[2]);
 
+    draw_blocked(flTime);
+
     return 1;
 }
 
@@ -144,6 +170,7 @@ void initialize_customhud(uintptr_t clso_addr, const symtbl_t &clso_st,
 {
     orig_PF_makevectors_I = (PF_makevectors_I_func_t)(hwso_addr + hwso_st.at("PF_makevectors_I"));
     orig_PF_traceline_DLL = (PF_traceline_DLL_func_t)(hwso_addr + hwso_st.at("PF_traceline_DLL"));
+    orig_Draw_FillRGBA = (Draw_FillRGBA_func_t)(hwso_addr + hwso_st.at("Draw_FillRGBA"));
     p_gHUD = (uintptr_t)(clso_addr + clso_st.at("gHUD"));
     p_gEngfuncs = (uintptr_t)(clso_addr + clso_st.at("gEngfuncs"));
     orig_AddHudElem = (AddHudElem_func_t)(clso_addr + clso_st.at("_ZN4CHud10AddHudElemEP8CHudBase"));

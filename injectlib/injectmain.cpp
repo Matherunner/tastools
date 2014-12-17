@@ -52,8 +52,8 @@ static int in_walkmove = 0;
 static int flymove_numtouches[2];
 static float flymove_vel1[3];
 static float flymove_pos1[3];
-static bool mvmt_clipped = false;
 
+bool mvmt_clipped = false;
 cvar_t sv_taslog;
 bool tas_hook_initialized = false;
 
