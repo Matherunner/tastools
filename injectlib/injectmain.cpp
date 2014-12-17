@@ -257,7 +257,7 @@ void PlayerPreThink(edict_s *ent)
 {
     if (sv_taslog.value) {
         orig_Con_Printf("prethink %u %.8g\n", *p_g_ulFrameCount,
-                        *p_host_frametime);
+                        *(float *)(*pp_gpGlobals + 0x4));
         orig_Con_Printf("health %.8g %.8g\n",
                         *(float *)((uintptr_t)ent + 0x80 + 0x160),
                         *(float *)((uintptr_t)ent + 0x80 + 0x1bc));
