@@ -348,18 +348,15 @@ extern "C" int PM_FlyMove()
     if (!*(int *)(p_pmove + 0x4))
         return orig_cl_PM_FlyMove();
 
-    int *p_numtouch = (int *)(p_pmove + 0x4548c);
+    const int *p_numtouch = (const int *)(p_pmove + 0x4548c);
     int old_numtouch = *p_numtouch;
-    *p_numtouch = 0;
     int ret = orig_hl_PM_FlyMove();
     if (!in_walkmove) {
-        mvmt_clipped = *p_numtouch;
-        *p_numtouch += old_numtouch;
+        mvmt_clipped = *p_numtouch - old_numtouch;
         return ret;
     }
 
-    flymove_numtouches[in_walkmove - 1] = *p_numtouch;
-    *p_numtouch += old_numtouch;
+    flymove_numtouches[in_walkmove - 1] = *p_numtouch - old_numtouch;
     if (in_walkmove == 1) {
         for (int i = 0; i < 3; i++) {
             flymove_vel1[i] = ((float *)(p_pmove + 0x5c))[i];
