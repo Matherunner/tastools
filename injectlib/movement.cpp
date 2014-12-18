@@ -864,6 +864,13 @@ final:
 
 extern "C" void CL_CreateMove(float frametime, void *cmd, int active)
 {
+    int *p_usehull = (int *)(*pp_hwpmove + 0xbc);
+    int old_usehull = *p_usehull;
+    if (get_duckstate() == 0 || get_duckstate() == 1)
+        *p_usehull = 0;
+    else
+        *p_usehull = 2;
+
     float viewangles[3];
     if (sv_taslog.value)
         orig_GetViewAngles(viewangles);
@@ -906,6 +913,8 @@ extern "C" void CL_CreateMove(float frametime, void *cmd, int active)
                         (new_viewangles[1] - viewangles[1] + M_U_DEG / 2) /
                         frametime);
     }
+
+    *p_usehull = old_usehull;
 }
 
 void initialize_movement(uintptr_t clso_addr, const symtbl_t &clso_st,
