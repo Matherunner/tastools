@@ -514,7 +514,7 @@ static void do_strafe_none(playerinfo_t &plrinfo)
     if (!F && !S)
         return;
     U = (p_in_up->state & 1) - (p_in_back->state & 1);
-    double invmag = 1 / std::sqrt(F + S + U);
+    double invmag = 1 / std::sqrt(std::fabs(F) + std::fabs(S) + std::fabs(U));
     F *= plrinfo.M * invmag;
     S *= plrinfo.M * invmag;
     U *= plrinfo.M * invmag;
