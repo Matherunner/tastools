@@ -869,7 +869,7 @@ extern "C" void CL_CreateMove(float frametime, void *cmd, int active)
     if (get_duckstate() == 0 || get_duckstate() == 1)
         *p_usehull = 0;
     else
-        *p_usehull = 2;
+        *p_usehull = 1;
 
     float viewangles[3];
     if (sv_taslog.value)
