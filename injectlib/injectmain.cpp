@@ -20,10 +20,16 @@
 struct edict_s;
 struct entity_state_s;
 struct KeyValueData_s;
+struct entvars_s;
 
 class CWorld
 {
     void KeyValue(KeyValueData_s *keydat);
+};
+
+class CBasePlayer
+{
+    int TakeDamage(entvars_s *, entvars_s *, float, int);
 };
 
 #ifdef OPPOSINGFORCE
@@ -40,6 +46,7 @@ typedef void (*SV_SendClientMessages_func_t)();
 typedef uintptr_t (*SZ_GetSpace_func_t)(uintptr_t, int);
 typedef void (*PlayerPreThink_func_t)(edict_s *);
 typedef void (*CWorld_KeyValue_func_t)(CWorld *, KeyValueData_s *);
+typedef int (*CBasePlayer_TakeDamage_func_t)(CBasePlayer *, entvars_s *, entvars_s *, float, int);
 
 static uintptr_t hwso_addr = 0;
 static uintptr_t hlso_addr = 0;
@@ -84,6 +91,7 @@ static SV_SendClientMessages_func_t orig_SV_SendClientMessages = nullptr;
 static SZ_GetSpace_func_t orig_SZ_GetSpace = nullptr;
 static PlayerPreThink_func_t orig_PlayerPreThink = nullptr;
 static CWorld_KeyValue_func_t orig_CWorld_KeyValue = nullptr;
+static CBasePlayer_TakeDamage_func_t orig_CBasePlayer_TakeDamage = nullptr;
 
 static cvar_t *p_r_norefresh = nullptr;
 static uintptr_t p_pmove = 0;
@@ -137,6 +145,7 @@ static void load_hl_symbols()
     orig_AddToFullPack = (AddToFullPack_func_t)(hlso_addr + hlso_st["_Z13AddToFullPackP14entity_state_siP7edict_sS2_iiPh"]);
     orig_PlayerPreThink = (PlayerPreThink_func_t)(hlso_addr + hlso_st["_Z14PlayerPreThinkP7edict_s"]);
     orig_CWorld_KeyValue = (CWorld_KeyValue_func_t)(hlso_addr + hlso_st["_ZN6CWorld8KeyValueEP14KeyValueData_s"]);
+    orig_CBasePlayer_TakeDamage = (CBasePlayer_TakeDamage_func_t)(hlso_addr + hlso_st["_ZN11CBasePlayer10TakeDamageEP9entvars_sS1_fi"]);
 
     pp_gpGlobals = (uintptr_t *)(hlso_addr + hlso_st["gpGlobals"]);
     p_g_ulFrameCount = (unsigned int *)(hlso_addr + hlso_st["g_ulFrameCount"]);
@@ -401,6 +410,15 @@ void CWorld::KeyValue(KeyValueData_s *keydat)
     if (strcmp(keystr, "startdark") == 0)
         return;
     orig_CWorld_KeyValue(this, keydat);
+}
+
+int CBasePlayer::TakeDamage(entvars_s *pevInflictor, entvars_s *pevAttacker,
+                            float flDamage, int bitsDamageType)
+{
+    if (sv_taslog.value)
+        orig_Con_Printf("dmg %.8g %d\n", flDamage, bitsDamageType);
+    return orig_CBasePlayer_TakeDamage(this, pevInflictor, pevAttacker,
+                                       flDamage, bitsDamageType);
 }
 
 #ifdef OPPOSINGFORCE
