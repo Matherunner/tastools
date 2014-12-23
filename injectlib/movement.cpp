@@ -68,7 +68,6 @@ struct playerinfo_t
 typedef void (*CL_CreateMove_func_t)(float, void *, int);
 typedef void (*Keyin_func_t)();
 typedef int (*AddCommand_func_t)(const char *, Keyin_func_t);
-typedef const char *(*Cmd_Argv_func_t)(int);
 typedef pmtrace_t (*PM_PlayerTrace_func_t)(float *, float *, int, int);
 typedef cvar_t *(*RegisterVariable_func_t)(const char *, const char *, int);
 typedef void (*Cbuf_InsertTextLines_func_t)(const char *);

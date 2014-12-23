@@ -47,9 +47,7 @@ typedef uintptr_t (*SZ_GetSpace_func_t)(uintptr_t, int);
 typedef void (*PlayerPreThink_func_t)(edict_s *);
 typedef void (*CWorld_KeyValue_func_t)(CWorld *, KeyValueData_s *);
 typedef int (*CBasePlayer_TakeDamage_func_t)(CBasePlayer *, entvars_s *, entvars_s *, float, int);
-typedef const char *(*Cmd_Argv_func_t)(int);
 typedef void (*Cmd_AddGameCommand_func_t)(const char *, void (*)());
-typedef const char *(*Cmd_Argv_func_t)(int);
 
 static uintptr_t hwso_addr = 0;
 static uintptr_t hlso_addr = 0;
