@@ -47,6 +47,9 @@ typedef uintptr_t (*SZ_GetSpace_func_t)(uintptr_t, int);
 typedef void (*PlayerPreThink_func_t)(edict_s *);
 typedef void (*CWorld_KeyValue_func_t)(CWorld *, KeyValueData_s *);
 typedef int (*CBasePlayer_TakeDamage_func_t)(CBasePlayer *, entvars_s *, entvars_s *, float, int);
+typedef const char *(*Cmd_Argv_func_t)(int);
+typedef void (*Cmd_AddGameCommand_func_t)(const char *, void (*)());
+typedef const char *(*Cmd_Argv_func_t)(int);
 
 static uintptr_t hwso_addr = 0;
 static uintptr_t hlso_addr = 0;
@@ -92,6 +95,8 @@ static SZ_GetSpace_func_t orig_SZ_GetSpace = nullptr;
 static PlayerPreThink_func_t orig_PlayerPreThink = nullptr;
 static CWorld_KeyValue_func_t orig_CWorld_KeyValue = nullptr;
 static CBasePlayer_TakeDamage_func_t orig_CBasePlayer_TakeDamage = nullptr;
+static Cmd_AddGameCommand_func_t orig_Cmd_AddGameCommand = nullptr;
+static Cmd_Argv_func_t orig_Cmd_Argv = nullptr;
 
 static cvar_t *p_r_norefresh = nullptr;
 static uintptr_t p_pmove = 0;
@@ -162,6 +167,8 @@ static void load_hw_symbols()
 
     orig_Cvar_RegisterVariable = (Cvar_RegisterVariable_func_t)(hwso_addr + hwso_st["Cvar_RegisterVariable"]);
     orig_Cvar_SetValue = (Cvar_SetValue_func_t)(hwso_addr + hwso_st["Cvar_SetValue"]);
+    orig_Cmd_AddGameCommand = (Cmd_AddGameCommand_func_t)(hwso_addr + hwso_st["Cmd_AddGameCommand"]);
+    orig_Cmd_Argv = (Cmd_Argv_func_t)(hwso_addr + hwso_st["Cmd_Argv"]);
     orig_SCR_UpdateScreen = (SCR_UpdateScreen_func_t)(hwso_addr + hwso_st["SCR_UpdateScreen"]);
     orig_SV_SendClientMessages = (SV_SendClientMessages_func_t)(hwso_addr + hwso_st["SV_SendClientMessages"]);
     orig_SZ_GetSpace = (SZ_GetSpace_func_t)(hwso_addr + hwso_st["SZ_GetSpace"]);
@@ -183,6 +190,20 @@ void InitInput()
     orig_InitInput();
 }
 
+static void change_plr_hp()
+{
+    if (!pp_sv_player || !*pp_sv_player)
+        return;
+    *(float *)(*pp_sv_player + 0x80 + 0x160) = std::atof(orig_Cmd_Argv(1));
+}
+
+static void change_plr_ap()
+{
+    if (!pp_sv_player || !*pp_sv_player)
+        return;
+    *(float *)(*pp_sv_player + 0x80 + 0x1bc) = std::atof(orig_Cmd_Argv(1));
+}
+
 void GameDLLInit()
 {
     if (!tas_hook_initialized) {
@@ -190,6 +211,8 @@ void GameDLLInit()
         // initialise if we do it in InitInput instead.
         initialize_customhud(clso_addr, clso_st, hwso_addr, hwso_st);
         load_hl_symbols();
+        orig_Cmd_AddGameCommand("ch_health", change_plr_hp);
+        orig_Cmd_AddGameCommand("ch_armor", change_plr_ap);
         tas_hook_initialized = true; // finally, everything is initialised
     }
     orig_GameDLLInit();
