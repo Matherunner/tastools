@@ -32,6 +32,11 @@ class CBasePlayer
     int TakeDamage(entvars_s *, entvars_s *, float, int);
 };
 
+class CGauss
+{
+    void StartFire();
+};
+
 #ifdef OPPOSINGFORCE
 typedef void *(*dlsym_func_t)(void *, const char *);
 #endif
@@ -48,6 +53,7 @@ typedef void (*PlayerPreThink_func_t)(edict_s *);
 typedef void (*CWorld_KeyValue_func_t)(CWorld *, KeyValueData_s *);
 typedef int (*CBasePlayer_TakeDamage_func_t)(CBasePlayer *, entvars_s *, entvars_s *, float, int);
 typedef void (*Cmd_AddGameCommand_func_t)(const char *, void (*)());
+typedef void (*CGauss_StartFire_func_t)(CGauss *);
 
 static uintptr_t hwso_addr = 0;
 static uintptr_t hlso_addr = 0;
@@ -56,6 +62,7 @@ static symtbl_t hwso_st;
 static symtbl_t hlso_st;
 static symtbl_t clso_st;
 static cvar_t sv_show_triggers;
+static cvar_t sv_sim_qg;
 static int in_walkmove = 0;
 static int flymove_numtouches[2];
 static float flymove_vel1[3];
@@ -93,12 +100,15 @@ static SZ_GetSpace_func_t orig_SZ_GetSpace = nullptr;
 static PlayerPreThink_func_t orig_PlayerPreThink = nullptr;
 static CWorld_KeyValue_func_t orig_CWorld_KeyValue = nullptr;
 static CBasePlayer_TakeDamage_func_t orig_CBasePlayer_TakeDamage = nullptr;
+static CGauss_StartFire_func_t orig_hl_CGauss_StartFire = nullptr;
+static CGauss_StartFire_func_t orig_cl_CGauss_StartFire = nullptr;
 static Cmd_AddGameCommand_func_t orig_Cmd_AddGameCommand = nullptr;
 static Cmd_Argv_func_t orig_Cmd_Argv = nullptr;
 
 static cvar_t *p_r_norefresh = nullptr;
 static uintptr_t p_pmove = 0;
 static int *p_g_onladder = nullptr;
+static uintptr_t p_g_Gauss = 0;
 
 static const int EF_NODRAW = 128;
 static const int kRenderTransColor = 1;
@@ -131,6 +141,8 @@ static void load_cl_symbols()
     orig_cl_PM_FlyMove = (PM_FlyMove_func_t)(clso_addr + clso_st["PM_FlyMove"]);
     orig_cl_PM_WalkMove = (PM_WalkMove_func_t)(clso_addr + clso_st["PM_WalkMove"]);
     orig_InitInput = (InitInput_func_t)(clso_addr + clso_st["_Z9InitInputv"]);
+    orig_cl_CGauss_StartFire = (CGauss_StartFire_func_t)(clso_addr + clso_st["_ZN6CGauss9StartFireEv"]);
+    p_g_Gauss = clso_addr + clso_st["g_Gauss"];
 }
 
 static void load_hl_symbols()
@@ -149,6 +161,7 @@ static void load_hl_symbols()
     orig_PlayerPreThink = (PlayerPreThink_func_t)(hlso_addr + hlso_st["_Z14PlayerPreThinkP7edict_s"]);
     orig_CWorld_KeyValue = (CWorld_KeyValue_func_t)(hlso_addr + hlso_st["_ZN6CWorld8KeyValueEP14KeyValueData_s"]);
     orig_CBasePlayer_TakeDamage = (CBasePlayer_TakeDamage_func_t)(hlso_addr + hlso_st["_ZN11CBasePlayer10TakeDamageEP9entvars_sS1_fi"]);
+    orig_hl_CGauss_StartFire = (CGauss_StartFire_func_t)(hlso_addr + hlso_st["_ZN6CGauss9StartFireEv"]);
 
     pp_gpGlobals = (uintptr_t *)(hlso_addr + hlso_st["gpGlobals"]);
     p_g_ulFrameCount = (unsigned int *)(hlso_addr + hlso_st["g_ulFrameCount"]);
@@ -330,6 +343,10 @@ extern "C" void Cvar_Init()
     sv_taslog.name = "sv_taslog";
     sv_taslog.string = "0";
     orig_Cvar_RegisterVariable(&sv_taslog);
+
+    sv_sim_qg.name = "sv_sim_qg";
+    sv_sim_qg.string = "0";
+    orig_Cvar_RegisterVariable(&sv_sim_qg);
 }
 
 static void print_tasinfo(uintptr_t pmove, int server, int num)
@@ -440,6 +457,29 @@ int CBasePlayer::TakeDamage(entvars_s *pevInflictor, entvars_s *pevAttacker,
         orig_Con_Printf("dmg %.8g %d\n", flDamage, bitsDamageType);
     return orig_CBasePlayer_TakeDamage(this, pevInflictor, pevAttacker,
                                        flDamage, bitsDamageType);
+}
+
+static inline void call_orig_startfire(CGauss *cgauss)
+{
+    if ((uintptr_t)cgauss == p_g_Gauss)
+        orig_cl_CGauss_StartFire(cgauss);
+    else
+        orig_hl_CGauss_StartFire(cgauss);
+}
+
+void CGauss::StartFire()
+{
+    if (!sv_sim_qg.value) {
+        call_orig_startfire(this);
+        return;
+    }
+
+    uintptr_t p_player = *(uintptr_t *)((uintptr_t)this + 0x80);
+    float *p_start_charge = (float *)(p_player + 0x640);
+    float old_start_charge = *p_start_charge;
+    *p_start_charge = 0;
+    call_orig_startfire(this);
+    *p_start_charge = old_start_charge;
 }
 
 #ifdef OPPOSINGFORCE
