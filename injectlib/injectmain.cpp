@@ -35,6 +35,7 @@ class CBasePlayer
 class CGauss
 {
     void StartFire();
+    void PrimaryAttack();
 };
 
 class CBasePlayerWeapon
@@ -59,6 +60,7 @@ typedef void (*CWorld_KeyValue_func_t)(CWorld *, KeyValueData_s *);
 typedef int (*CBasePlayer_TakeDamage_func_t)(CBasePlayer *, entvars_s *, entvars_s *, float, int);
 typedef void (*Cmd_AddGameCommand_func_t)(const char *, void (*)());
 typedef void (*CGauss_StartFire_func_t)(CGauss *);
+typedef void (*CGauss_PrimaryAttack_func_t)(CGauss *);
 typedef int (*CBasePlayerWeapon_DefaultDeploy_func_t)(CBasePlayerWeapon *, char *, char *, int, char *, int, int);
 
 static uintptr_t hwso_addr = 0;
@@ -70,6 +72,7 @@ static symtbl_t clso_st;
 static cvar_t sv_show_triggers;
 static cvar_t sv_sim_qg;
 static cvar_t sv_sim_qws;
+static cvar_t sv_sim_grf;
 static int in_walkmove = 0;
 static int flymove_numtouches[2];
 static float flymove_vel1[3];
@@ -109,6 +112,8 @@ static CWorld_KeyValue_func_t orig_CWorld_KeyValue = nullptr;
 static CBasePlayer_TakeDamage_func_t orig_CBasePlayer_TakeDamage = nullptr;
 static CGauss_StartFire_func_t orig_hl_CGauss_StartFire = nullptr;
 static CGauss_StartFire_func_t orig_cl_CGauss_StartFire = nullptr;
+static CGauss_PrimaryAttack_func_t orig_hl_CGauss_PrimaryAttack = nullptr;
+static CGauss_PrimaryAttack_func_t orig_cl_CGauss_PrimaryAttack = nullptr;
 static Cmd_AddGameCommand_func_t orig_Cmd_AddGameCommand = nullptr;
 static Cmd_Argv_func_t orig_Cmd_Argv = nullptr;
 static CBasePlayerWeapon_DefaultDeploy_func_t orig_hl_CBasePlayerWeapon_DefaultDeploy = nullptr;
@@ -151,6 +156,7 @@ static void load_cl_symbols()
     orig_cl_PM_WalkMove = (PM_WalkMove_func_t)(clso_addr + clso_st["PM_WalkMove"]);
     orig_InitInput = (InitInput_func_t)(clso_addr + clso_st["_Z9InitInputv"]);
     orig_cl_CGauss_StartFire = (CGauss_StartFire_func_t)(clso_addr + clso_st["_ZN6CGauss9StartFireEv"]);
+    orig_cl_CGauss_PrimaryAttack = (CGauss_PrimaryAttack_func_t)(clso_addr + clso_st["_ZN6CGauss13PrimaryAttackEv"]);
     orig_cl_CBasePlayerWeapon_DefaultDeploy = (CBasePlayerWeapon_DefaultDeploy_func_t)(clso_addr + clso_st["_ZN17CBasePlayerWeapon13DefaultDeployEPcS0_iS0_ii"]);
     p_g_Gauss = clso_addr + clso_st["g_Gauss"];
 }
@@ -172,6 +178,7 @@ static void load_hl_symbols()
     orig_CWorld_KeyValue = (CWorld_KeyValue_func_t)(hlso_addr + hlso_st["_ZN6CWorld8KeyValueEP14KeyValueData_s"]);
     orig_CBasePlayer_TakeDamage = (CBasePlayer_TakeDamage_func_t)(hlso_addr + hlso_st["_ZN11CBasePlayer10TakeDamageEP9entvars_sS1_fi"]);
     orig_hl_CGauss_StartFire = (CGauss_StartFire_func_t)(hlso_addr + hlso_st["_ZN6CGauss9StartFireEv"]);
+    orig_hl_CGauss_PrimaryAttack = (CGauss_PrimaryAttack_func_t)(hlso_addr + hlso_st["_ZN6CGauss13PrimaryAttackEv"]);
     orig_hl_CBasePlayerWeapon_DefaultDeploy = (CBasePlayerWeapon_DefaultDeploy_func_t)(hlso_addr + hlso_st["_ZN17CBasePlayerWeapon13DefaultDeployEPcS0_iS0_ii"]);
 
     pp_gpGlobals = (uintptr_t *)(hlso_addr + hlso_st["gpGlobals"]);
@@ -362,6 +369,10 @@ extern "C" void Cvar_Init()
     sv_sim_qws.name = "sv_sim_qws";
     sv_sim_qws.string = "0";
     orig_Cvar_RegisterVariable(&sv_sim_qws);
+
+    sv_sim_grf.name = "sv_sim_grf";
+    sv_sim_grf.string = "0";
+    orig_Cvar_RegisterVariable(&sv_sim_grf);
 }
 
 static void print_tasinfo(uintptr_t pmove, int server, int num)
@@ -495,6 +506,19 @@ void CGauss::StartFire()
     *p_start_charge = 0;
     call_orig_startfire(this);
     *p_start_charge = old_start_charge;
+}
+
+void CGauss::PrimaryAttack()
+{
+    if ((uintptr_t)this == p_g_Gauss)
+        orig_cl_CGauss_PrimaryAttack(this);
+    else
+        orig_hl_CGauss_PrimaryAttack(this);
+
+    if (sv_sim_grf.value) {
+        uintptr_t thisplayer = *(uintptr_t *)((uintptr_t)this + 0x80);
+        *(float *)(thisplayer + 0x264) = 0;
+    }
 }
 
 int CBasePlayerWeapon::DefaultDeploy(char *szViewModel, char *szWeaponModel,
