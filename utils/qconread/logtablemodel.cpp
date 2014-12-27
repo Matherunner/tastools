@@ -311,7 +311,7 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
     float tmppangs[2];
     unsigned int flags;
     int readState = 0;
-    QStringList tokens;
+    QVector<QStringRef> tokens;
     QTextStream textStream(&logFile);
     for (;;) {
         QString line = textStream.readLine();
@@ -320,24 +320,24 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
         switch (readState) {
         case 0:
             if (line.startsWith("prethink ")) {
-                tokens = line.split(' ');
+                tokens = line.splitRef(' ');
                 frameNums.append(tokens[1].toUInt());
                 logTableData[HEAD_FRATE].append(1 / tokens[2].toFloat());
                 readState = 1;
                 continue;
             } else if (line.startsWith("dmg ")) {
-                tokens = line.split(' ');
+                tokens = line.splitRef(' ');
                 damages[frameNums.length() - 1] = qMakePair(
                     tokens[1].toFloat(), tokens[2].toUInt());
                 continue;
             } else if (line.startsWith("obj ")) {
-                tokens = line.split(' ');
+                tokens = line.splitRef(' ');
                 objmoves[frameNums.length() - 1] = std::make_tuple(
-                    tokens[1][0] != '0', tokens[2].toFloat(),
+                    tokens[1].at(0) != '0', tokens[2].toFloat(),
                     tokens[3].toFloat());
                 continue;
             } else if (line.startsWith("expld ")) {
-                tokens = line.split(' ');
+                tokens = line.splitRef(' ');
                 float disp[3] = {tokens[7].toFloat() - tokens[1].toFloat(),
                                  tokens[8].toFloat() - tokens[2].toFloat(),
                                  tokens[9].toFloat() - tokens[3].toFloat()};
@@ -350,7 +350,7 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
         case 1:
             if (!line.startsWith("health "))
                 break;
-            tokens = line.split(' ');
+            tokens = line.splitRef(' ');
             logTableData[HEAD_HP].append(tokens[1].toFloat());
             logTableData[HEAD_AP].append(tokens[2].toFloat());
             readState = 2;
@@ -358,7 +358,7 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
         case 2:
             if (!line.startsWith("usercmd "))
                 break;
-            tokens = line.split(' ');
+            tokens = line.splitRef(' ');
             logTableData[HEAD_MSEC].append(tokens[1].toShort());
             flags = tokens[2].toUInt();
             logTableData[HEAD_DUCK].append((flags & IN_DUCK) != 0);
@@ -374,7 +374,7 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
         case 3:
             if (!line.startsWith("fsu "))
                 break;
-            tokens = line.split(' ');
+            tokens = line.splitRef(' ');
             logTableData[HEAD_FMOVE].append(tokens[1].toInt());
             logTableData[HEAD_SMOVE].append(tokens[2].toInt());
             logTableData[HEAD_UMOVE].append(tokens[3].toInt());
@@ -388,7 +388,7 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
         case 5:
             if (!line.startsWith("pa "))
                 break;
-            tokens = line.split(' ');
+            tokens = line.splitRef(' ');
             tmppangs[0] = tokens[1].toFloat();
             tmppangs[1] = tokens[2].toFloat();
             if (tmppangs[0] || tmppangs[1])
@@ -399,7 +399,7 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
         case 6:
             if (!line.startsWith("pmove 1 "))
                 break;
-            tokens = line.split(' ');
+            tokens = line.splitRef(' ');
             basevel[0] = tokens[5].toFloat();
             basevel[1] = tokens[6].toFloat();
             basevel[2] = tokens[7].toFloat();
@@ -410,7 +410,7 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
         case 7:
             if (!line.startsWith("ntl "))
                 break;
-            tokens = line.split(' ');
+            tokens = line.splitRef(' ');
             logTableData[HEAD_LADDER].append(tokens[2] != "0");
             if (tokens[1] != "0")
                 numtouches.insert(frameNums.length() - 1);
@@ -419,7 +419,7 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
         case 8:
             if (!line.startsWith("pos 2 "))
                 break;
-            tokens = line.split(' ');
+            tokens = line.splitRef(' ');
             logTableData[HEAD_POSX].append(tokens[2].toFloat());
             logTableData[HEAD_POSY].append(tokens[3].toFloat());
             logTableData[HEAD_POSZ].append(tokens[4].toFloat());
@@ -428,7 +428,7 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
         case 9:
             if (!line.startsWith("pmove 2 "))
                 break;
-            tokens = line.split(' ');
+            tokens = line.splitRef(' ');
             velocity[0] = tokens[2].toFloat();
             velocity[1] = tokens[3].toFloat();
             velocity[2] = tokens[4].toFloat();
@@ -439,7 +439,7 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
             logTableData[HEAD_OG].append(tokens[10] != "-1");
             if (tokens[9].toUInt() & FL_DUCKING)
                 logTableData[HEAD_DST].append(2);
-            else if (tokens[8][0] != '0')
+            else if (tokens[8].at(0) != '0')
                 logTableData[HEAD_DST].append(1);
             else
                 logTableData[HEAD_DST].append(0);
