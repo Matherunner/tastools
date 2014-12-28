@@ -590,22 +590,53 @@ void LogTableModel::clearAllRows()
 QModelIndex LogTableModel::findDiff(const QModelIndex &curIndex,
                                     bool forward) const
 {
+#define SEARCHDIFF(field)                                               \
+    {                                                                   \
+        auto curVal = logTableData[curIndex.row()].field;               \
+        if (forward) {                                                  \
+            for (int row = curIndex.row() + 1;                          \
+                 row < logTableData.length(); row++) {                  \
+                if ((logTableData[row].field) != curVal)                \
+                    return createIndex(row, curIndex.column());         \
+            }                                                           \
+        } else {                                                        \
+            for (int row = curIndex.row() - 1; row >= 0; row--) {       \
+                if ((logTableData[row].field) != curVal)                \
+                    return createIndex(row, curIndex.column());         \
+            }                                                           \
+        }                                                               \
+    }
+
     if (!curIndex.isValid())
         return QModelIndex();
 
-    // auto searchList = logTableData[curIndex.column()];
-    // const QVariant &curVal = searchList[curIndex.row()];
-    // if (forward) {
-    //     for (int row = curIndex.row() + 1; row < searchList.length(); row++) {
-    //         if (searchList[row] != curVal)
-    //             return createIndex(row, curIndex.column());
-    //     }
-    // } else {
-    //     for (int row = curIndex.row() - 1; row >= 0; row--) {
-    //         if (searchList[row] != curVal)
-    //             return createIndex(row, curIndex.column());
-    //     }
-    // }
+    switch (curIndex.column()) {
+    case HEAD_FRATE: SEARCHDIFF(frate); break;
+    case HEAD_MSEC: SEARCHDIFF(msec); break;
+    case HEAD_HP: SEARCHDIFF(hp); break;
+    case HEAD_AP: SEARCHDIFF(ap); break;
+    case HEAD_HSPD: SEARCHDIFF(hspd); break;
+    case HEAD_ANG: SEARCHDIFF(ang); break;
+    case HEAD_VSPD: SEARCHDIFF(vspd); break;
+    case HEAD_OG: SEARCHDIFF(og); break;
+    case HEAD_DST: SEARCHDIFF(dst); break;
+    case HEAD_DUCK: SEARCHDIFF(buttons & IN_DUCK); break;
+    case HEAD_JUMP: SEARCHDIFF(buttons & IN_JUMP); break;
+    case HEAD_FMOVE: SEARCHDIFF(fmove); break;
+    case HEAD_SMOVE: SEARCHDIFF(smove); break;
+    case HEAD_UMOVE: SEARCHDIFF(umove); break;
+    case HEAD_YAW: SEARCHDIFF(yaw); break;
+    case HEAD_PITCH: SEARCHDIFF(pitch); break;
+    case HEAD_USE: SEARCHDIFF(buttons & IN_USE); break;
+    case HEAD_ATTACK: SEARCHDIFF(buttons & IN_ATTACK); break;
+    case HEAD_ATTACK2: SEARCHDIFF(buttons & IN_ATTACK2); break;
+    case HEAD_RELOAD: SEARCHDIFF(buttons & IN_RELOAD); break;
+    case HEAD_WLVL: SEARCHDIFF(wlvl); break;
+    case HEAD_LADDER: SEARCHDIFF(ladder); break;
+    case HEAD_POSX: SEARCHDIFF(posx); break;
+    case HEAD_POSY: SEARCHDIFF(posy); break;
+    case HEAD_POSZ: SEARCHDIFF(posz); break;
+    }
 
     return QModelIndex();
 }
