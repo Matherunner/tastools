@@ -3,6 +3,9 @@
 #include <QTextStream>
 #include <QDebug>
 #include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
 #include "logtablemodel.h"
 
 using std::hypot;
@@ -331,161 +334,231 @@ QVariant LogTableModel::headerData(int section, Qt::Orientation orientation,
 
 bool LogTableModel::parseLogFile(const QString &logFileName)
 {
-    QFile logFile(logFileName);
-    if (!logFile.open(QIODevice::ReadOnly | QIODevice::Text))
+#define STARTTOK(n) tok = strtok_r(lineptr + (n), " ", &saveptr);
+#define NEXTTOK tok = strtok_r(NULL, " ", &saveptr);
+
+    FILE *logFile = std::fopen(logFileName.toUtf8().data(), "r");
+    if (!logFile)
         return false;
 
-    float velocity[3];
     float basevel[3] = {0, 0, 0};
-    float tmppangs[2];
     int readState = 0;
-    QVector<QStringRef> tokens;
-    QTextStream textStream(&logFile);
     LogEntry logEntry;
+    size_t n = 1024;
+    char *lineptr = (char *)std::malloc(n);
 
-    for (;;) {
-        QString line = textStream.readLine();
-        if (line.isNull())
-            break;
+    while (getline(&lineptr, &n, logFile) != -1) {
+        char *saveptr;
+        char *tok;
+
         switch (readState) {
         case 0:
-            if (line.startsWith("prethink ")) {
-                tokens = line.splitRef(' ');
-                frameNums.append(tokens[1].toUInt());
+            if (strncmp(lineptr, "prethink", 8) == 0) {
+                STARTTOK(8);
+                frameNums.append(std::atoi(tok));
                 logTableData.append(logEntry);
-                logTableData.last().HEAD_FRATE = 1 / tokens[2].toFloat();
+                NEXTTOK;
+                logTableData.last().HEAD_FRATE = 1 / std::atof(tok);
                 readState = 1;
                 continue;
-            } else if (line.startsWith("dmg ")) {
-                tokens = line.splitRef(' ');
-                damages[frameNums.length() - 1] = qMakePair(
-                    tokens[1].toFloat(), tokens[2].toUInt());
+            } else if (strncmp(lineptr, "dmg", 3) == 0) {
+                STARTTOK(3);
+                float dmg = std::atof(tok);
+                NEXTTOK;
+                unsigned long bits = std::strtoul(tok, NULL, 10);
+                damages[frameNums.length() - 1] = qMakePair(dmg, bits);
                 continue;
-            } else if (line.startsWith("obj ")) {
-                tokens = line.splitRef(' ');
-                objmoves[frameNums.length() - 1] = std::make_tuple(
-                    tokens[1].at(0) != '0', tokens[2].toFloat(),
-                    tokens[3].toFloat());
+            } else if (strncmp(lineptr, "obj", 3) == 0) {
+                STARTTOK(3);
+                bool push = *tok != '0';
+                NEXTTOK;
+                float velx = std::atof(tok);
+                NEXTTOK;
+                float vely = std::atof(tok);
+                objmoves[frameNums.length() - 1] =
+                    std::make_tuple(push, velx, vely);
                 continue;
-            } else if (line.startsWith("expld ")) {
-                tokens = line.splitRef(' ');
-                float disp[3] = {tokens[7].toFloat() - tokens[1].toFloat(),
-                                 tokens[8].toFloat() - tokens[2].toFloat(),
-                                 tokens[9].toFloat() - tokens[3].toFloat()};
-                explddists[frameNums.length() - 1] = sqrt(disp[0] * disp[0] +
-                                                          disp[1] * disp[1] +
-                                                          disp[2] * disp[2]);
+            } else if (strncmp(lineptr, "expld", 5) == 0) {
+                float start[3];
+                STARTTOK(5);
+                start[0] = std::atof(tok);
+                NEXTTOK;
+                start[1] = std::atof(tok);
+                NEXTTOK;
+                start[2] = std::atof(tok);
+
+                float end[3];
+                NEXTTOK;
+                NEXTTOK;
+                NEXTTOK;
+                NEXTTOK;
+                end[0] = std::atof(tok);
+                NEXTTOK;
+                end[1] = std::atof(tok);
+                NEXTTOK;
+                end[2] = std::atof(tok);
+
+                float disp[3] = {end[0] - start[0], end[1] - start[1],
+                                 end[2] - start[2]};
+                explddists[frameNums.length() - 1] = sqrt(
+                    disp[0] * disp[0] + disp[1] * disp[1] + disp[2] * disp[2]);
                 continue;
             }
             break;
         case 1:
-            if (!line.startsWith("health "))
+            if (strncmp(lineptr, "health", 6) != 0)
                 break;
-            tokens = line.splitRef(' ');
-            logTableData.last().HEAD_HP = tokens[1].toFloat();
-            logTableData.last().HEAD_AP = tokens[2].toFloat();
+            STARTTOK(6);
+            logTableData.last().HEAD_HP = std::atof(tok);
+            NEXTTOK;
+            logTableData.last().HEAD_AP = std::atof(tok);
             readState = 2;
             continue;
         case 2:
-            if (!line.startsWith("usercmd "))
+            if (strncmp(lineptr, "usercmd", 7) != 0)
                 break;
-            tokens = line.splitRef(' ');
-            logTableData.last().HEAD_MSEC = tokens[1].toShort();
-            logTableData.last().buttons = tokens[2].toUInt();
-            logTableData.last().HEAD_PITCH = tokens[3].toFloat();
-            logTableData.last().HEAD_YAW = tokens[4].toFloat();
+            STARTTOK(7);
+            logTableData.last().HEAD_MSEC = std::atoi(tok);
+            NEXTTOK;
+            logTableData.last().buttons = std::strtoul(tok, NULL, 10);
+            NEXTTOK;
+            logTableData.last().HEAD_PITCH = std::atof(tok);
+            NEXTTOK;
+            logTableData.last().HEAD_YAW = std::atof(tok);
             readState = 3;
             continue;
         case 3:
-            if (!line.startsWith("fsu "))
+            if (strncmp(lineptr, "fsu", 3) != 0)
                 break;
-            tokens = line.splitRef(' ');
-            logTableData.last().HEAD_FMOVE = tokens[1].toInt();
-            logTableData.last().HEAD_SMOVE = tokens[2].toInt();
-            logTableData.last().HEAD_UMOVE = tokens[3].toInt();
+            STARTTOK(3);
+            logTableData.last().HEAD_FMOVE = std::atoi(tok);
+            NEXTTOK;
+            logTableData.last().HEAD_SMOVE = std::atoi(tok);
+            NEXTTOK;
+            logTableData.last().HEAD_UMOVE = std::atoi(tok);
             readState = 4;
             continue;
         case 4:
-            if (!line.startsWith("fg "))
+            if (strncmp(lineptr, "fg", 2) != 0)
                 break;
             readState = 5;
             continue;
-        case 5:
-            if (!line.startsWith("pa "))
+        case 5: {
+            if (strncmp(lineptr, "pa", 2) != 0)
                 break;
-            tokens = line.splitRef(' ');
-            tmppangs[0] = tokens[1].toFloat();
-            tmppangs[1] = tokens[2].toFloat();
+            float tmppangs[2];
+            STARTTOK(2);
+            tmppangs[0] = std::atof(tok);
+            NEXTTOK;
+            tmppangs[1] = std::atof(tok);
             if (tmppangs[0] || tmppangs[1])
                 punchangles[frameNums.length() - 1] =
                     qMakePair(tmppangs[0], tmppangs[1]);
             readState = 6;
             continue;
+        }
         case 6:
-            if (!line.startsWith("pmove 1 "))
+            if (strncmp(lineptr, "pmove", 5) != 0)
                 break;
-            tokens = line.splitRef(' ');
-            basevel[0] = tokens[5].toFloat();
-            basevel[1] = tokens[6].toFloat();
-            basevel[2] = tokens[7].toFloat();
+            STARTTOK(5);
+            if (*tok != '1')
+                break;
+            NEXTTOK;
+            NEXTTOK;
+            NEXTTOK;
+            NEXTTOK;
+            basevel[0] = std::atof(tok);
+            NEXTTOK;
+            basevel[1] = std::atof(tok);
+            NEXTTOK;
+            basevel[2] = std::atof(tok);
             if (basevel[2])
                 vbasevels[frameNums.length() - 1] = basevel[2];
             readState = 7;
             continue;
         case 7:
-            if (!line.startsWith("ntl "))
+            if (strncmp(lineptr, "ntl", 3) != 0)
                 break;
-            tokens = line.splitRef(' ');
-            logTableData.last().HEAD_LADDER = tokens[2] != "0";
-            if (tokens[1] != "0")
+            STARTTOK(3);
+            if (*tok != '0')
                 numtouches.insert(frameNums.length() - 1);
+            NEXTTOK;
+            logTableData.last().HEAD_LADDER = *tok != '0';
             readState = 8;
             continue;
         case 8:
-            if (!line.startsWith("pos 2 "))
+            if (strncmp(lineptr, "pos", 3) != 0)
                 break;
-            tokens = line.splitRef(' ');
-            logTableData.last().HEAD_POSX = tokens[2].toFloat();
-            logTableData.last().HEAD_POSY = tokens[3].toFloat();
-            logTableData.last().HEAD_POSZ = tokens[4].toFloat();
+            STARTTOK(3);
+            if (*tok != '2')
+                break;
+            NEXTTOK;
+            logTableData.last().HEAD_POSX = std::atof(tok);
+            NEXTTOK;
+            logTableData.last().HEAD_POSY = std::atof(tok);
+            NEXTTOK;
+            logTableData.last().HEAD_POSZ = std::atof(tok);
             readState = 9;
             continue;
-        case 9:
-            if (!line.startsWith("pmove 2 "))
+        case 9: {
+            if (strncmp(lineptr, "pmove", 5) != 0)
                 break;
-            tokens = line.splitRef(' ');
-            velocity[0] = tokens[2].toFloat();
-            velocity[1] = tokens[3].toFloat();
-            velocity[2] = tokens[4].toFloat();
-            logTableData.last().HEAD_HSPD = hypotf(velocity[0], velocity[1]);
-            logTableData.last().HEAD_ANG = atan2f(velocity[1], velocity[0]) *
+            STARTTOK(5);
+            if (*tok != '2')
+                break;
+
+            float vel[3];
+            NEXTTOK;
+            vel[0] = std::atof(tok);
+            NEXTTOK;
+            vel[1] = std::atof(tok);
+            NEXTTOK;
+            vel[2] = std::atof(tok);
+            logTableData.last().HEAD_HSPD = hypotf(vel[0], vel[1]);
+            logTableData.last().HEAD_ANG = atan2f(vel[1], vel[0]) *
                 M_RAD2DEG;
-            logTableData.last().HEAD_VSPD = velocity[2];
-            logTableData.last().HEAD_OG = tokens[10] != "-1";
-            if (tokens[9].toUInt() & FL_DUCKING)
+            logTableData.last().HEAD_VSPD = vel[2];
+
+            NEXTTOK;
+            NEXTTOK;
+            NEXTTOK;
+            NEXTTOK;
+            bool bInDuck = *tok != '0';
+            NEXTTOK;
+            bool ducking = std::strtoul(tok, NULL, 10) & FL_DUCKING;
+            if (ducking)
                 logTableData.last().HEAD_DST = 2;
-            else if (tokens[8].at(0) != '0')
+            else if (bInDuck)
                 logTableData.last().HEAD_DST = 1;
             else
                 logTableData.last().HEAD_DST = 0;
-            logTableData.last().HEAD_WLVL = tokens[11].toShort();
+
+            NEXTTOK;
+            logTableData.last().HEAD_OG = std::atoi(tok) != -1;
+            NEXTTOK;
+            logTableData.last().HEAD_WLVL = std::atoi(tok);
             if (basevel[0] || basevel[1]) {
-                velocity[0] += basevel[0];
-                velocity[1] += basevel[1];
+                vel[0] += basevel[0];
+                vel[1] += basevel[1];
                 hbasevels[frameNums.length() - 1] = qMakePair(
-                    hypotf(velocity[0], velocity[1]),
-                    atan2f(velocity[1], velocity[0]) * M_RAD2DEG);
+                    hypotf(vel[0], vel[1]),
+                    atan2f(vel[1], vel[0]) * M_RAD2DEG);
             }
             readState = 0;
             continue;
         }
+        }
 
-        if (line.startsWith("pos") || line.startsWith("cl_yawspeed") ||
-            line.startsWith("execing"))
+        if (strncmp(lineptr, "pos", 3) == 0 ||
+            strncmp(lineptr, "cl_yawspeed", 11) == 0 ||
+            strncmp(lineptr, "execing", 7) == 0)
             continue;
 
-        extralines[frameNums.length() - 1].append(line);
+        extralines[frameNums.length() - 1].append(lineptr);
     }
+
+    std::free(lineptr);
+    std::fclose(logFile);
 
     if (extralines.contains(-1)){
         extralines[-1].append(extralines.value(0, QStringList()));
