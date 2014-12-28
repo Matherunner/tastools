@@ -6,6 +6,30 @@
 #include <QSet>
 #include <tuple>
 
+struct LogEntry
+{
+    unsigned int buttons;
+    float HEAD_FRATE;
+    float HEAD_HP;
+    float HEAD_AP;
+    float HEAD_HSPD;
+    float HEAD_ANG;
+    float HEAD_VSPD;
+    float HEAD_YAW;
+    float HEAD_PITCH;
+    float HEAD_POSX;
+    float HEAD_POSY;
+    float HEAD_POSZ;
+    short HEAD_FMOVE;
+    short HEAD_SMOVE;
+    short HEAD_UMOVE;
+    char HEAD_MSEC;
+    char HEAD_OG;
+    char HEAD_DST;
+    char HEAD_WLVL;
+    char HEAD_LADDER;
+};
+
 class LogTableModel : public QAbstractTableModel
 {
 public:
@@ -61,8 +85,7 @@ public:
     float sumDuration(int startRow, int endRow) const;
 
 private:
-    // We will be assuming that every QVector in this array has equal length.
-    QVector<QVariant> logTableData[HEAD_LENGTH];
+    QVector<LogEntry> logTableData;
     QVector<unsigned int> frameNums;
     QHash<unsigned int, QPair<float, unsigned int>> damages;
     QHash<unsigned int, QPair<float, float>> punchangles;

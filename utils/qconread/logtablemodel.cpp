@@ -76,33 +76,41 @@ QVariant LogTableModel::data(const QModelIndex &index, int role) const
     switch (role) {
     case Qt::DisplayRole:
         switch (index.column()) {
-        case HEAD_OG:
-        case HEAD_DST:
-        case HEAD_DUCK:
-        case HEAD_JUMP:
-        case HEAD_FMOVE:
-        case HEAD_SMOVE:
-        case HEAD_UMOVE:
-        case HEAD_USE:
-        case HEAD_ATTACK:
-        case HEAD_ATTACK2:
-        case HEAD_RELOAD:
-        case HEAD_WLVL:
-        case HEAD_LADDER:
-            return QVariant();
+        case HEAD_FRATE:
+            return logTableData[index.row()].HEAD_FRATE;
+        case HEAD_MSEC:
+            return logTableData[index.row()].HEAD_MSEC;
+        case HEAD_HP:
+            return logTableData[index.row()].HEAD_HP;
+        case HEAD_AP:
+            return logTableData[index.row()].HEAD_AP;
+        case HEAD_YAW:
+            return logTableData[index.row()].HEAD_YAW;
+        case HEAD_PITCH:
+            return logTableData[index.row()].HEAD_PITCH;
+        case HEAD_POSX:
+            return logTableData[index.row()].HEAD_POSX;
+        case HEAD_POSY:
+            return logTableData[index.row()].HEAD_POSY;
+        case HEAD_POSZ:
+            return logTableData[index.row()].HEAD_POSZ;
         case HEAD_HSPD:
+            if (hbasevels.contains(index.row()))
+                return '*' + QString::number(logTableData[index.row()].HEAD_HSPD);
+            else
+                return logTableData[index.row()].HEAD_HSPD;
         case HEAD_ANG:
-            if (!hbasevels.contains(index.row()))
-                break;
-            return '*' + QString::number(logTableData[index.column()]
-                                         [index.row()].toFloat());
+            if (hbasevels.contains(index.row()))
+                return '*' + QString::number(logTableData[index.row()].HEAD_ANG);
+            else
+                return logTableData[index.row()].HEAD_ANG;
         case HEAD_VSPD:
-            if (!vbasevels.contains(index.row()))
-                break;
-            return '*' + QString::number(logTableData[index.column()]
-                                         [index.row()].toFloat());
+            if (vbasevels.contains(index.row()))
+                return '*' + QString::number(logTableData[index.row()].HEAD_VSPD);
+            else
+                return logTableData[index.row()].HEAD_VSPD;
         }
-        return logTableData[index.column()][index.row()];
+        return QVariant();
 
     case Qt::ForegroundRole:
         switch (index.column()) {
@@ -125,24 +133,52 @@ QVariant LogTableModel::data(const QModelIndex &index, int role) const
                 return brushLRed;
             break;
         case HEAD_DST:
-            duckState = logTableData[HEAD_DST][index.row()].toInt();
+            duckState = logTableData[index.row()].HEAD_DST;
             if (duckState == 2)
                 return brushBlack;
             else if (duckState == 1)
                 return brushDckGray;
             break;
         case HEAD_DUCK:
-            if (logTableData[HEAD_DUCK][index.row()].toBool())
+            if (logTableData[index.row()].buttons & IN_DUCK)
                 return brushMagenta;
             break;
         case HEAD_JUMP:
-            if (logTableData[HEAD_JUMP][index.row()].toBool())
+            if (logTableData[index.row()].buttons & IN_JUMP)
                 return brushCyan;
             break;
+        case HEAD_USE:
+            if (logTableData[index.row()].buttons & IN_USE)
+                return brushYellow;
+            break;
+        case HEAD_ATTACK:
+            if (logTableData[index.row()].buttons & IN_ATTACK)
+                return brushYellow;
+            break;
+        case HEAD_ATTACK2:
+            if (logTableData[index.row()].buttons & IN_ATTACK2)
+                return brushYellow;
+            break;
+        case HEAD_RELOAD:
+            if (logTableData[index.row()].buttons & IN_RELOAD)
+                return brushYellow;
+            break;
         case HEAD_FMOVE:
+            moveVal = logTableData[index.row()].HEAD_FMOVE;
+            if (moveVal > 0)
+                return brushMoveBlue;
+            else if (moveVal < 0)
+                return brushMoveRed;
+            break;
         case HEAD_SMOVE:
+            moveVal = logTableData[index.row()].HEAD_SMOVE;
+            if (moveVal > 0)
+                return brushMoveBlue;
+            else if (moveVal < 0)
+                return brushMoveRed;
+            break;
         case HEAD_UMOVE:
-            moveVal = logTableData[index.column()][index.row()].toInt();
+            moveVal = logTableData[index.row()].HEAD_UMOVE;
             if (moveVal > 0)
                 return brushMoveBlue;
             else if (moveVal < 0)
@@ -158,31 +194,24 @@ QVariant LogTableModel::data(const QModelIndex &index, int role) const
                 punchangles[index.row()].second)
                 return brushLMagenta;
             break;
-        case HEAD_USE:
-        case HEAD_ATTACK:
-        case HEAD_ATTACK2:
-        case HEAD_RELOAD:
-            if (logTableData[index.column()][index.row()].toBool())
-                return brushYellow;
-            break;
         case HEAD_HP:
         case HEAD_AP:
             if (damages.contains(index.row()))
                 return brushRed;
             break;
         case HEAD_OG:
-            if (logTableData[HEAD_OG][index.row()].toBool())
+            if (logTableData[index.row()].HEAD_OG)
                 return brushOgGreen;
             break;
         case HEAD_WLVL:
-            waterLevel = logTableData[HEAD_WLVL][index.row()].toInt();
+            waterLevel = logTableData[index.row()].HEAD_WLVL;
             if (waterLevel >= 2)
                 return brushBlue;
             else if (waterLevel == 1)
                 return brushDimBlue;
             break;
         case HEAD_LADDER:
-            if (logTableData[HEAD_LADDER][index.row()].toBool())
+            if (logTableData[index.row()].HEAD_LADDER)
                 return brushBrown;
         }
         break;
@@ -309,10 +338,11 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
     float velocity[3];
     float basevel[3] = {0, 0, 0};
     float tmppangs[2];
-    unsigned int flags;
     int readState = 0;
     QVector<QStringRef> tokens;
     QTextStream textStream(&logFile);
+    LogEntry logEntry;
+
     for (;;) {
         QString line = textStream.readLine();
         if (line.isNull())
@@ -322,7 +352,8 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
             if (line.startsWith("prethink ")) {
                 tokens = line.splitRef(' ');
                 frameNums.append(tokens[1].toUInt());
-                logTableData[HEAD_FRATE].append(1 / tokens[2].toFloat());
+                logTableData.append(logEntry);
+                logTableData.last().HEAD_FRATE = 1 / tokens[2].toFloat();
                 readState = 1;
                 continue;
             } else if (line.startsWith("dmg ")) {
@@ -351,33 +382,27 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
             if (!line.startsWith("health "))
                 break;
             tokens = line.splitRef(' ');
-            logTableData[HEAD_HP].append(tokens[1].toFloat());
-            logTableData[HEAD_AP].append(tokens[2].toFloat());
+            logTableData.last().HEAD_HP = tokens[1].toFloat();
+            logTableData.last().HEAD_AP = tokens[2].toFloat();
             readState = 2;
             continue;
         case 2:
             if (!line.startsWith("usercmd "))
                 break;
             tokens = line.splitRef(' ');
-            logTableData[HEAD_MSEC].append(tokens[1].toShort());
-            flags = tokens[2].toUInt();
-            logTableData[HEAD_DUCK].append((flags & IN_DUCK) != 0);
-            logTableData[HEAD_JUMP].append((flags & IN_JUMP) != 0);
-            logTableData[HEAD_USE].append((flags & IN_USE) != 0);
-            logTableData[HEAD_ATTACK].append((flags & IN_ATTACK) != 0);
-            logTableData[HEAD_ATTACK2].append((flags & IN_ATTACK2) != 0);
-            logTableData[HEAD_RELOAD].append((flags & IN_RELOAD) != 0);
-            logTableData[HEAD_PITCH].append(tokens[3].toFloat());
-            logTableData[HEAD_YAW].append(tokens[4].toFloat());
+            logTableData.last().HEAD_MSEC = tokens[1].toShort();
+            logTableData.last().buttons = tokens[2].toUInt();
+            logTableData.last().HEAD_PITCH = tokens[3].toFloat();
+            logTableData.last().HEAD_YAW = tokens[4].toFloat();
             readState = 3;
             continue;
         case 3:
             if (!line.startsWith("fsu "))
                 break;
             tokens = line.splitRef(' ');
-            logTableData[HEAD_FMOVE].append(tokens[1].toInt());
-            logTableData[HEAD_SMOVE].append(tokens[2].toInt());
-            logTableData[HEAD_UMOVE].append(tokens[3].toInt());
+            logTableData.last().HEAD_FMOVE = tokens[1].toInt();
+            logTableData.last().HEAD_SMOVE = tokens[2].toInt();
+            logTableData.last().HEAD_UMOVE = tokens[3].toInt();
             readState = 4;
             continue;
         case 4:
@@ -411,7 +436,7 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
             if (!line.startsWith("ntl "))
                 break;
             tokens = line.splitRef(' ');
-            logTableData[HEAD_LADDER].append(tokens[2] != "0");
+            logTableData.last().HEAD_LADDER = tokens[2] != "0";
             if (tokens[1] != "0")
                 numtouches.insert(frameNums.length() - 1);
             readState = 8;
@@ -420,9 +445,9 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
             if (!line.startsWith("pos 2 "))
                 break;
             tokens = line.splitRef(' ');
-            logTableData[HEAD_POSX].append(tokens[2].toFloat());
-            logTableData[HEAD_POSY].append(tokens[3].toFloat());
-            logTableData[HEAD_POSZ].append(tokens[4].toFloat());
+            logTableData.last().HEAD_POSX = tokens[2].toFloat();
+            logTableData.last().HEAD_POSY = tokens[3].toFloat();
+            logTableData.last().HEAD_POSZ = tokens[4].toFloat();
             readState = 9;
             continue;
         case 9:
@@ -432,18 +457,18 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
             velocity[0] = tokens[2].toFloat();
             velocity[1] = tokens[3].toFloat();
             velocity[2] = tokens[4].toFloat();
-            logTableData[HEAD_HSPD].append(hypotf(velocity[0], velocity[1]));
-            logTableData[HEAD_ANG].append(atan2f(velocity[1], velocity[0])
-                                          * M_RAD2DEG);
-            logTableData[HEAD_VSPD].append(velocity[2]);
-            logTableData[HEAD_OG].append(tokens[10] != "-1");
+            logTableData.last().HEAD_HSPD = hypotf(velocity[0], velocity[1]);
+            logTableData.last().HEAD_ANG = atan2f(velocity[1], velocity[0]) *
+                M_RAD2DEG;
+            logTableData.last().HEAD_VSPD = velocity[2];
+            logTableData.last().HEAD_OG = tokens[10] != "-1";
             if (tokens[9].toUInt() & FL_DUCKING)
-                logTableData[HEAD_DST].append(2);
+                logTableData.last().HEAD_DST = 2;
             else if (tokens[8].at(0) != '0')
-                logTableData[HEAD_DST].append(1);
+                logTableData.last().HEAD_DST = 1;
             else
-                logTableData[HEAD_DST].append(0);
-            logTableData[HEAD_WLVL].append(tokens[11].toShort());
+                logTableData.last().HEAD_DST = 0;
+            logTableData.last().HEAD_WLVL = tokens[11].toShort();
             if (basevel[0] || basevel[1]) {
                 velocity[0] += basevel[0];
                 velocity[1] += basevel[1];
@@ -477,9 +502,7 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
 void LogTableModel::clearAllRows()
 {
     beginRemoveRows(QModelIndex(), 0, frameNums.length() - 1);
-    for (int i = 0; i < HEAD_LENGTH; i++) {
-        logTableData[i].clear();
-    }
+    logTableData.clear();
     frameNums.clear();
     damages.clear();
     punchangles.clear();
@@ -497,19 +520,19 @@ QModelIndex LogTableModel::findDiff(const QModelIndex &curIndex,
     if (!curIndex.isValid())
         return QModelIndex();
 
-    auto searchList = logTableData[curIndex.column()];
-    const QVariant &curVal = searchList[curIndex.row()];
-    if (forward) {
-        for (int row = curIndex.row() + 1; row < searchList.length(); row++) {
-            if (searchList[row] != curVal)
-                return createIndex(row, curIndex.column());
-        }
-    } else {
-        for (int row = curIndex.row() - 1; row >= 0; row--) {
-            if (searchList[row] != curVal)
-                return createIndex(row, curIndex.column());
-        }
-    }
+    // auto searchList = logTableData[curIndex.column()];
+    // const QVariant &curVal = searchList[curIndex.row()];
+    // if (forward) {
+    //     for (int row = curIndex.row() + 1; row < searchList.length(); row++) {
+    //         if (searchList[row] != curVal)
+    //             return createIndex(row, curIndex.column());
+    //     }
+    // } else {
+    //     for (int row = curIndex.row() - 1; row >= 0; row--) {
+    //         if (searchList[row] != curVal)
+    //             return createIndex(row, curIndex.column());
+    //     }
+    // }
 
     return QModelIndex();
 }
@@ -518,7 +541,7 @@ float LogTableModel::sumDuration(int startRow, int endRow) const
 {
     double duration = 0;
     for (int i = startRow; i <= endRow; i++) {
-        duration += 1 / logTableData[HEAD_FRATE][i].toDouble();
+        duration += 1 / (double)logTableData[i].HEAD_FRATE;
     }
     return duration;
 }
