@@ -9,25 +9,25 @@
 struct LogEntry
 {
     unsigned int buttons;
-    float HEAD_FRATE;
-    float HEAD_HP;
-    float HEAD_AP;
-    float HEAD_HSPD;
-    float HEAD_ANG;
-    float HEAD_VSPD;
-    float HEAD_YAW;
-    float HEAD_PITCH;
-    float HEAD_POSX;
-    float HEAD_POSY;
-    float HEAD_POSZ;
-    short HEAD_FMOVE;
-    short HEAD_SMOVE;
-    short HEAD_UMOVE;
-    char HEAD_MSEC;
-    char HEAD_OG;
-    char HEAD_DST;
-    char HEAD_WLVL;
-    char HEAD_LADDER;
+    float frate;
+    float hp;
+    float ap;
+    float hspd;
+    float ang;
+    float vspd;
+    float yaw;
+    float pitch;
+    float posx;
+    float posy;
+    float posz;
+    short fmove;
+    short smove;
+    short umove;
+    char msec;
+    char og;
+    char dst;
+    char wlvl;
+    char ladder;
 };
 
 class LogTableModel : public QAbstractTableModel

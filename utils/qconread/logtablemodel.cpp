@@ -80,38 +80,38 @@ QVariant LogTableModel::data(const QModelIndex &index, int role) const
     case Qt::DisplayRole:
         switch (index.column()) {
         case HEAD_FRATE:
-            return logTableData[index.row()].HEAD_FRATE;
+            return logTableData[index.row()].frate;
         case HEAD_MSEC:
-            return logTableData[index.row()].HEAD_MSEC;
+            return logTableData[index.row()].msec;
         case HEAD_HP:
-            return logTableData[index.row()].HEAD_HP;
+            return logTableData[index.row()].hp;
         case HEAD_AP:
-            return logTableData[index.row()].HEAD_AP;
+            return logTableData[index.row()].ap;
         case HEAD_YAW:
-            return logTableData[index.row()].HEAD_YAW;
+            return logTableData[index.row()].yaw;
         case HEAD_PITCH:
-            return logTableData[index.row()].HEAD_PITCH;
+            return logTableData[index.row()].pitch;
         case HEAD_POSX:
-            return logTableData[index.row()].HEAD_POSX;
+            return logTableData[index.row()].posx;
         case HEAD_POSY:
-            return logTableData[index.row()].HEAD_POSY;
+            return logTableData[index.row()].posy;
         case HEAD_POSZ:
-            return logTableData[index.row()].HEAD_POSZ;
+            return logTableData[index.row()].posz;
         case HEAD_HSPD:
             if (hbasevels.contains(index.row()))
-                return '*' + QString::number(logTableData[index.row()].HEAD_HSPD);
+                return '*' + QString::number(logTableData[index.row()].hspd);
             else
-                return logTableData[index.row()].HEAD_HSPD;
+                return logTableData[index.row()].hspd;
         case HEAD_ANG:
             if (hbasevels.contains(index.row()))
-                return '*' + QString::number(logTableData[index.row()].HEAD_ANG);
+                return '*' + QString::number(logTableData[index.row()].ang);
             else
-                return logTableData[index.row()].HEAD_ANG;
+                return logTableData[index.row()].ang;
         case HEAD_VSPD:
             if (vbasevels.contains(index.row()))
-                return '*' + QString::number(logTableData[index.row()].HEAD_VSPD);
+                return '*' + QString::number(logTableData[index.row()].vspd);
             else
-                return logTableData[index.row()].HEAD_VSPD;
+                return logTableData[index.row()].vspd;
         }
         return QVariant();
 
@@ -136,7 +136,7 @@ QVariant LogTableModel::data(const QModelIndex &index, int role) const
                 return brushLRed;
             break;
         case HEAD_DST:
-            duckState = logTableData[index.row()].HEAD_DST;
+            duckState = logTableData[index.row()].dst;
             if (duckState == 2)
                 return brushBlack;
             else if (duckState == 1)
@@ -167,21 +167,21 @@ QVariant LogTableModel::data(const QModelIndex &index, int role) const
                 return brushYellow;
             break;
         case HEAD_FMOVE:
-            moveVal = logTableData[index.row()].HEAD_FMOVE;
+            moveVal = logTableData[index.row()].fmove;
             if (moveVal > 0)
                 return brushMoveBlue;
             else if (moveVal < 0)
                 return brushMoveRed;
             break;
         case HEAD_SMOVE:
-            moveVal = logTableData[index.row()].HEAD_SMOVE;
+            moveVal = logTableData[index.row()].smove;
             if (moveVal > 0)
                 return brushMoveBlue;
             else if (moveVal < 0)
                 return brushMoveRed;
             break;
         case HEAD_UMOVE:
-            moveVal = logTableData[index.row()].HEAD_UMOVE;
+            moveVal = logTableData[index.row()].umove;
             if (moveVal > 0)
                 return brushMoveBlue;
             else if (moveVal < 0)
@@ -203,18 +203,18 @@ QVariant LogTableModel::data(const QModelIndex &index, int role) const
                 return brushRed;
             break;
         case HEAD_OG:
-            if (logTableData[index.row()].HEAD_OG)
+            if (logTableData[index.row()].og)
                 return brushOgGreen;
             break;
         case HEAD_WLVL:
-            waterLevel = logTableData[index.row()].HEAD_WLVL;
+            waterLevel = logTableData[index.row()].wlvl;
             if (waterLevel >= 2)
                 return brushBlue;
             else if (waterLevel == 1)
                 return brushDimBlue;
             break;
         case HEAD_LADDER:
-            if (logTableData[index.row()].HEAD_LADDER)
+            if (logTableData[index.row()].ladder)
                 return brushBrown;
         }
         break;
@@ -358,7 +358,7 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
                 frameNums.append(std::atoi(tok));
                 logTableData.append(logEntry);
                 NEXTTOK;
-                logTableData.last().HEAD_FRATE = 1 / std::atof(tok);
+                logTableData.last().frate = 1 / std::atof(tok);
                 readState = 1;
                 continue;
             } else if (strncmp(lineptr, "dmg", 3) == 0) {
@@ -409,33 +409,33 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
             if (strncmp(lineptr, "health", 6) != 0)
                 break;
             STARTTOK(6);
-            logTableData.last().HEAD_HP = std::atof(tok);
+            logTableData.last().hp = std::atof(tok);
             NEXTTOK;
-            logTableData.last().HEAD_AP = std::atof(tok);
+            logTableData.last().ap = std::atof(tok);
             readState = 2;
             continue;
         case 2:
             if (strncmp(lineptr, "usercmd", 7) != 0)
                 break;
             STARTTOK(7);
-            logTableData.last().HEAD_MSEC = std::atoi(tok);
+            logTableData.last().msec = std::atoi(tok);
             NEXTTOK;
             logTableData.last().buttons = std::strtoul(tok, NULL, 10);
             NEXTTOK;
-            logTableData.last().HEAD_PITCH = std::atof(tok);
+            logTableData.last().pitch = std::atof(tok);
             NEXTTOK;
-            logTableData.last().HEAD_YAW = std::atof(tok);
+            logTableData.last().yaw = std::atof(tok);
             readState = 3;
             continue;
         case 3:
             if (strncmp(lineptr, "fsu", 3) != 0)
                 break;
             STARTTOK(3);
-            logTableData.last().HEAD_FMOVE = std::atoi(tok);
+            logTableData.last().fmove = std::atoi(tok);
             NEXTTOK;
-            logTableData.last().HEAD_SMOVE = std::atoi(tok);
+            logTableData.last().smove = std::atoi(tok);
             NEXTTOK;
-            logTableData.last().HEAD_UMOVE = std::atoi(tok);
+            logTableData.last().umove = std::atoi(tok);
             readState = 4;
             continue;
         case 4:
@@ -483,7 +483,7 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
             if (*tok != '0')
                 numtouches.insert(frameNums.length() - 1);
             NEXTTOK;
-            logTableData.last().HEAD_LADDER = *tok != '0';
+            logTableData.last().ladder = *tok != '0';
             readState = 8;
             continue;
         case 8:
@@ -493,11 +493,11 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
             if (*tok != '2')
                 break;
             NEXTTOK;
-            logTableData.last().HEAD_POSX = std::atof(tok);
+            logTableData.last().posx = std::atof(tok);
             NEXTTOK;
-            logTableData.last().HEAD_POSY = std::atof(tok);
+            logTableData.last().posy = std::atof(tok);
             NEXTTOK;
-            logTableData.last().HEAD_POSZ = std::atof(tok);
+            logTableData.last().posz = std::atof(tok);
             readState = 9;
             continue;
         case 9: {
@@ -514,10 +514,10 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
             vel[1] = std::atof(tok);
             NEXTTOK;
             vel[2] = std::atof(tok);
-            logTableData.last().HEAD_HSPD = hypotf(vel[0], vel[1]);
-            logTableData.last().HEAD_ANG = atan2f(vel[1], vel[0]) *
+            logTableData.last().hspd = hypotf(vel[0], vel[1]);
+            logTableData.last().ang = atan2f(vel[1], vel[0]) *
                 M_RAD2DEG;
-            logTableData.last().HEAD_VSPD = vel[2];
+            logTableData.last().vspd = vel[2];
 
             NEXTTOK;
             NEXTTOK;
@@ -527,16 +527,16 @@ bool LogTableModel::parseLogFile(const QString &logFileName)
             NEXTTOK;
             bool ducking = std::strtoul(tok, NULL, 10) & FL_DUCKING;
             if (ducking)
-                logTableData.last().HEAD_DST = 2;
+                logTableData.last().dst = 2;
             else if (bInDuck)
-                logTableData.last().HEAD_DST = 1;
+                logTableData.last().dst = 1;
             else
-                logTableData.last().HEAD_DST = 0;
+                logTableData.last().dst = 0;
 
             NEXTTOK;
-            logTableData.last().HEAD_OG = std::atoi(tok) != -1;
+            logTableData.last().og = std::atoi(tok) != -1;
             NEXTTOK;
-            logTableData.last().HEAD_WLVL = std::atoi(tok);
+            logTableData.last().wlvl = std::atoi(tok);
             if (basevel[0] || basevel[1]) {
                 vel[0] += basevel[0];
                 vel[1] += basevel[1];
@@ -614,7 +614,7 @@ float LogTableModel::sumDuration(int startRow, int endRow) const
 {
     double duration = 0;
     for (int i = startRow; i <= endRow; i++) {
-        duration += 1 / (double)logTableData[i].HEAD_FRATE;
+        duration += 1 / (double)logTableData[i].frate;
     }
     return duration;
 }
