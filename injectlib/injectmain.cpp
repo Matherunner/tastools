@@ -69,6 +69,7 @@ static uintptr_t clso_addr = 0;
 static symtbl_t hwso_st;
 static symtbl_t hlso_st;
 static symtbl_t clso_st;
+static cvar_t sv_show_hidents;
 static cvar_t sv_show_triggers;
 static cvar_t sv_sim_qg;
 static cvar_t sv_sim_qws;
@@ -125,6 +126,7 @@ static int *p_g_onladder = nullptr;
 static uintptr_t p_g_Gauss = 0;
 
 static const int EF_NODRAW = 128;
+static const int kRenderNormal = 0;
 static const int kRenderTransColor = 1;
 static const int kRenderFxPulseFastWide = 4;
 
@@ -292,8 +294,9 @@ int AddToFullPack(entity_state_s *state, int e, edict_s *ent, edict_s *host,
 {
     uintptr_t entvarsaddr = (uintptr_t)ent + 0x80;
     const char *classname = hlname_to_string(*(unsigned int *)entvarsaddr);
+    bool is_trigger = std::strncmp(classname, "trigger_", 8) == 0;
 
-    if (std::strncmp(classname, "trigger_", 8) != 0 || !sv_show_triggers.value)
+    if ((!is_trigger || !sv_show_triggers.value) && !sv_show_hidents.value)
         return orig_AddToFullPack(state, e, ent, host, hostflags, player, pSet);
 
     int *p_effects = (int *)(entvarsaddr + 0x118);
@@ -302,16 +305,22 @@ int AddToFullPack(entity_state_s *state, int e, edict_s *ent, edict_s *host,
     int ret = orig_AddToFullPack(state, e, ent, host, hostflags, player, pSet);
     *p_effects = old_effects;
 
-    if (ret) {
-        uintptr_t stateaddr = (uintptr_t)state;
+    if (!ret)
+        return 0;
+
+    uintptr_t stateaddr = (uintptr_t)state;
+    if (is_trigger && sv_show_triggers.value) {
         *(int *)(stateaddr + 0x3c) &= ~EF_NODRAW;
         *(int *)(stateaddr + 0x48) = kRenderTransColor;
         *(int *)(stateaddr + 0x54) = kRenderFxPulseFastWide;
         get_trigger_amt_colors(classname + 8, (int *)(stateaddr + 0x4c),
                                (char *)(stateaddr + 0x50));
+    } else if (sv_show_hidents.value) {
+        *(int *)(stateaddr + 0x3c) &= ~EF_NODRAW;
+        *(int *)(stateaddr + 0x48) = kRenderNormal;
     }
 
-    return ret;
+    return 1;
 }
 
 void PlayerPreThink(edict_s *ent)
@@ -357,6 +366,10 @@ extern "C" void Cvar_Init()
     sv_show_triggers.name = "sv_show_triggers";
     sv_show_triggers.string = "0";
     orig_Cvar_RegisterVariable(&sv_show_triggers);
+
+    sv_show_hidents.name = "sv_show_hidents";
+    sv_show_hidents.string = "0";
+    orig_Cvar_RegisterVariable(&sv_show_hidents);
 
     sv_taslog.name = "sv_taslog";
     sv_taslog.string = "0";
