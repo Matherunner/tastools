@@ -258,12 +258,17 @@ Half-Life execution script
 --------------------------
 
 In Linux it is not possible to execute ``hl_linux`` directly, as it depends on
-the values of certain environment variables usually set by the Steam process.
-We could use the Steam GUI to specify additional switches to the executable,
-but this requires several mouse clicks.  To eliminate this inconvenience we
-must be able to set up the environment correctly before executing ``hl_linux``.
-To determine the values of these environment variables we run Half-Life via
-Steam then grab the values by issuing::
+the values of specific environment variables that are set by the Steam process.
+This is because Steam games are dynamically linked to the runtime libraries
+distributed by Steam itself in place of the system-wide versions.  As TAS
+runners we often want to specify additional switches to the game.  One way is
+to utilise the Steam GUI, but this process requires several mouse clicks.  It
+is much more convenient to be able to specify the switches and luanch Half-Life
+via the command line.
+
+To set up the environment correctly before executing ``hl_linux``, we need to
+determine the values of these environment variables we run Half-Life via Steam
+then grab the values by issuing::
 
   ps ex | grep '[h]l_linux'
 
@@ -272,38 +277,42 @@ This process has been done for you, and the resulting script, named
 
 .. code-block:: bash
 
-    #!/bin/bash
+   #!/bin/bash
 
-    # Modify this to point to your local Steam directory.
-    export STEAM_PATH=~/.local/share/Steam
+   export STEAM_ROOT=~/.local/share/Steam
+   export PLATFORM=ubuntu12_32
+   export STEAM_RUNTIME=$STEAM_ROOT/$PLATFORM/steam-runtime
+   export HL_ROOT=$STEAM_ROOT/steamapps/common/Half-Life
 
-    export STEAM_RUNTIME=$STEAM_PATH/ubuntu12_32/steam-runtime
+   export LD_LIBRARY_PATH=\
+   $HL_ROOT:\
+   $STEAM_ROOT/$PLATFORM:\
+   $STEAM_RUNTIME/i386/lib/i386-linux-gnu:\
+   $STEAM_RUNTIME/i386/lib:\
+   $STEAM_RUNTIME/i386/usr/lib/i386-linux-gnu:\
+   $STEAM_RUNTIME/i386/usr/lib:\
+   $STEAM_RUNTIME/amd64/lib/x86_64-linux-gnu:\
+   $STEAM_RUNTIME/amd64/lib:\
+   $STEAM_RUNTIME/amd64/usr/lib/x86_64-linux-gnu:\
+   $STEAM_RUNTIME/amd64/usr/lib:\
+   /usr/lib32
 
-    export PATH=$PATH:\
-    $STEAM_PATH/ubuntu12_32:\
-    $STEAM_PATH/ubuntu12_32/steam-runtime/amd64/bin:\
-    $STEAM_PATH/ubuntu12_32/steam-runtime/amd64/usr/bin
+   export PATH=$PATH:\
+   $STEAM_ROOT/$PLATFORM:\
+   $STEAM_RUNTIME/amd64/bin:\
+   $STEAM_RUNTIME/amd64/usr/bin
 
-    export LD_LIBRARY_PATH=\
-    $STEAM_PATH/SteamApps/common/Half-Life:\
-    $STEAM_PATH/ubuntu12_32:\
-    $STEAM_PATH/ubuntu12_32/steam-runtime/i386/lib/i386-linux-gnu:\
-    $STEAM_PATH/ubuntu12_32/steam-runtime/i386/lib:\
-    $STEAM_PATH/ubuntu12_32/steam-runtime/i386/usr/lib/i386-linux-gnu:\
-    $STEAM_PATH/ubuntu12_32/steam-runtime/i386/usr/lib:\
-    $STEAM_PATH/ubuntu12_32/steam-runtime/amd64/lib/x86_64-linux-gnu:\
-    $STEAM_PATH/ubuntu12_32/steam-runtime/amd64/lib:\
-    $STEAM_PATH/ubuntu12_32/steam-runtime/amd64/usr/lib/x86_64-linux-gnu:\
-    $STEAM_PATH/ubuntu12_32/steam-runtime/amd64/usr/lib:\
-    $STEAM_PATH/ubuntu12_64:\
-    /usr/lib32
+   export LD_PRELOAD=
 
-    cd $STEAM_PATH/SteamApps/common/Half-Life
-    exec ./hl_linux -steam "$@"
+   cd $HL_ROOT
+   exec ./hl_linux -steam "$@"
 
-Nevertheless, we do not guarantee that this script will run successfully in
-your system.  For example, it has been reported that on some systems the
-``SteamApps`` folder is in lowercase.
+To run hooking-based mods, one needs to specify the path of the associated
+shared library to ``LD_PRELOAD``.
+
+Nevertheless, there is no guarantee that the script above will run successfully
+in every Linux system.  The script has only been tested on recent versions of
+Arch Linux at the time of writing.
 
 
 Scripting
