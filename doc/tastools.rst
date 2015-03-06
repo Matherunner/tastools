@@ -267,8 +267,8 @@ is much more convenient to be able to specify the switches and launch Half-Life
 via the command line.
 
 To set up the environment correctly before executing ``hl_linux``, we need to
-determine the values of these environment variables we run Half-Life via Steam
-then grab the values by issuing::
+determine the values of these environment variables.  To do this, we run
+Half-Life via Steam then grab the values by issuing::
 
   ps ex | grep '[h]l_linux'
 
