@@ -263,7 +263,7 @@ This is because Steam games are dynamically linked to the runtime libraries
 distributed by Steam itself in place of the system-wide versions.  As TAS
 runners we often want to specify additional switches to the game.  One way is
 to utilise the Steam GUI, but this process requires several mouse clicks.  It
-is much more convenient to be able to specify the switches and luanch Half-Life
+is much more convenient to be able to specify the switches and launch Half-Life
 via the command line.
 
 To set up the environment correctly before executing ``hl_linux``, we need to
