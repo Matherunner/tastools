@@ -324,7 +324,7 @@ Limited applicability
 ~~~~~~~~~~~~~~~~~~~~~
 
 So why does shooting the target crate when a grenade explodes not work?  To see
-this, suppose the grande explodes first.  The grenade will call
+this, suppose the grenade explodes first.  The grenade will call
 ``RadiusDamage`` to inflict blast damage onto the target crate.  After that,
 the crate becomes ``SOLID_NOT``.  The bullet will therefore miss the crate.
 Suppose the bullet hits the crate first.  The crate will then break and becomes
