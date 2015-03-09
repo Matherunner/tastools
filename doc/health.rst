@@ -191,3 +191,148 @@ exact reason remains a mystery.
 Selfgaussing can be very powerful.  It is possible to obtain a 1000 ups upward
 boost using just 67 damage.  However, if the pitch angle is too high or too
 low, the beam might not hit the head, hence reducing the boost significantly.
+
+
+Box item duplication
+--------------------
+
+Box item duplication is a recently discovered trick useful for duplicating
+items dropped by crates.  To perform this trick, we simply fire shotgun
+simultaneously at two adjacent crates, one of which is explosive and the other
+will spawn the desired item upon destruction.  Consequently, the desired item
+will be duplicated.  The intuition for why this trick works seems
+straightforward: the crate in question breaks twice due to simultaneous damage
+inflicted by the adjacent explosive crate and the shotgun fire.  Such
+explanation implies that any type of simultaneous damage inflicted in the same
+frame can trigger the glitch.  Unfortunately, this is false.  For instance, if
+we shoot the crate while a hand grenade explodes in the same frame, the box
+items will not be duplicated.
+
+Building blocks
+~~~~~~~~~~~~~~~
+
+Understanding the correct explanation requires a detailed knowledge of the
+Half-Life damage system and the sequence of events when performing the trick.
+Often, damages in Half-Life are not inflicted immediately.  Instead, a series
+of damages may be accumulated by the *multidamage* mechanism.  There are three
+important functions associated with this mechanism: ``ClearMultiDamage``,
+``AddMultiDamage`` and ``ApplyMultiDamage``.  Each of these functions works on
+a global variable called ``gMultiDamage`` which has the following type
+
+.. code-block:: cpp
+
+   typedef struct
+   {
+     CBaseEntity *pEntity;
+     float amount;
+     int type;
+   } MULTIDAMAGE;
+
+The ``pEntity`` field is the entity on which damages are inflicted while the
+``amount`` field is the accumulated damage.  The ``type`` field is not
+important.
+
+``ClearMultiDamage`` is the simplest function out of the three.  It simply
+assigns ``NULL`` to ``gMultiDamage->pEntity`` and zeros out
+``gMultiDamage->amount`` and ``gMultiDamage->type``.  This function accepts no
+parameter.
+
+``ApplyMultiDamage`` is straightforward.  When called, it will invoke
+``gMultiDamage->pEntity->TakeDamage`` with a damage specified by
+``gMultiDamage->amount``.  As the name suggests, ``TakeDamage`` simply
+subtracts the entity's health by the given damage.  When the entity is a
+breakable crate and its health is reduced to below zero, it will make itself
+become ``SOLID_NOT``, which effectively renders itself invisible to any tracing
+functions.  Then, the crate will fire any associated targets, schedule its
+removal from memory after 0.1s, then spawn its associated item.  At this point
+you may be confused: if the crate becomes ``SOLID_NOT``, then how can any
+further damage be dealt to it if the crate cannot be found by tracing
+functions?  Continue reading.
+
+``AddMultiDamage`` is slightly trickier.  One of the parameters accepted by
+this function is the target entity on which damage is inflicted.  When this
+function is invoked, it checks whether the current ``gMultiDamage->pEntity``
+differs from the supplied entity.  If so, it will call ``ApplyMultiDamage`` to
+deal the currently accumulated damage on the current ``gMultiDamage->pEntity``.
+After that, it changes ``pEntity`` to the supplied entity, and sets
+``gMultiDamage->amount`` to the supplied damage.  On the other hand, if the
+supplied entity is the same as the current ``gMultiDamage->pEntity``, then the
+supplied damage will simply be added to ``gMultiDamage->amount``.
+
+When an explosive crate explodes, the damage is dealt to the surrounding
+entities.  The function responsible of inflicting this blast damage is
+``RadiusDamage``.  This function searches for entities within a given radius,
+then for each entity it usually does a ``ClearMultiDamage``, followed by
+``TraceAttack`` and then ``ApplyMultiDamage``.  ``TraceAttack`` simply calls
+``AddMultiDamage`` on the target entity.
+
+Finally, we come to the last piece of building block toward understanding the
+trick: ``FireBulletsPlayer``.  This function is called whenever a shotgun is
+fired.  At the very beginning of this function, ``ClearMultiDamage`` is called,
+followed by a loop in which each pellet is randomly assigned a direction to
+simulate spread, then a tracing function is called for each pellet to determine
+the entity that got hit.  Then, this entity's ``TraceAttack`` is called.  After
+the loop ends, the function concludes with a call to ``ApplyMultiDamage``.
+
+Process
+~~~~~~~
+
+We can now make use of the knowledge we learnt above to understand how the
+trick works.  Suppose we have two crates, one explosive and the other carrying
+the desired item.  To perform the trick we fire the shotgun so that both crates
+are simultaneously broken.  First of all, ``FireBulletsPlayer`` will be called.
+The ``ClearMultiDamage`` at the beginning of the function ensures that any
+previous multidamage leftover will not interfere with our current situatino.
+Suppose the first few pellets strike the explosive crate.  For each of these
+pellets, ``TraceAttack`` is being called on the explosive crate.  This in turns
+call ``AddMultiDamage`` which accumulates the damage dealt to the explosive
+crate.  Suppose now the loop reaches the pellets that deal damage on the
+desired crate.  This time, ``TraceAttack`` and so ``AddMultiDamage`` is called
+on the desired crate, which is a *different entity* than the explosive crate.
+Since the desired crate is not the same as ``gMultiDamage->pEntity``,
+``AddMultiDamage`` will call ``ApplyMultiDamage`` to inflict the accumulated
+damage against the explosive crate.  This is the moment where the explosive
+crate explodes.
+
+The explosive crate calls ``RadiusDamage`` which in turn inflicts damage onto
+the desired crate.  When this happens, the ``TakeDamage`` associated with the
+desired crate will be called, which causes the associated item to spawn.  The
+desired crate now turns into ``SOLID_NOT``.  Once ``RadiusDamage`` returns, we
+go back to the last ``AddMultiDamage`` call mentioned in the previous
+paragraph.  Here, ``gMultiDamage->pEntity`` will be made to point to the
+desired crate, and the damage for the current pellet will be assigned to
+``gMultiDamage->amount``.
+
+Remember the ``FireBulletsPlayer`` at the beginning of this series of events?
+The loop in this function will continue to iterate.  However, since the desired
+crate is of ``SOLID_NOT`` type, the tracing functions will completely miss the
+crate.  In other words, the rest of the shotgun pellets will not hit the
+desired crate, and that in total only one pellet hits the crate.  When the loop
+finally completes, the final ``ApplyMultiDamage`` then inflicts the damage
+dealt by the one pellet onto the desired crate.  Since ``ApplyMultiDamage``
+does not rely on tracing functions to determine the target entity, but rather,
+it uses ``gMultiDamage->pEntity`` a moment ago, the damage will be successfully
+inflicted which triggers the second ``TakeDamage`` call for the desired crate.
+This will again causes it to spawn the associated item.
+
+One assumption we made in the description above is that the loop in
+``FireBulletsPlayer`` breaks the explosion crate first.  If this is not the
+case, then the item will not be duplicated.  To see this, notice that the
+desired crate becomes ``SOLID_NOT`` as soon as the first pellets breaks it,
+which causes the later explosion to miss the crate.
+
+Limited applicability
+~~~~~~~~~~~~~~~~~~~~~
+
+So why does shooting the target crate when a grenade explodes not work?  To see
+this, suppose the grande explodes first.  The grenade will call
+``RadiusDamage`` to inflict blast damage onto the target crate.  After that,
+the crate becomes ``SOLID_NOT``.  The bullet will therefore miss the crate.
+Suppose the bullet hits the crate first.  The crate will then break and becomes
+``SOLID_NOT`` again.  When the grenade later calls ``RadiusDamage``, the
+tracing functions within ``RadiusDamage`` will again miss the crate.
+
+To put it simply, this trick does not work in cases like this because usually
+there is no way for the second damage to find the crate, since they depend on
+tracing functions and they do not save the pointer to the desired crate
+*before* the crate becomes ``SOLID_NOT``.
