@@ -282,17 +282,16 @@ trick works.  Suppose we have two crates, one explosive and the other carrying
 the desired item.  To perform the trick we fire the shotgun so that both crates
 are simultaneously broken.  First of all, ``FireBulletsPlayer`` will be called.
 The ``ClearMultiDamage`` at the beginning of the function ensures that any
-previous multidamage leftover will not interfere with our current situation.
-Suppose the first few pellets strike the explosive crate.  For each of these
-pellets, ``TraceAttack`` is being called on the explosive crate.  This in turns
-call ``AddMultiDamage`` which accumulates the damage dealt to the explosive
-crate.  Suppose now the loop reaches the pellets that deal damage on the
-desired crate.  This time, ``TraceAttack`` and so ``AddMultiDamage`` is called
-on the desired crate, which is a *different entity* than the explosive crate.
-Since the desired crate is not the same as ``gMultiDamage->pEntity``,
-``AddMultiDamage`` will call ``ApplyMultiDamage`` to inflict the accumulated
-damage against the explosive crate.  This is the moment where the explosive
-crate explodes.
+leftover multidamage will not interfere with our current situation.  Suppose
+the first few pellets strike the explosive crate.  For each of these pellets,
+``TraceAttack`` is being called on the explosive crate.  This in turns call
+``AddMultiDamage`` which accumulates the damage dealt to the explosive crate.
+Suppose now the loop reaches the pellets that deal damage on the desired crate.
+This time, ``TraceAttack`` and so ``AddMultiDamage`` is called on the desired
+crate, which is a *different entity* than the explosive crate.  Since the
+desired crate is not the same as ``gMultiDamage->pEntity``, ``AddMultiDamage``
+will call ``ApplyMultiDamage`` to inflict the accumulated damage against the
+explosive crate.  This is the moment where the explosive crate explodes.
 
 The explosive crate calls ``RadiusDamage`` which in turn inflicts damage onto
 the desired crate.  When this happens, the ``TakeDamage`` associated with the
