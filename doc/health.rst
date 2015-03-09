@@ -317,8 +317,8 @@ desired crate.  This will again causes it to spawn the associated item.
 One assumption we made in the description above is that the loop in
 ``FireBulletsPlayer`` breaks the explosion crate first.  If this is not the
 case, then the item will not be duplicated.  To see this, notice that the
-desired crate becomes ``SOLID_NOT`` as soon as the first pellets breaks it,
-which causes the later explosion to miss the crate.
+desired crate becomes ``SOLID_NOT`` as soon as the first set of pellets breaks
+it, which causes the later explosion to miss the crate.
 
 Limited applicability
 ~~~~~~~~~~~~~~~~~~~~~
