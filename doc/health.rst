@@ -311,9 +311,9 @@ desired crate, and that in total only one pellet hits the crate.  When the loop
 finally completes, the final ``ApplyMultiDamage`` then inflicts the damage
 dealt by the one pellet onto the desired crate.  Since ``ApplyMultiDamage``
 does not rely on tracing functions to determine the target entity, but rather,
-it uses ``gMultiDamage->pEntity`` a moment ago, the damage will be successfully
-inflicted which triggers the second ``TakeDamage`` call for the desired crate.
-This will again causes it to spawn the associated item.
+it uses ``gMultiDamage->pEntity`` set a moment ago, the damage will be
+successfully inflicted which triggers the second ``TakeDamage`` call for the
+desired crate.  This will again causes it to spawn the associated item.
 
 One assumption we made in the description above is that the loop in
 ``FireBulletsPlayer`` breaks the explosion crate first.  If this is not the
