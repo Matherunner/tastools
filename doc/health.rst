@@ -282,7 +282,7 @@ trick works.  Suppose we have two crates, one explosive and the other carrying
 the desired item.  To perform the trick we fire the shotgun so that both crates
 are simultaneously broken.  First of all, ``FireBulletsPlayer`` will be called.
 The ``ClearMultiDamage`` at the beginning of the function ensures that any
-previous multidamage leftover will not interfere with our current situatino.
+previous multidamage leftover will not interfere with our current situation.
 Suppose the first few pellets strike the explosive crate.  For each of these
 pellets, ``TraceAttack`` is being called on the explosive crate.  This in turns
 call ``AddMultiDamage`` which accumulates the damage dealt to the explosive
