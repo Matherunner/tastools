@@ -31,7 +31,7 @@ with
           \end{cases}
           \quad\quad
           M = \min\left( M_m, \sqrt{F^2 + S^2} \right) \\
-          \gamma_1 = \tau MA
+          \gamma_1 = k_e \tau MA
           \quad\quad
           \gamma_2 = L - \mathbf{v} \cdot \mathbf{\hat{a}} = L - \lVert\mathbf{v}\rVert \cos\theta
    :nowrap:
@@ -39,25 +39,28 @@ with
 where :math:`\tau` is called the *frame time*, which is just the inverse of
 frame rate.  :math:`L = 30` when airstrafing and :math:`L = M` when
 groundstrafing.  :math:`A` is the value of ``sv_airaccelerate`` when
-airstrafing and ``sv_accelerate`` when groundstrafing.
+airstrafing and ``sv_accelerate`` when groundstrafing.  Lastly, :math:`k_e` is
+called the *environmental friction* which is usually 1 and will be explained in
+:ref:`friction`.
 
-The unit acceleration vector is such that :math:`\mathbf{a} = F
-\mathbf{\hat{f}} + S \mathbf{\hat{s}}`, which is in :math:`\mathbb{R}^2`.  We
-have unit forward vector :math:`\mathbf{\hat{f}} = \langle\cos\vartheta,
-\sin\vartheta\rangle` where :math:`\vartheta` is the yaw angle.  This means
-:math:`\mathbf{\hat{f}}` is essentially directed parallel to the player view.
-:math:`\mathbf{\hat{s}}` is directed perpendicular to :math:`\mathbf{\hat{f}}`
-rightward, or :math:`\mathbf{\hat{s}} = \langle\sin\vartheta,
--\cos\vartheta\rangle`.  The magnitude of :math:`\mathbf{a}` is simply
-:math:`\sqrt{F^2 + S^2}`.  In the following analysis we will not concern
-ourselves with the components of :math:`\mathbf{a}`, but instead parameterise
-the entire equation in :math:`\theta`.
+Ignoring the roll angle, the unit acceleration vector is such that
+:math:`\mathbf{a} = F \mathbf{\hat{f}} + S \mathbf{\hat{s}}`, which is in
+:math:`\mathbb{R}^2`.  We have unit forward vector :math:`\mathbf{\hat{f}} =
+\langle\cos\vartheta, \sin\vartheta\rangle` where :math:`\vartheta` is the yaw
+angle.  This means :math:`\mathbf{\hat{f}}` is essentially directed parallel to
+the player view.  :math:`\mathbf{\hat{s}}` is directed perpendicular to
+:math:`\mathbf{\hat{f}}` rightward, or :math:`\mathbf{\hat{s}} =
+\langle\sin\vartheta, -\cos\vartheta\rangle`.  The magnitude of
+:math:`\mathbf{a}` is simply :math:`\sqrt{F^2 + S^2}`.  In the following
+analysis we will not concern ourselves with the components of
+:math:`\mathbf{a}`, but instead parameterise the entire equation in
+:math:`\theta`.
 
 Besides, we will assume that :math:`\lVert\langle F,S\rangle\rVert \ge M`.  If
 this is not the case, we must replace :math:`M \mapsto \lVert\langle
 F,S\rangle\rVert` for all appearances of :math:`M` below.  Throughout this
 document we will assume that :math:`M`, :math:`A`, :math:`\tau`, :math:`k`,
-:math:`E` are positive.
+:math:`k_e` and :math:`E` are positive.
 
 
 Optimal strafing
@@ -91,7 +94,7 @@ If :math:`\mu = \gamma_1` and :math:`\mu = \gamma_2` we have
 
 .. math:: \begin{align*}
           \lVert\mathbf{v}'\rVert_{\mu = \gamma_1} &= \sqrt{\lVert\mathbf{v}\rVert^2 +
-          \tau MA \left( \tau MA + 2 \lVert\mathbf{v}\rVert \cos\theta \right)} \\
+          k_e \tau MA \left( k_e \tau MA + 2 \lVert\mathbf{v}\rVert \cos\theta \right)} \\
           \lVert\mathbf{v}'\rVert_{\mu = \gamma_2} &= \sqrt{\lVert\mathbf{v}\rVert^2 \sin^2 \theta + L^2}
           \end{align*}
 
@@ -102,7 +105,7 @@ Observe that
 
 1. :math:`\lVert\mathbf{v}'\rVert_{\mu = \gamma_1}` and
    :math:`\lVert\mathbf{v}'\rVert_{\mu = \gamma_2}` intersects only at
-   :math:`\theta = \zeta` where :math:`\cos\zeta = (L - \tau MA)
+   :math:`\theta = \zeta` where :math:`\cos\zeta = (L - k_e \tau MA)
    \lVert\mathbf{v}\rVert^{-1}` is obtained by solving :math:`\gamma_1 =
    \gamma_2`
 
@@ -120,8 +123,8 @@ optimal angle
 
 .. math:: \theta =
           \begin{cases}
-          \pi/2 & \text{if } L - \tau MA \le 0 \\
-          \zeta & \text{if } 0 < L - \tau MA \le \lVert\mathbf{v}\rVert \\
+          \pi/2 & \text{if } L - k_e \tau MA \le 0 \\
+          \zeta & \text{if } 0 < L - k_e \tau MA \le \lVert\mathbf{v}\rVert \\
           0 & \text{otherwise}
           \end{cases}
 
@@ -164,8 +167,8 @@ obtain
 .. math:: \lVert\mathbf{v}_n\rVert =
           \begin{cases}
           \sqrt{\lVert\mathbf{v}\rVert^2 + 900n} & \text{if } \theta = \pi/2 \\
-          \sqrt{\lVert\mathbf{v}\rVert^2 + n\tau MA_a (60 - \tau MA_a)} & \text{if } \theta = \zeta \\
-          \lVert\mathbf{v}\rVert + n\tau MA_a & \text{if } \theta = 0
+          \sqrt{\lVert\mathbf{v}\rVert^2 + nk_e \tau MA_a (60 - k_e \tau MA_a)} & \text{if } \theta = \zeta \\
+          \lVert\mathbf{v}\rVert + nk_e \tau MA_a & \text{if } \theta = 0
           \end{cases}
 
 These equations can be quite useful in planning.  For example, to calculate the
@@ -180,18 +183,19 @@ For groundstrafing, however, the presence of friction means simple substitution
 may not work.
 
 
+.. _friction:
+
 Friction
 --------
 
-Let :math:`k` the friction coefficient and :math:`E` the stopspeed.  In most
-cases :math:`k` is ``sv_friction`` and :math:`E` is ``sv_stopspeed``.  However,
-as mentioned previously if the value of ``pmove->friction`` is not 1 (e.g. due
-to ``trigger_friction``) then :math:`k` must be multiplied by
-``pmove->friction`` accordingly.  If friction is present then before any
-physics computation the velocity must be multiplied by :math:`\lambda` such
-that
+Let :math:`k` the friction coefficient, :math:`k_e` the environmental friction
+and :math:`E` the stopspeed.  The value of :math:`k` in the game
+``sv_friction`` while :math:`E` is ``sv_stopspeed``.  As mentioned previously,
+in most cases :math:`k_e = 1` unless the player is standing on a friction
+modifier.  If friction is present, then before any physics computation is done,
+the velocity must be multiplied by :math:`\lambda` such that
 
-.. math:: \lambda = \max(1 - \max(1, E \lVert\mathbf{v}\rVert^{-1}) k\tau, 0)
+.. math:: \lambda = \max(1 - \max(1, E \lVert\mathbf{v}\rVert^{-1}) k_e k\tau, 0)
 
 In :math:`Ek\tau \le \lVert\mathbf{v}\rVert \le E`, the kind of friction is
 called *arithmetic friction*.  It is so named because if the player is allowed
@@ -199,32 +203,26 @@ to slide freely on the ground, the successive speeds form an arithmetic series.
 In other words, given initial speed, the speed at the :math:`n`\ -th frame
 :math:`\lVert\mathbf{v}_n\rVert` is
 
-.. math:: \lVert\mathbf{v}_n\rVert = \lVert\mathbf{v}_0\rVert - nEk\tau
+.. math:: \lVert\mathbf{v}_n\rVert = \lVert\mathbf{v}_0\rVert - nEk_ek\tau
 
 Let :math:`t = n\tau`, then notice that the value of
 :math:`\lVert\mathbf{v}_t\rVert` is independent of the frame rate.  If
 :math:`\lVert\mathbf{v}\rVert > E`, however, the friction is called *geometric
 friction*
 
-.. math:: \lVert\mathbf{v}_n\rVert = \lVert\mathbf{v}_0\rVert (1 - k\tau)^n
+.. math:: \lVert\mathbf{v}_n\rVert = \lVert\mathbf{v}_0\rVert (1 - k_ek\tau)^n
 
 Again, let :math:`t = n\tau`, then :math:`\lVert\mathbf{v}_t\rVert =
 \lVert\mathbf{v}_0\rVert (1 - k\tau)^{t/\tau}`.  Observe that
 
 .. math:: \frac{d}{d\tau} \lVert\mathbf{v}_t\rVert = -\frac{t}{\tau}
-          \lVert\mathbf{v}_t\rVert \left( \frac{k}{1 - k\tau} +
-          \frac{\ln\lvert 1 - k\tau\rvert}{\tau} \right) \le 0 \quad\text{for } t \ge 0
+          \lVert\mathbf{v}_t\rVert \left( \frac{k_ek}{1 - k_ek\tau} +
+          \frac{\ln\lvert 1 - k_ek\tau\rvert}{\tau} \right) \le 0 \quad\text{for } t \ge 0
 
 which means :math:`\lVert\mathbf{v}_t\rVert` is strictly increasing with
 respect to :math:`\tau` at any given positive :math:`t`.  By increasing
 :math:`\tau` (or decreasing the frame rate), the deceleration as a result of
-geometric friction becomes larger.  A quantity that can be useful for later
-analysis is the mean speed when geometric friction is present and no strafing
-is performed.  This is simply the sum of speeds divided by the number of frames
-
-.. math:: \frac{1}{n} \sum_{i = 0}^{n - 1} \lVert\mathbf{v}_i\rVert =
-          \frac{\lVert\mathbf{v}_0\rVert}{n} \sum_{i = 0}^{n - 1} (1 - k\tau)^i =
-          \frac{\lVert\mathbf{v}_0\rVert \left( 1 - (1 - k\tau)^n \right)}{nk\tau}
+geometric friction becomes larger.
 
 There is a limit to the speed achievable by perfect groundstrafing alone.
 There will be a critical speed such that the increase in speed exactly cancels
@@ -232,20 +230,19 @@ the friction, so that :math:`\lVert\mathbf{v}_{n + 1}\rVert =
 \lVert\mathbf{v}_n\rVert`.  For example, suppose optimal :math:`\theta = \zeta`
 and geometric friction is at play.  Then if
 
-.. math:: \lVert\mathbf{v}\rVert^2 = (1 - k\tau)^2 \lVert\mathbf{v}\rVert^2 + \tau M^2 A_g (2 - \tau A_g)
+.. math:: \lVert\mathbf{v}\rVert^2 = (1 - k_e k\tau)^2 \lVert\mathbf{v}\rVert^2 + k_e \tau M^2 A_g (2 - k_e \tau A_g)
 
 we have *maximum groundstrafe speed*
 
-.. math:: M \sqrt{\frac{A_g (2 - \tau A_g)}{k (2 - k\tau)}}
+.. math:: M \sqrt{\frac{A_g (2 - k_e \tau A_g)}{k (2 - k_ek\tau)}}
 
 Strafing at this speed effectively degenerates *perfect strafing* into *speed
-preserving strafing*, which will be discussed shortly after.  Assuming default
-Half-Life settings, then we have :math:`k < A_g`.  It can be seen that the
-smaller the :math:`\tau`, the higher the maximum groundstrafe speed, because
-the numerator increases at a higher rate than the denominator does.  If
-:math:`\theta = \pi/2` instead, then the expression becomes
+preserving strafing*, which will be discussed shortly after.  If :math:`k <
+A_g`, which is the case in default Half-Life settings, the smaller the
+:math:`\tau` the higher the maximum groundstrafe speed.  If :math:`\theta =
+\pi/2` instead, then the expression becomes
 
-.. math:: \frac{M}{\sqrt{k\tau (2 - k \tau)}}
+.. math:: \frac{M}{\sqrt{k_ek\tau (2 - k_ek \tau)}}
 
 
 Bunnyhop cap
@@ -312,14 +309,14 @@ We first consider the case where friction is absent.  Setting
 
 If :math:`\mu = \gamma_1` then we must have :math:`\gamma_1 \le \gamma_2`, or
 
-.. math:: \tau MA \le L - \lVert\mathbf{v}\rVert \cos\theta \implies \tau MA \le 2L
+.. math:: k_e \tau MA \le L - \lVert\mathbf{v}\rVert \cos\theta \implies k_e \tau MA \le 2L
 
 At this point we can go ahead and write out the full formula to compute the
 :math:`\theta` that preserves speed while strafing
 
 .. math:: \cos\theta =
           \begin{cases}
-          -\displaystyle\frac{\tau MA}{2\lVert\mathbf{v}\rVert} & \text{if } \tau MA \le 2L \\
+          -\displaystyle\frac{k_e \tau MA}{2\lVert\mathbf{v}\rVert} & \text{if } k_e \tau MA \le 2L \\
           -\displaystyle\frac{L}{\lVert\mathbf{v}\rVert} & \text{otherwise}
           \end{cases}
 
@@ -332,15 +329,15 @@ By the usual line of attack: suppose :math:`\mu = \gamma_1` then
 :math:`\gamma_1 \le \gamma_2` thus
 
 .. math:: \cos\theta = \frac{1}{2\lVert\mathbf{u}\rVert} \left(
-          \frac{\lVert\mathbf{v}\rVert^2 - \lVert\mathbf{u}\rVert^2}{\tau MA} -
-          \tau MA \right) \quad\text{if}\quad
-          \frac{\lVert\mathbf{v}\rVert^2 - \lVert\mathbf{u}\rVert^2}{\tau MA} + \tau MA\le 2L
+          \frac{\lVert\mathbf{v}\rVert^2 - \lVert\mathbf{u}\rVert^2}{k_e \tau MA} -
+          k_e \tau MA \right) \quad\text{if}\quad
+          \frac{\lVert\mathbf{v}\rVert^2 - \lVert\mathbf{u}\rVert^2}{k_e \tau MA} + k_e \tau MA\le 2L
 
 If the condition failed, then we have
 
 .. math:: \cos\theta = -\frac{\sqrt{L^2 + \lVert\mathbf{u}\rVert^2 - \lVert\mathbf{v}\rVert^2}}{\lVert\mathbf{u}\rVert}
           \quad\text{if}\quad
-          \tau MA - L > \sqrt{L^2 + \lVert\mathbf{u}\rVert^2 - \lVert\mathbf{v}\rVert^2}
+          k_e \tau MA - L > \sqrt{L^2 + \lVert\mathbf{u}\rVert^2 - \lVert\mathbf{v}\rVert^2}
 
 A few notes on how we derived this result: notice that we took the negative
 square root for :math:`\cos\theta`.  The reason for this is that we need
