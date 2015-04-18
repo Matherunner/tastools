@@ -103,6 +103,46 @@ within the use radius.  This means the object will hit an obstruction as soon
 as possible, so that we can change direction as soon as that happens.
 
 
+Handgrenades
+------------
+
+The handgrenade is one of the most useful weapons for damage boosting in
+Half-Life.  It is versatile and can be used in many situations.  Interestingly,
+the initial speed and direction of the grenade when it is tossed depend on the
+player pitch in a subtle way.  For example, when :math:`\varphi = \pi/2`
+(i.e. the player is facing straight down) the initial speed and direction are
+:math:`0` and :math:`\pi/2` respectively.  However, when :math:`\varphi = 0`
+the initial speed and direction now become :math:`400` and :math:`-\pi/18 =
+-10^\circ` respectively.  Another notable aspect of handgrenades is that its
+initial velocity depends on the player velocity at the instant of throwing.
+This is unlike MP5 grenades.
+
+In general, we can describe the initial velocity and direction of handgrenades
+in the following way.  **Assuming all angles are in degrees**.  First of all,
+the player pitch will be clamped within :math:`(-180^\circ, 180^\circ]`.  Let
+:math:`\varphi_g` be the handgrenade's initial pitch, then we have
+
+.. math:: \varphi_g = -10^\circ +
+          \begin{cases}
+          (8/9) \varphi & \text{if } \varphi < 0 \\
+          (10/9) \varphi & \text{otherwise}
+          \end{cases}
+
+And if :math:`\mathbf{v}_g` is its initial velocity and
+:math:`\mathbf{\hat{f}}_g` is the unit forward vector constructed using
+:math:`\varphi_g`, then
+
+.. math:: \mathbf{v}_g = \mathbf{v} + \min(500, 360 - 4\varphi_g)
+          \mathbf{\hat{f}}_g
+
+To visualise this equation, we plotted a graph of the handgrenade's horizontal
+speed and vertical velocity relative to the player against the player pitch.
+
+.. image:: _static/handgrenade-vel.png
+
+TODO
+
+
 Gauss boost and quickgauss
 --------------------------
 
