@@ -26,6 +26,9 @@ respectively.  If a hat is written on top of the vector, then it must be a unit
 vector.  For example, :math:`\mathbf{\hat{v}} = \mathbf{v} /
 \lVert\mathbf{v}\rVert`.
 
+All angles are assumed to be in radians unless stated otherwise.  The
+:math:`{}^\circ` symbol will be used to denote angles in degrees.
+
 **Contents**:
 
 .. toctree::
