@@ -103,8 +103,11 @@ within the use radius.  This means the object will hit an obstruction as soon
 as possible, so that we can change direction as soon as that happens.
 
 
+Damage boosting
+---------------
+
 Handgrenades
-------------
+~~~~~~~~~~~~
 
 The handgrenade is one of the most useful weapons for damage boosting in
 Half-Life.  It is versatile and can be used in many situations.  Interestingly,
@@ -141,6 +144,75 @@ speed and vertical velocity relative to the player against the player pitch.
 .. image:: _static/handgrenade-vel.png
 
 TODO
+
+Distribution of health
+~~~~~~~~~~~~~~~~~~~~~~
+
+Health is often a constraint when performing damage boostings.  Deciding on how
+much health should be lost for a particular instance of damage boosting can be
+tricky, it is an art as much as it is a science.  The decision is made harder
+if we plan to perform several damage boosts given a limited amount of health at
+the beginning.  Specifically, we need to choose carefully how we should
+distribute health over every boosts.  To calculate the optimal distribution, we
+create a model that should closely reflect actual situations.
+
+This model assumes that we want to perform damage boosts over :math:`n`
+*distance segments*, where a distance segment is a horizontal straight path
+that can directly benefit from a damage boost.  Let the lengths of the distance
+segments be :math:`s_1, s_2, \ldots, s_n`, and let the horizontal speeds before
+boosting be :math:`u_1, u_2, \ldots, u_n`.  Let :math:`v_1, v_2, \ldots, v_n`
+be the horizontal speed boosts.  Assuming constant speed after boosting, we
+calculate that the total time required to traverse all :math:`s_i` is
+
+.. math:: T(v_1, v_2, \ldots, v_n) = \frac{s_1}{u_1 + v_1} + \frac{s_2}{u_1 +
+          v_1} + \cdots + \frac{s_n}{u_n + v_n}
+
+We want to minimise this quantity, subject to
+
+.. math:: H(v_1, v_2, \ldots, v_n) = v_1 + v_2 + \cdots + v_n = 10\mathcal{H}
+
+where :math:`\mathcal{H}` is the total health amount that will be lost.  The
+coefficient of :math:`10` assumes that the player will duck for each damage
+boosting.  By stating the optimisation problem this way, it easily lends itself
+to be solved via Lagrange multipliers.  In other words, we want to solve the
+:math:`n + 1` equations consisting of the constraint and the equations encoded
+as :math:`\nabla T = -\lambda \nabla H`.  Writing out the latter explicitly, we
+have
+
+.. math:: \frac{s_i}{(u_i + v_i)^2} = \lambda
+
+for all :math:`1 \le i \le n`.  To proceed, we first set :math:`10\mathcal{H} =
+\mathcal{\tilde{H}} - u_1 - u_2 - \cdots` so that the constraint equation can
+be written as
+
+.. math:: (u_1 + v_1) + (u_2 + v_2) + \cdots = \mathcal{\tilde{H}}
+
+We then eliminate all :math:`(u_i + v_i)` to give
+
+.. math:: \sqrt{\frac{s_1}{\lambda}} + \sqrt{\frac{s_2}{\lambda}} + \cdots =
+          \mathcal{\tilde{H}}
+
+or
+
+.. math:: \left( \frac{\sqrt{s_1} + \sqrt{s_2} + \cdots}{10\mathcal{H} + u_1 + u_2 +
+          \cdots} \right)^2 = \lambda
+
+This provides us the solution for :math:`v_i` in the form of
+
+.. math:: u_i + v_i = \frac{\sqrt{s_i}}{\sum_{k=1}^n \sqrt{s_k}} \left(
+          10\mathcal{H} + \sum_{k=1}^n u_k \right)
+
+We want to point out the non-obviousness of this result.  In particular, that
+the ratio is *not* given by
+
+.. math:: \frac{s_i}{\sum_{k=1}^n s_k}
+
+can be surprising.  It is important to stress again that this result is only
+accurate if the health does not change significantly over the course of the
+boostings and the horizontal speed for each distance segment is constant.  In
+practice, we will likely to be strafing while traversing the segments, but the
+result above may still be approximately valid as long as we treat :math:`(u_i +
+v_i)` as the *average* speed.
 
 
 Gauss boost and quickgauss
