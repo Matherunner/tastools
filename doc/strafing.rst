@@ -196,6 +196,7 @@ modifier.  If friction is present, then before any physics computation is done,
 the velocity must be multiplied by :math:`\lambda` such that
 
 .. math:: \lambda = \max(1 - \max(1, E \lVert\mathbf{v}\rVert^{-1}) k_e k\tau, 0)
+   :label: fricfunc
 
 In :math:`Ek\tau \le \lVert\mathbf{v}\rVert \le E`, the kind of friction is
 called *arithmetic friction*.  It is so named because if the player is allowed
@@ -301,6 +302,22 @@ compute the new airstrafe and groundstrafe speeds then comparing them.
 Speed preserving strafing
 -------------------------
 
+Speed preserving strafing can be useful when we are strafing at high :math:`A`.
+It takes only about 4.4s to reach 2000 ups from rest at :math:`A = 100`.  While
+making turns at 2000 ups, if the velocity is not parallel to the global axes
+the speed will exceed ``sv_maxvelocity``.  Ocassionally, this can prove
+cumbersome as the curvature decreases with increasing speed, making the player
+liable to collision with walls or other obstacles.  Besides, as the velocity
+gradually becomes parallel to one of the global axes again, the speed will drop
+back to ``sv_maxvelocity``.  This means, under certain situations, that the
+slight speed increase in the process of making the turn has little benefit.
+Therefore, it can sometimes be helpful to simply make turns at a constant
+``sv_maxvelocity``.  This is where the technique of *speed preserving strafing*
+comes into play.  Another situation might be that we want to groundstrafe at a
+constant speed.  When the speed is relatively low, constant speed
+groundstrafing can produce a very sharp curve, which is sometimes desirable in
+a very confined space.
+
 We first consider the case where friction is absent.  Setting
 :math:`\lVert\mathbf{v}'\rVert = \lVert\mathbf{v}\rVert` in Equation
 :eq:`nextspeed` and solving,
@@ -311,8 +328,8 @@ If :math:`\mu = \gamma_1` then we must have :math:`\gamma_1 \le \gamma_2`, or
 
 .. math:: k_e \tau MA \le L - \lVert\mathbf{v}\rVert \cos\theta \implies k_e \tau MA \le 2L
 
-At this point we can go ahead and write out the full formula to compute the
-:math:`\theta` that preserves speed while strafing
+At this point we can go ahead and write out the full formula for :math:`\theta`
+that preserves speed while strafing
 
 .. math:: \cos\theta =
           \begin{cases}
@@ -320,35 +337,62 @@ At this point we can go ahead and write out the full formula to compute the
           -\displaystyle\frac{L}{\lVert\mathbf{v}\rVert} & \text{otherwise}
           \end{cases}
 
-If friction is present, then speed preserving means that, if
-:math:`\lVert\mathbf{u}\rVert = \lambda\lVert\mathbf{v}\rVert`,
+On the other hand, if friction is present, we let :math:`\lVert\mathbf{u}\rVert
+= \lambda\lVert\mathbf{v}\rVert` be the speed immediately after friction is
+applied, where :math:`\lambda` is given in :eq:`fricfunc`.  Now we have
 
-.. math:: \lVert\mathbf{v}\rVert^2 = \lVert\mathbf{u}\rVert^2 + \mu^2 + 2 \mu \lVert\mathbf{u}\rVert \cos\theta
+.. math:: \lVert\mathbf{v}\rVert^2 = \lVert\mathbf{u}\rVert^2 + \mu^2 + 2 \mu
+          \lVert\mathbf{u}\rVert \cos\theta
 
-By the usual line of attack: suppose :math:`\mu = \gamma_1` then
-:math:`\gamma_1 \le \gamma_2` thus
+By the usual line of attack, we force :math:`\mu = \gamma_1` which implies that
+:math:`\gamma_1 \le \gamma_2`, giving the formula
 
 .. math:: \cos\theta = \frac{1}{2\lVert\mathbf{u}\rVert} \left(
           \frac{\lVert\mathbf{v}\rVert^2 - \lVert\mathbf{u}\rVert^2}{k_e \tau MA} -
-          k_e \tau MA \right) \quad\text{if}\quad
-          \frac{\lVert\mathbf{v}\rVert^2 - \lVert\mathbf{u}\rVert^2}{k_e \tau MA} + k_e \tau MA\le 2L
+          k_e \tau MA \right)
 
-If the condition failed, then we have
+and the necessary condition
 
-.. math:: \cos\theta = -\frac{\sqrt{L^2 + \lVert\mathbf{u}\rVert^2 - \lVert\mathbf{v}\rVert^2}}{\lVert\mathbf{u}\rVert}
-          \quad\text{if}\quad
-          k_e \tau MA - L > \sqrt{L^2 + \lVert\mathbf{u}\rVert^2 - \lVert\mathbf{v}\rVert^2}
+.. math:: \frac{\lVert\mathbf{v}\rVert^2 - \lVert\mathbf{u}\rVert^2}{k_e \tau
+          MA} + k_e \tau MA\le 2L
 
-A few notes on how we derived this result: notice that we took the negative
-square root for :math:`\cos\theta`.  The reason for this is that we need
-:math:`\theta` be as large as possible so as to increase the curvature of the
-strafing path, which is the very purpose of speed preserving strafing!
-Therefore the condition is not the converse of the condition for :math:`\mu =
-\gamma_1`.  The square root is essential, one cannot square both sides to
-remove the square root.
+If that condition failed, then we instead have
 
-If both conditions failed and if :math:`\theta` does not exist (because
-:math:`\lvert\cos\theta\rvert > 1`), then we might resort to using the optimal
-angle to strafe instead.  If :math:`\lVert\mathbf{v}\rVert` is greater than the
-maximum groundstrafe speed, then the angle that minimises the inevitable speed
-loss is obviously the optimal strafing angle.
+.. math:: \cos\theta = -\frac{\sqrt{L^2 - \left( \lVert\mathbf{v}\rVert^2 -
+          \lVert\mathbf{u}\rVert^2 \right)}}{\lVert\mathbf{u}\rVert}
+
+Note that we took the negative square root, because :math:`\theta` needs to be
+as large as possible so that the curvature of the strafing path is maximised,
+which is one of the purposes of speed preserving strafing.  To derive the
+necessary condition for the formula above, we again employ the standard
+strategy, yielding
+
+.. math:: k_e \tau MA - L > \sqrt{L^2 - \left( \lVert\mathbf{v}\rVert^2 -
+          \lVert\mathbf{u}\rVert^2 \right)}
+
+Observe that we need :math:`k_e \tau MA > L` and :math:`L^2 \ge
+\lVert\mathbf{v}\rVert^2 - \lVert\mathbf{u}\rVert^2`.  Then we square the
+inequality to yield the converse of the condition for :math:`\mu = \gamma_1`,
+as expected.  Putting these results together, we obtain
+
+.. math:: \cos\theta =
+          \begin{cases}
+          \displaystyle \frac{1}{2\lVert\mathbf{u}\rVert} \left(
+          \frac{\lVert\mathbf{v}\rVert^2 - \lVert\mathbf{u}\rVert^2}{k_e \tau MA} -
+          k_e \tau MA \right) & \displaystyle \text{if } \frac{\lVert\mathbf{v}\rVert^2 -
+          \lVert\mathbf{u}\rVert^2}{k_e \tau MA} + k_e \tau MA\le 2L \\
+          \displaystyle -\frac{\sqrt{L^2 - \left( \lVert\mathbf{v}\rVert^2 -
+          \lVert\mathbf{u}\rVert^2 \right)}}{\lVert\mathbf{u}\rVert} &
+          \displaystyle \text{otherwise, if } k_e \tau MA > L \text{ and } L^2 \ge
+          \lVert\mathbf{v}\rVert^2 - \lVert\mathbf{u}\rVert^2
+          \end{cases}
+
+Note that, regardless of whether friction is present, if
+:math:`\lvert\cos\theta\rvert > 1` then we might resort to using the optimal
+angle to strafe instead.  This can happen when, for instance, the speed is so
+small that the player will always gain speed regardless of strafing direction.
+Or it could be that the effect of friction exceeds that of strafing, rendering
+it impossible to prevent the speed reduction.  If
+:math:`\lVert\mathbf{v}\rVert` is greater than the maximum groundstrafe speed,
+then the angle that minimises the inevitable speed loss is obviously the
+optimal strafing angle.
