@@ -46,8 +46,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = 'TasTools'
-copyright = '2014, Airstrafers'
+project = 'Half-Life Physics'
+copyright = '2014-2015, Matherunner'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

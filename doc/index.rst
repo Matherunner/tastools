@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-TasTools Documentation
-==========================
+Half-Life Physics
+=================
 
 This is the documentation for TasTools mod and some aspects of the physics of
 the latest Half-Life version that may be important for TAS runners to know
