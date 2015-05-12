@@ -164,8 +164,8 @@ boosting be :math:`u_1, u_2, \ldots, u_n`.  Let :math:`v_1, v_2, \ldots, v_n`
 be the horizontal speed boosts.  Assuming constant speed after boosting, we
 calculate that the total time required to traverse all :math:`s_i` is
 
-.. math:: T(v_1, v_2, \ldots, v_n) = \frac{s_1}{u_1 + v_1} + \frac{s_2}{u_1 +
-          v_1} + \cdots + \frac{s_n}{u_n + v_n}
+.. math:: T(v_1, v_2, \ldots, v_n) = \frac{s_1}{u_1 + v_1} + \frac{s_2}{u_2 +
+          v_2} + \cdots + \frac{s_n}{u_n + v_n}
 
 We want to minimise this quantity, subject to
 
