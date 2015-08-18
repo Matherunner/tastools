@@ -6,6 +6,13 @@
 Half-Life Physics
 =================
 
+.. caution::
+   This documentation is incomplete and may contain outdated information.  Due
+   to real life commitments I am not able to update this documentation as
+   quickly as I would like to.  Nevertheless, this is still the best place to
+   go if you seek to deepen your theoretical knowledge of Half-Life and gain a
+   further appreciation for Half-Life TASes.
+
 This is the documentation for TasTools mod and some aspects of the physics of
 the latest Half-Life version that may be important for TAS runners to know
 about.  This is currently the most detailed and up-to-date documentation about
