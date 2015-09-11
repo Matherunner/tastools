@@ -305,6 +305,44 @@ boost using just 67 damage.  However, if the pitch angle is too high or too
 low, the beam might not hit the head, hence reducing the boost significantly.
 
 
+Quick weapon switch and gauss rapid fire
+----------------------------------------
+
+Weapons in Half-Life does moderate damage by default.  The quick weapon switch
+(QWS) trick is one way to dramatically boost one's damage rate.  There is a
+small delay immediately after switching to any weapon before one could fire it.
+To eliminate this delay, one saves the game and reloads it.  This is the essence
+of the QWS trick.
+
+There is an instance variable of ``float`` type in the ``CBasePlayer`` class
+named ``m_flNextAttack``.  Upon switching to a new weapon, this variable is set
+by ``CBasePlayerWeapon::DefaultDeploy`` to ``0.5``.  This effectively adds a
+delay of half a second to any weapon switching.  However, this value is not
+written to the savestate when the game is saved.  After reloading, the variable
+will be set to zero and therefore the weapon can start firing immediately.
+Contrary to popular beliefs, the trick does not work by cancelling the
+animation, because the delay is independent of the animation.
+
+Though there is quick weapon switch, we do not have "weapon rapid fire" to
+eliminate the delay between consecutive fires.  This is because this delay is
+set by ``m_flNextPrimaryAttack`` or ``m_flNextSecondaryAttack``, which are
+written to the savestate.  Fortunately, the gauss weapon is a remarkable
+exception to this. It is widely known that there is no firing delay in secondary
+mode.  More importantly, the delay in primary mode is enforced by
+``m_flNextAttack`` instead of ``m_flNextPrimaryAttack``.  This allows one to
+save and reload the game immediately after a primary fire to bypass the delay.
+This is called gauss rapid fire (GRF) or fastfire.
+
+The gauss weapon in rapid fire has an impressive damage rate.  One primary fire
+inflicts a damage of 20.  Thus at 1000 fps, the damage rate is 20000 HP per
+second, dealing a total damage of 1000 HP limited by the ammunition.  The damage
+rate is significantly higher than that of any other weapon, including gauss with
+the quickgauss trick.  With GRF most enemies will be annihilated within a
+fraction of a second.  This can be useful for clearing paths in confined spaces
+and destroying monsters that block the progress of the game, such as the
+Nihilanth.
+
+
 Box item duplication
 --------------------
 
