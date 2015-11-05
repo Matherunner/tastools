@@ -7,6 +7,9 @@ Basic physics
 Walking through a frame
 -----------------------
 
+.. caution::
+   This section is incomplete and outdated.
+
 In this section we will describe what the game does in each frame that are
 relevant to TASing.  Do not skip this section if you intend to understand the
 rest of this document without much pain.
