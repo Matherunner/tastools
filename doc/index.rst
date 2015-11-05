@@ -42,6 +42,8 @@ All angles are assumed to be in radians unless stated otherwise.  The
    :maxdepth: 2
 
    basicphy
+   collision
+   ladderphy
    strafing
    algorithms
    health
