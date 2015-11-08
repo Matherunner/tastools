@@ -122,7 +122,7 @@ Immediately we observe that :math:`n_z \ge 0` is required for this equation to h
 We define three *free variables*:
 
 - The sign of :math:`\mathcal{S}`. Positive if rightward and negative if leftward.
-- The sign of :math:`\mathcal{F}`. Positive if upward and negative if downward.
+- The sign of :math:`\mathcal{F}`. Positive if forward and negative if backward.
 - The sign of :math:`v'_z`. Positive if upward and negative if downward.
 
 The motivation is that we want to be able to automatically determine the correct signs for the numerator and the denominator given our choices of the signs of the free variables. This is useful in practice because we often make conscious decisions regarding the directions in which we want to strafe when climbing ladders. For example, we may choose to invoke ``+forward`` and ``+moveleft``, or ``+back`` and ``+moveright``. In both cases the resulting velocity is identically optimal, and yet the viewangles are different. By declaring the signs of :math:`\mathcal{S}` and :math:`\mathcal{F}` as free variables, we can choose the strafing directions mathematically by simply setting the correct signs.
