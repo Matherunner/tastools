@@ -137,7 +137,7 @@ We will now attempt to formulate the final viewangles in terms of these free var
 
 #. We have :math:`\cos\varphi \ge 0` for :math:`-\pi/2 \le \varphi \le \pi/2`.
 
-We start by considering the sign of :math:`v'_z`. Obviously, the right hand side of Equation :eq:`laddervz` must be have the same sign as the :math:`v'_z`. But observe that there are two terms in the right hand side. Therefore, both terms should also be as large as possible in the direction indicated by the sign of :math:`v'_z`. For example, if we choose :math:`v'_z < 0`, then the terms on the right hand side should be as negative as possible, and vice versa.
+We start by considering the sign of :math:`v'_z`. Obviously, the right hand side of Equation :eq:`laddervz` must have the same sign as the :math:`v'_z`. But observe that there are two terms in the right hand side. Therefore, both terms should also be as large as possible in the direction indicated by the sign of :math:`v'_z`. For example, if we choose :math:`v'_z < 0`, then the terms on the right hand side should be as negative as possible, and vice versa.
 
 We will deal with the angle :math:`(\vartheta - \theta)` first, which appears only in the second term, so we will assume that the first term has been dealt with (that is, conforming to the sign of :math:`v'_z` while being as large as possible in magnitude). Now, we want
 
