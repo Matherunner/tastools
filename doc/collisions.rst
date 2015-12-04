@@ -1,5 +1,5 @@
-Collision
----------
+Collisions
+----------
 
 Many entities in Half-Life collide with one another.  The velocity of the
 colliding entity usually changes as a result, while the position and velocity

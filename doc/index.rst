@@ -24,7 +24,7 @@ Contents
 
    fundamentals
    basicphy
-   collision
+   collisions
    ladderphy
    strafing
    algorithms
