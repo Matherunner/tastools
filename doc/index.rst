@@ -29,4 +29,5 @@ Contents
    strafing
    algorithms
    health
+   explosions
    tastools
