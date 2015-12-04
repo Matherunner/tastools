@@ -148,71 +148,61 @@ TODO
 Distribution of health
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Health is often a constraint when performing damage boostings.  Deciding on how
-much health should be lost for a particular instance of damage boosting can be
-tricky, it is an art as much as it is a science.  The decision is made harder
-if we plan to perform several damage boosts given a limited amount of health at
-the beginning.  Specifically, we need to choose carefully how we should
-distribute health over every boosts.  To calculate the optimal distribution, we
-create a model that should closely reflect actual situations.
+Health is a scarce resource in any speedrun because medkits and health chargers are relatively rare. Despite this harsh constraint, it is common to want to perform multiple damage boosts using whatever health that is available until the health becomes too low. A natural question to ask is: what is the optimal way to distribute the limited health over these damage boosts, so that the total time taken to reach the destination is minimised?
 
-This model assumes that we want to perform damage boosts over :math:`n`
-*distance segments*, where a distance segment is a horizontal straight path
-that can directly benefit from a damage boost.  Let the lengths of the distance
-segments be :math:`s_1, s_2, \ldots, s_n`, and let the horizontal speeds before
-boosting be :math:`u_1, u_2, \ldots, u_n`.  Let :math:`v_1, v_2, \ldots, v_n`
-be the horizontal speed boosts.  Assuming constant speed after boosting, we
-calculate that the total time required to traverse all :math:`s_i` is
+Intuitively, this question seems to have a simple answer. Suppose there are two straight paths we need to travel to reach the destination. We want to perform damage boosts at the very beginning of each path. Let the lengths of these two paths be 250 and 750 units. Assume that the initial horizontal speed at the beginning of each path is 100 ups. For simplicity, we will assume that we can consume up to 100 HP in total without dying.
 
-.. math:: T(v_1, v_2, \ldots, v_n) = \frac{s_1}{u_1 + v_1} + \frac{s_2}{u_2 +
-          v_2} + \cdots + \frac{s_n}{u_n + v_n}
+Now observe that the length ratio is 1:3, so it is natural to guess that the health should also be distributed in 1:3 proportion for each straight path. Namely, allocate 25 HP to the damage boost for the shorter path and 75 HP for the longer path. Thus, we calculate that the total time taken to travel both paths is 1.597 seconds. However, what if we allocate 34 HP for the shorter path and 66 HP for the longer path instead? Then the total time is 1.555 seconds. In fact, we claim that this is the optimal distribution which minimises the total time. Even though the difference is small in this particular scenario, it is not at all obvious why the 1:3 distribution is suboptimal.
 
-We want to minimise this quantity, subject to
+To find out the optimal health distribution, we construct a model which closely reflects actual situations. We first assume that we are required to perform damage boosts for :math:`n` *distance segments*. We define a distance segment as a straight line path which directly benefits from a damage boost done at the beginning of the path. To take a concrete example, imagine an extremely narrow L-shaped path where the turn is extremely sharp. Since the turn is very sharp, the player's horizontal speed will be reduced to zero after making the turn. Thus, we consider the L-shaped path to be comprised of two distance segments, one for each straight path. Notice that no matter how much health is allocated to the initial boost, the speed gained will be lost entirely after making the turn. Thus, the two straight paths are of distinct distance segment: the time taken to travel across the second straight path is independent of whatever that happens while travelling in the first straight path.
 
-.. math:: H(v_1, v_2, \ldots, v_n) = v_1 + v_2 + \cdots + v_n = 10\mathcal{H}
+In practice, there is, of course, no perfect distance segment. Turns are rarely so sharp that all boosts in the horizontal speed are nullified. Nevertheless, the concept of distance segments can serve as a helpful guide and approximation to practical situations.
 
-where :math:`\mathcal{H}` is the total health amount that will be lost.  The
-coefficient of :math:`10` assumes that the player will duck for each damage
-boosting.  By stating the optimisation problem this way, it easily lends itself
-to be solved via Lagrange multipliers.  In other words, we want to solve the
-:math:`n + 1` equations consisting of the constraint and the equations encoded
-as :math:`\nabla T = -\lambda \nabla H`.  Writing out the latter explicitly, we
-have
+Let :math:`s_1, \ldots, s_n` be the lengths of the distance segments. Let :math:`u_1, \ldots, u_n` be the initial horizontal speeds are the beginning of each distance segment before damage boosting. And let :math:`\Delta v_1, \ldots, \Delta v_n` be the change in horizontal speed as a result of the damage boost at the beginning of each distance segment. Now assume that the speed stays constant after boosting. We can then compute that the total time required to traverse all distance segments is
 
-.. math:: \frac{s_i}{(u_i + v_i)^2} = \lambda
+.. math:: T(\Delta v_1, \ldots, \Delta v_n) = \frac{s_1}{u_1 + \Delta v_1} + \cdots + \frac{s_n}{u_n + \Delta v_n}
 
-for all :math:`1 \le i \le n`.  To proceed, we first set :math:`10\mathcal{H} =
-\mathcal{\tilde{H}} - u_1 - u_2 - \cdots` so that the constraint equation can
-be written as
+Here, the total time is written as a function with parameters :math:`\Delta v_1, \ldots, \Delta v_n`. We want to minimise this quantity by finding the optimal values for each of :math:`\Delta v_i`. Note also that we have a constraint, namely the amount of health given at the beginning of everything, before any boosting is done. We may express this constraint simply as
 
-.. math:: (u_1 + v_1) + (u_2 + v_2) + \cdots = \mathcal{\tilde{H}}
+.. math:: H(\Delta v_1, \ldots, \Delta v_n) = \Delta v_1 + \cdots + \Delta v_n = 10\mathcal{H}
 
-We then eliminate all :math:`(u_i + v_i)` to give
+where :math:`\mathcal{H}` is the total health amount that will be consumed. Here, the coefficient of :math:`10` reflects the assumption that the player will duck for each damage boosting. Indeed, recall that by ducking the player will receive twice the amount of speed boost compared to that received in upright position. By stating the optimisation problem this way, it may readily be solved via the method of Lagrange multipliers.
 
-.. math:: \sqrt{\frac{s_1}{\lambda}} + \sqrt{\frac{s_2}{\lambda}} + \cdots =
-          \mathcal{\tilde{H}}
+This optimisation method is particularly useful when we have an multivariate objective function and an equation constraining the parameters. In this optimisation problem, we want to solve the :math:`n + 1` equations consisting of the constraint along the equations encoded as :math:`\nabla T = -\lambda \nabla H` where :math:`\lambda` is the Lagrange multiplier. Writing out the latter explicitly, we have
 
-or
+.. math:: \frac{s_i}{(u_i + \Delta v_i)^2} = \lambda
+   :label: explicit_lagrange
 
-.. math:: \left( \frac{\sqrt{s_1} + \sqrt{s_2} + \cdots}{10\mathcal{H} + u_1 + u_2 +
-          \cdots} \right)^2 = \lambda
+for all :math:`1 \le i \le n`.  To proceed, we introduce a temporary variable :math:`\mathcal{\tilde{H}}` such that
 
-This provides us the solution for :math:`v_i` in the form of
+.. math:: 10\mathcal{H} = \mathcal{\tilde{H}} - u_1 - \cdots - u_n
 
-.. math:: u_i + v_i = \frac{\sqrt{s_i}}{\sum_{k=1}^n \sqrt{s_k}} \left(
-          10\mathcal{H} + \sum_{k=1}^n u_k \right)
+As a result, the constraint equation may be written as
 
-We want to point out the non-obviousness of this result.  In particular, that
-the ratio is *not* given by
+.. math:: (u_1 + \Delta v_1) + \cdots + (u_n + \Delta v_n) = \mathcal{\tilde{H}}
 
-.. math:: \frac{s_i}{\sum_{k=1}^n s_k}
+Using :eq:`explicit_lagrange`, we then eliminate all :math:`u_i + \Delta v_i`, yielding
 
-can be surprising.  It is important to stress again that this result is only
-accurate if the health does not change significantly over the course of the
-boostings and the horizontal speed for each distance segment is constant.  In
-practice, we will likely to be strafing while traversing the segments, but the
-result above may still be approximately valid as long as we treat :math:`(u_i +
-v_i)` as the *average* speed.
+.. math:: \sqrt{\frac{s_1}{\lambda}} + \cdots + \sqrt{\frac{s_n}{\lambda}} = \mathcal{\tilde{H}}
+
+Or equivalently, by eliminating the temporary variable,
+
+.. math:: \left( \frac{\sqrt{s_1} + \cdots + \sqrt{s_n}}{10\mathcal{H} + u_1 + \cdots + u_n} \right)^2 = \lambda
+
+Eliminating :math:`\lambda` using :eq:`explicit_lagrange` again, we have the solution for each :math:`\Delta v_i` in the following form:
+
+.. math:: \Delta v_i = \frac{\sqrt{s_i}}{\sum_{k=1}^n \sqrt{s_k}} \left(
+          10\mathcal{H} + \sum_{k=1}^n u_k \right) - u_i
+
+Looking at this equation, we observe the rather counterintuitive ratio. In particular, the ratio is *not* given by
+
+.. math:: \frac{s_i}{\sum_{k=1}^n s_i}
+
+as one would have guessed.
+
+We want to remark that this model makes the assumption that the speed is constant after boosting. This is normally not true in practice. However, consider that the speed after a damage boost is typically very high, and recall from strafing physics that the acceleration at higher speeds is noticeably lower.
+
+
 
 
 Gauss boost and quickgauss
