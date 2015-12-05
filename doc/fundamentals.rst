@@ -29,7 +29,7 @@ Every vector also has components in each axis. For a vector in :math:`\mathbb{R}
 
 .. math:: \mathbf{v} = \langle v_x, v_y, v_z\rangle
 
-This is equivalent to writing :math:`\mathbf{v} = v_x \mathbf{\hat{i}} + v_y \mathbf{\hat{j}} + v_z \mathbf{\hat{k}}`. However, we never write out the components this way in this documentation as it is tedious.
+This is equivalent to writing :math:`\mathbf{v} = v_x \mathbf{\hat{i}} + v_y \mathbf{\hat{j}} + v_z \mathbf{\hat{k}}`. However, we never write out the components this way in this documentation as it is tedious. Notice that we are writing vectors as row vectors. This will be important to keep in mind when we apply matrix transformations to vectors.
 
 The dot product between two vectors :math:`\mathbf{a}` and :math:`\mathbf{b}` is written as
 
