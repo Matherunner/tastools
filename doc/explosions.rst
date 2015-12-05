@@ -20,7 +20,7 @@ Observe that the damage inflicted falls off linearly with distance, and not with
 
 Interestingly, the computed distance :math:`\ell` may not equal to the actual distance between this entity and explosion origin. In particular, if the line trace is startsolid, then the game computes :math:`\ell = 0`. As a result, the damage inflicted on the entity is exactly the source damage of the explosion. Indeed, all entities within the sphere will receive the same damage.
 
-The case where the line trace is startsolid is seemingly impossible to achieve. Fortunately, this edge case is not hard to exploit in game, the act of which is named *nuking* as will be detailed in :ref:`nuking`. The key to understanding how such exploits might work is to observe that the explosion origin may not coincide with the origin of the entity just before it detonates. The exactly way the explosion origin is computed depends on the type of entity generating the explosion.
+The case where the line trace is startsolid is seemingly impossible to achieve. Fortunately, this edge case is not hard to exploit in game, the act of which is named *nuking* as will be detailed in :ref:`nuking`. The key to understanding how such exploits might work is to observe that the explosion origin may not coincide with the origin of the entity just before it detonates. The exact way the explosion origin is computed depends on the type of entity generating the explosion.
 
 Explosion origin
 ----------------
