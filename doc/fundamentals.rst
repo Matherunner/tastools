@@ -37,7 +37,7 @@ On the other hand, the cross product between :math:`\mathbf{a}` and :math:`\math
 Viewangles
 ----------
 
-The term *viewangles* is usually associated with the player entity. The viewangles refer to a group of three angles which describe the player's view orientation. We call these angles *yaw*, *pitch* and *row*. Mathematically, we denote the yaw by
+The term *viewangles* is usually associated with the player entity. The viewangles refer to a group of three angles which describe the player's view orientation. We call these angles *yaw*, *pitch* and *roll*. Mathematically, we denote the yaw by
 
 .. math:: \vartheta
 
