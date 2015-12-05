@@ -31,3 +31,4 @@ Contents
    health
    explosions
    tastools
+   glossary
