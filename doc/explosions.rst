@@ -12,7 +12,7 @@ An explosion is a phenomenon in Half-Life that inflicts damage onto surrounding 
 
 Suppose an explosion occurs. Let :math:`D` be its source damage and :math:`R` its radius. Suppose there is an entity adjacent to the explosion origin. From gaming experience, we know that the further away this entity is from the explosion origin, the lower the damage inflicted on this entity. In fact, the game only looks for entities within a sphere of radius :math:`R` from the explosion origin, ignoring all entities beyond. In the implementation, this is achieved by calling ``UTIL_FindEntityInSphere`` with the radius as one of the parameters.
 
-Assume the entity in question is within :math:`R` units from the explosion origin. The game traces a line from the explosion origin to the entity's *body target*. Recall from :ref:`entities` that the body target of an entity is usually, but not always, coincident with the entity's origin. Then, the game computes the distance between this entity's body target and the explosion origin as :math:`\ell`. The damage inflicted onto this entity is thus computed to be
+Assume the entity in question is within :math:`R` units from the explosion origin. First, the game traces a line from the explosion origin to the entity's *body target*. Recall from :ref:`entities` that the body target of an entity is usually, but not always, coincident with the entity's origin. Then, the game computes the distance between this entity's body target and the explosion origin as :math:`\ell`. The damage inflicted onto this entity is thus computed to be
 
 .. math:: D \left( 1 - \frac{\ell}{R} \right) \qquad (0 \le \ell \le R)
 
