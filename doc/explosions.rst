@@ -27,7 +27,7 @@ Explosion origin
 
 Explosions are always associated with a *source entity*. This entity could be a grenade (of which there are three kinds) or an ``env_explosion``.
 
-Denote :math:`\mathbf{r}` the position of the associated entity. When an explosion occurs, the game will trace a line from :math:`A` to :math:`B`, which are different depending on the type of explosive source. But these points are always offset from the source entity's origin. In general, we call :math:`\mathbf{c}` the end position from the line trace. If the trace fraction is not 1, the game will modify the position of the source entity. Otherwise, the position will not be changed.
+Denote :math:`\mathbf{r}` the position of the associated entity. When an explosion occurs, the game will trace a line from :math:`A` to :math:`B`. The exact coordinates of these two points depend on the type of the associated source entity, but they are always, in one way or the other, offset from the source entity's origin. In general, we call :math:`\mathbf{c}` the end position from the line trace. If the trace fraction is not 1, the game will modify the position of the source entity. Otherwise, the position will not be changed.
 
 The new position of the source entity is computed to be
 
