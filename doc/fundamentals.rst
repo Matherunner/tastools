@@ -18,7 +18,12 @@ A vector of length one is called a *unit vector*. So the unit vector in the dire
 
 .. math:: \mathbf{\hat{v}} = \frac{\mathbf{v}}{\lVert\mathbf{v}\rVert}
 
-There are three special unit vectors, namely :math:`\mathbf{\hat{i}}`, :math:`\mathbf{\hat{j}}` and :math:`\mathbf{\hat{k}}`. They have directions in the :math:`x`, :math:`y` and :math:`z` axes respectively.
+There are three special unit vectors, namely
+
+
+.. math:: \mathbf{\hat{i}} \quad \mathbf{\hat{j}} \quad \mathbf{\hat{k}}
+
+These vectors point towards the positive :math:`x`, :math:`y` and :math:`z` axes respectively.
 
 Every vector also has components in each axis. For a vector in :math:`\mathbb{R}^2`, it has an :math:`x` component and a :math:`y` component. A vector in :math:`\mathbb{R}^3` has an additional :math:`z` component. To write out the components of a vector explicitly, we have
 
