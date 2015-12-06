@@ -396,3 +396,70 @@ it impossible to prevent the speed reduction.  If
 :math:`\lVert\mathbf{v}\rVert` is greater than the maximum groundstrafe speed,
 then the angle that minimises the inevitable speed loss is obviously the
 optimal strafing angle.
+
+
+Curvature
+---------
+
+The locus of a point obtained by strafing is a spiral. Intuitively, at any given speed there is a limit to how sharp a turn can be made without lowering acceleration. It is commonly known that this limit grows harsher with higher speed. As tight turns are common in Half-Life, this becomes an important consideration that preoccupies speedrunners at almost every moment. Learning how navigate through tight corners by strafing without losing speed is a make-or-break skill in speedrunning.
+
+It is natural to ask exactly how this limit can be quantified for the benefit of TASing. The simplest way to do so is to consider the *radius of curvature* of the path. Obviously, this quantity is not constant with time, except for speed preserving strafing. Therefore, when we talk about the radius of curvature, precisely we are referring to the *instantaneous* radius of curvature, namely the radius at a given instant in time. But time is discrete in Half-Life, so this is approximated by the radius in a given frame.
+
+90 degrees turns
+~~~~~~~~~~~~~~~~
+
+Passageways in Half-Life commonly bend perpendicularly, so we frequently make 90 degrees turns by strafing. We can imagine how the width of a passage limits the maximum radius of curvature one can sustain without colliding with the walls. This implies that the speed is limited as well. When planning for speedruns, it can prove useful to be able to estimate this limit for a given turn without running a simulation or strafing by hand. In particular, we want to compute the maximum speed for a given passage width. We start by making some simplifying assumptions that will greatly reduce the difficulty of analysis while closely modelling actual situations in practice. Refer to the figure below.
+
+.. image:: _static/90-degrees-strafe-radius.png
+   :height: 800px
+   :width: 754px
+   :scale: 50%
+   :align: center
+
+The first assumption we make is that the width of the corridor is the same before and after the turn. This width is denoted as :math:`d`, as one can see in the figure. This assumption is justified because this is often true or approximately true in Half-Life maps. The second assumption is that the path is circular. The centre of this circle, also named the *centre of curvature*, is at point :math:`C`. As noted earlier, the strafing path is in general a spiral with varying radius of curvature. Nevertheless, the total time required to make such a turn is typically very small. Within such short time frame, the radius would not have changed significantly. Therefore it is not absurd to assume that the radius of curvature is constant while making the turn. The third assumption is that the positions of the player before and after making the turn coincide with the walls. This assumption is arguably less realistic, but the resulting path is the larger circular arc one can fit in this space.
+
+By trivial applications of the Pythagorean theorem, it can be shown that the relationship between the radius of curvature :math:`r` and the width of the corridor :math:`d` is given by
+
+.. math:: r = \left( 2 + \sqrt{2} \right) d \approx 3.414 d
+
+This formula may be used to estimate the maximum radius of curvature for making such a turn without collision. However, the radius of curvature by itself is not very useful. We may wish to further estimate the maximum speed corresponding to this :math:`r`.
+
+Radius-speed relationship
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The following figure depicts the positions of the player at times :math:`t = 0`, :math:`t = \tau` and :math:`t = 2\tau`. The initial speed is :math:`\lVert\mathbf{v}\rVert`. All other symbols have their usual meaning.
+
+.. image:: _static/radius-estimate-xy.png
+   :height: 775px
+   :width: 1135px
+   :scale: 50%
+   :align: center
+
+Based on the figure, the radius of curvature may be approximated as the :math:`y`-intercept, or :math:`c`. Obviously, a more accurate approximation may be achieved by averaging :math:`c` and :math:`\mathit{BC}`. However, this results in a clumsy formula with little benefit. Empirically, the approximation by calculating :math:`c` is sufficiently accurate in practice. In consideration of this, it can be calculated that
+
+.. math:: r \approx c = \frac{\tau}{\sin\theta} \left( \frac{2}{\mu} \lVert\mathbf{v}\rVert^2 + 3 \lVert\mathbf{v}\rVert \cos\theta + \mu \right)
+  :label: radius-speed-relationship
+
+Note that this is the most general formula, applicable to any type of strafing. From this equation, observe that the radius of curvature grows with the square of speed. This is a fairly rapid growth. On the other hand, under maximum speed strafing, the speed grows with the square root of time. Informally, the result of these two growth rates conspiring with one another is that the radius of curvature grows linearly with time. We also observe that the radius of curvature is directly influenced by :math:`\tau`, as experienced strafers would expect. Namely, we can make sharper turns at higher frame rates.
+
+From Equation :eq:`radius-speed-relationship` we can derive formulae for various types of strafing by eliminating :math:`\theta`. For instance, in Type 2 strafing we have :math:`\theta = \pi/2`. Substituting, we obtain a very simple expression for the radius:
+
+.. math:: r \approx \tau \left( \frac{2}{L} \lVert\mathbf{v}\rVert^2 + L \right)
+
+Or, solving for :math:`\lVert\mathbf{v}\rVert`, we obtain a more useful equation:
+
+.. math:: \lVert\mathbf{v}\rVert \approx \sqrt{\frac{L}{2} \left( \frac{r}{\tau} - L \right)}
+
+For Type 1 strafing, the formula is clumsier. Recall that we have :math:`\mu = k_e \tau MA` and
+
+.. math:: \cos\theta = \frac{L - k_e \tau MA}{\lVert\mathbf{v}\rVert}
+
+To eliminate :math:`\sin\theta`, we can trivially rewrite the :math:`\cos\theta` equation in this form
+
+.. math:: \sin\theta = \frac{\sqrt{\lVert\mathbf{v}\rVert^2 - (L - k_e \tau MA)^2}}{\lVert\mathbf{v}\rVert}
+
+Then we proceed by substituting, yielding
+
+.. math:: r \approx \frac{\tau \lVert\mathbf{v}\rVert}{\sqrt{\lVert\mathbf{v}\rVert^2 - (L - k_e \tau MA)^2}} \left( \frac{2}{k_e \tau MA} \lVert\mathbf{v}\rVert^2 + 3L - 2 k_e \tau MA \right)
+
+We cannot simplify this equation further. In fact, solving for :math:`\lVert\mathbf{v}\rVert` is non-trivial as it requires finding a root to a relatively high order polynomial equation. As per the usual strategy when facing similar difficulties, we resort to iterative methods.
